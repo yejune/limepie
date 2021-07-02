@@ -90,7 +90,7 @@ class Connector
     public function connect()
     {
         try {
-            $class = '\\Limepie\\Pdo\\Driver\\' . \ucfirst($this->scheme);
+            $class = '\\Limepie\\Pdo\\Driver\\' . \Limepie\camelize($this->scheme);
 
             $options = $this->options;
 

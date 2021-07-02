@@ -20,6 +20,19 @@ class Select extends \Limepie\Form\Generation\Fields
         }
         // $dotKey = \preg_replace('#.__([^_]{13})__#', '[]', \str_replace(['[', ']'], ['.', ''], $key));
 
+        $style = '';
+
+        if (true === isset($property['readonly']) && $property['readonly']) {
+            if (false === isset($property['element_style'])) {
+                $property['element_style'] = '';
+            }
+            $property['element_style'] .= '-webkit-appearance: none; -moz-appearance: none; text-indent: 1px;text-overflow: \'\'; pointer-events: none;';
+        }
+
+        if (isset($property['element_style']) && $property['element_style']) {
+            $style = ' style="' . $property['element_style'] . '"';
+        }
+
         // \pr($dotKey, $key, $property);
         $class = '';
 
@@ -38,13 +51,11 @@ class Select extends \Limepie\Form\Generation\Fields
             $keyAsArray = [];
 
             foreach ($parts as $part) {
-                if (1 === \preg_match('#__([^_]{13})__#', $part)) {
+                if (1 === \preg_match('#__([^_]{13,})__#', $part)) {
                     $keyAsArray[] = $part;
-                //$dotParts[]   = '*';
-                } else {
-                    //$dotParts[] = $part;
-                    1;
+                    //$dotParts[]   = '*';
                 }
+                //$dotParts[] = $part;
             }
             //$dotKey2 = \implode('.', $dotParts);
 
@@ -110,7 +121,7 @@ EOD;
 
             //exit;
 
-            $expend = <<<EOD
+            $expend = <<<'EOD'
 
 EOD;
         }
@@ -136,7 +147,7 @@ EOD;
         $option = '';
 
         if (true === isset($property['items'])) {
-            if($property['items'] instanceof \Resource\Helper\Menu) {
+            if ($property['items'] instanceof \Resource\Helper\Menu) {
                 $option = '<option value="">select..</option>';
                 // storage of output
 
@@ -153,17 +164,15 @@ EOD;
 
                     // generate the nav
                     foreach ($its as $it) {
-
                         // set the current depth
                         $curDepth = $its->getDepth();
 
                         // store the difference in depths
-                        $diff = abs($curDepth - $depth);
+                        $diff = \abs($curDepth - $depth);
                         // close previous nested levels
                         if ($curDepth < $depth) {
-                            $output->append(str_repeat('</optgroup>', $diff));
+                            $output->append(\str_repeat('</optgroup>', $diff));
                         }
-
 
                         $depth = $its->getDepth();
 
@@ -178,17 +187,19 @@ EOD;
 
                         // either add a subnav or close the optionst item
                         if ($its->hasChildren()) {
-                            $output->append('<optgroup label="'.\str_repeat("&nbsp;", ($curDepth) * 4).$it['name'].'">');
+                            $output->append('<optgroup label="' . \str_repeat('&nbsp;', ($curDepth) * 4) . $it['name'] . '">');
                         } else {
                             $selected = '';
-                            if((string) $value === (string) $it['params']['seq']) {
+
+                            if ((string) $value === (string) $it['params']['seq']) {
                                 $selected = " selected='selected'";
                             }
                             $space = '';
-                            if($curDepth > 0) {
-                                $space = \str_repeat("&nbsp;", ($curDepth-1) * 4);
+
+                            if (0 < $curDepth) {
+                                $space = \str_repeat('&nbsp;', ($curDepth - 1) * 4);
                             }
-                            $output->append('<option value="'.$it['params']['seq'].'" '.$selected.'>' . $space. implode(' > ', $path) . '</option>');
+                            $output->append('<option value="' . $it['params']['seq'] . '" ' . $selected . '>' . $space . \implode(' > ', $path) . '</option>');
                         }
 
                         // cache the depth
@@ -197,11 +208,10 @@ EOD;
 
                     // if we have values, output the unordered list
                     if ($output->count()) {
-                        $option .= implode("\n", (array) $output);
+                        $option .= \implode("\n", (array) $output);
                     }
-
                 } catch (\Exception $e) {
-                    die($e->getMessage());
+                    exit($e->getMessage());
                 }
             } else {
                 foreach ($property['items'] as $itemValue => $itemText) {
@@ -253,15 +263,15 @@ EOD;
         }
         $onchange = '';
 
-        if (true === isset($property['onchange'])) {
-            $onchange = 'onchange="' . \trim(\addcslashes($property['onchange'], '"')) . '"';
-        } elseif (true === isset($property['readonly'])) {
+        if (true === isset($property['readonly']) && $property['readonly']) {
             $onchange = "readonly onFocus='this.initialSelect = this.selectedIndex;' onChange='this.selectedIndex = this.initialSelect;'";
+        } elseif (true === isset($property['onchange'])) {
+            $onchange = 'onchange="' . \trim(\addcslashes($property['onchange'], '"')) . '"';
         }
         $html = <<<EOT
         <div class="input-group">
         {$prepend}
-        <select class="form-control{$class}" name="{$key}" {$onchange} data-default="{$default}">{$option}</select>
+        <select class="form-control{$class}" {$style} name="{$key}" {$onchange} data-default="{$default}">{$option}</select>
         {$append}
         </div>
         {$scripts}
@@ -290,11 +300,9 @@ EOT;
             }
         }
 
-        $html = <<<EOT
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

@@ -22,7 +22,7 @@ class Properties
         return $this->pk_name;
     }
 
-    public function getTimestampFields() : string
+    public function getTimestampFields() : array
     {
         return $this->timestamp_fields;
     }

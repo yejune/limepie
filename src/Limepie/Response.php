@@ -222,7 +222,7 @@ class Response
     }
 
     /**
-     * Sets the response content-type mime, optionally the charset
+     * Sets the response content-type mime, optionally the charset.
      *
      *<code>
      * $response->setContentType("application/pdf");

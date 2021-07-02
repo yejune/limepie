@@ -256,6 +256,10 @@ class Application
             $actionName = \preg_replace('#' . $fromAll . '$#', '', $actionName);
         }
 
+        if (false === \class_exists($className)) {
+            throw new \Limepie\Exception('Class "' . $className . '" not found');
+        }
+
         try {
             $methods = \get_class_methods($className);
         } catch (\Limepie\Exception $e) {
@@ -265,7 +269,7 @@ class Application
         }
 
         if (null === $methods) {
-            throw new \Limepie\Exception($className . ' class name error');
+            throw new \Limepie\Exception('Class "' . $className . '" name error');
         }
         $methodNames = \preg_grep('/^' . $actionName . '/', $methods);
 

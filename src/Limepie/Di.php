@@ -11,7 +11,7 @@ class Di
     private $isInstance = false;
 
     /**
-     * reset variables
+     * reset variables.
      */
     public function __destruct()
     {
@@ -23,10 +23,12 @@ class Di
         if (0 === \strpos($name, 'get')) {
             return Di::instance()->getBuild($name, $arguments);
         }
+
+        throw new \Limepie\Exception('static method not found: '.$name);
     }
 
     /**
-     * Singleton instance
+     * Singleton instance.
      */
     public static function instance() : Di
     {
@@ -85,7 +87,7 @@ class Di
         if (false === $this->isInstance && true === Di::isCallableClosure($value)) {
             // TODO: invoke method가 있으면 callable가 true임, invoke를 계속 실행하게 됨
             // => isInstance check
-            $value        = $value();
+            $value             = $value();
             $value->isInstance = true;
             Di::instance()->setProperty($key, $value);
         }
@@ -112,7 +114,7 @@ class Di
 
     public static function isCallableClosure($value) : bool
     {
-        //return true === \is_object($value) && ($value instanceof Closure);
+        //return true === \is_object($value) && ($value instanceof \Closure);
 
         return true === \is_object($value) && true === \is_callable($value);
     }
@@ -188,7 +190,9 @@ class Di
 
         if ($this->hasProperty($fieldName)) {
             return $this->runProperty($fieldName);
-        } elseif (true === $isOrEmpty) {
+        }
+
+        if (true === $isOrEmpty) {
             return ''; // column
         }
 

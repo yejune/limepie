@@ -35,7 +35,9 @@ function per1($point, $step)
 
     if (1 <= $diff) {
         return 100;
-    } elseif (0 < $diff && 1 > $diff) {
+    }
+
+    if (0 < $diff && 1 > $diff) {
         return $diff * 100;
     }
 
@@ -65,7 +67,7 @@ function repairSerializeString($value)
 
     return \preg_replace_callback(
         $regex,
-        function($match) {
+        function ($match) {
             return 's:' . \mb_strlen($match[2]) . ':"' . $match[2] . '"';
         },
         $value
@@ -76,7 +78,7 @@ function unserialize($value)
     $org   = $value;
     $value = \preg_replace_callback(
         '/(?<=^|\{|;)s:(\d+):\"(.*?)\";(?=[asbdiO]\:\d|N;|\}|$)/s',
-        function($m) {
+        function ($m) {
             return 's:' . \strlen($m[2]) . ':"' . $m[2] . '";';
         },
         $value
@@ -128,6 +130,7 @@ function format_mobile($phone, $isMark = false)
           return \preg_replace('/([0-9]{3})([0-9]{3})([0-9]{4})/', $match, $phone);
 
           break;
+
       default:
           return $phone;
 
@@ -149,6 +152,7 @@ function format_mobile_mask($phone)
             return \preg_replace('/([0-9]{3})([0-9])([0-9])([0-9])([0-9])([0-9])([0-9])([0-9])/', '$1-*$3$4-**$7$8', $phone);
 
             break;
+
         default:
             return $phone;
 
@@ -157,9 +161,7 @@ function format_mobile_mask($phone)
 }
 
 /**
- * debug용 print_r
- *
- * @return void
+ * debug용 print_r.
  */
 function pr()
 {
@@ -180,7 +182,7 @@ function pr()
 }
 
 /**
- * beautify print_r
+ * beautify print_r.
  *
  * @param mixed $args
  *
@@ -208,11 +210,9 @@ function print_x($args)
 }
 
 /**
- * 배열을 html table로 반환
+ * 배열을 html table로 반환.
  *
  * @param mixed $in
- *
- * @return string
  */
 function html_encode(array $in) : string
 {
@@ -242,7 +242,7 @@ function html_encode(array $in) : string
 }
 
 /**
- * 배열의 키가 숫자가 아닌 경우를 판별
+ * 배열의 키가 숫자가 아닌 경우를 판별.
  *
  * @param array $array
  *
@@ -260,9 +260,7 @@ function is_assoc($array)
 }
 
 /**
- * file을 읽어 확장자에 따라 decode하여 리턴
- *
- * @param string $filename
+ * file을 읽어 확장자에 따라 decode하여 리턴.
  *
  * @return string
  */
@@ -305,6 +303,7 @@ function decode_file(string $filename) : array
                         $message = 'Malformed UTF-8 characters';
 
                         break;
+
                     default:
                         $message = 'Invalid JSON syntax';
                 }
@@ -313,6 +312,7 @@ function decode_file(string $filename) : array
             }
 
             break;
+
         default:
             throw new \Limepie\Exception($ext . ' not support');
 
@@ -325,7 +325,8 @@ function decode_file(string $filename) : array
 function ceil(float $val, int $precision = 0)
 {
     $x = 1;
-    for ($i = 0; $i < $precision; $i++) {
+
+    for ($i = 0; $i < $precision; ++$i) {
         $x = $x * 10;
     }
 
@@ -401,7 +402,7 @@ function refparse($arr = [], $basepath = '') : array
     $return = [];
 
     foreach ($arr ?? [] as $key => $value) {
-        if (true === \in_array($key, ['$after', '$before', '$change', '$merge'], true)) {
+        if (true === \in_array($key, ['$after', '$before', '$change', '$merge', '$remove'], true)) {
         } elseif ('$ref' === $key) {
             if (false === \is_array($value)) {
                 $value = [$value];
@@ -440,7 +441,7 @@ function refparse($arr = [], $basepath = '') : array
                             $yml2 = $yml2[$key2];
                         //pr($keys, $path, $key2, $yml2);
                         } else {
-                            throw new \Limepie\Exception($key2 . ' not found');
+                            throw new \Limepie\Exception($key2 . ' not found2');
                         }
                     }
                 } else {
@@ -573,11 +574,23 @@ function refparse($arr = [], $basepath = '') : array
             }
         } elseif ('$change' === $key) {
             foreach ($value as $k => $v) {
-                $return[$k] = $return[$k] + $v;
+                if (true === isset($return[$k])) {
+                    $return[$k] = \Limepie\refparse(\Limepie\array_merge_deep($return[$k], $v));
+                } else {
+                    throw new \Limepie\Exception($key . ': Undefined array key "' . $k . '"');
+                }
             }
         } elseif ('$merge' === $key) {
             foreach ($value as $k => $v) {
-                $return[$k] = \Limepie\refparse(\Limepie\array_merge_deep($return[$k], $v));
+                if (true === isset($return[$k])) {
+                    $return[$k] = \Limepie\refparse(\Limepie\array_merge_deep($return[$k], $v));
+                } else {
+                    throw new \Limepie\Exception($key . ': Undefined array key "' . $k . '"');
+                }
+            }
+        } elseif ('$remove' === $key) {
+            foreach ($value as $k) {
+                unset($return[$k]);
             }
         }
     }
@@ -640,12 +653,10 @@ function yml_parse_file($file, \Closure $callback = null)
     throw new \Limepie\Exception('"' . $file . '" file not found');
 }
 /**
- * recursive array를 unique key로 merge
+ * recursive array를 unique key로 merge.
  *
  * @param array $array1 초기 배열
  * @param array $array2 병합할 배열
- *
- * @return array
  */
 function array_merge_recursive_distinct(array $array1, array $array2) : array
 {
@@ -657,7 +668,7 @@ function array_merge_recursive_distinct(array $array1, array $array2) : array
             && true === isset($merged[$key])
             && true === \is_array($merged[$key])
         ) {
-            $merged[$key] = \Limepie\array_merge_recursive_distinct($merged [$key], $value);
+            $merged[$key] = \Limepie\array_merge_recursive_distinct($merged[$key], $value);
         } else {
             $merged[$key] = $value;
         }
@@ -705,7 +716,7 @@ function array_flattenx($items)
         return [$items];
     }
 
-    return \array_reduce($items, function($carry, $item) {
+    return \array_reduce($items, function ($carry, $item) {
         return \array_merge($carry, \array_flatten($item));
     }, []);
 }
@@ -726,12 +737,10 @@ function array_mix(array $a, array $b) : array
     return \Limepie\array_merge_recursive_distinct($a, $b);
 }
 /**
- * time으로부터 지난 시간을 문자열로 반환
+ * time으로부터 지난 시간을 문자열로 반환.
  *
- * @param string|int $time  시간으로 표현가능한 문자열이나 숫자
+ * @param int|string $time  시간으로 표현가능한 문자열이나 숫자
  * @param int        $depth 표현 깊이
- *
- * @return string
  */
 function time_ago($time, int $depth = 3) : string
 {
@@ -814,12 +823,10 @@ function ago($enddate, $format = '$d day $H:$i:$s')
     return $day . '일하고, ' . $hour . ':' . $minute . ':' . $second . '';
 }
 /**
- * 숫자를 읽기쉬운 문자열로 변환
+ * 숫자를 읽기쉬운 문자열로 변환.
  *
  * @param $bytes
  * @param $decimals
- *
- * @return string
  */
 function readable_size($bytes, $decimals = 2) : string
 {
@@ -830,11 +837,9 @@ function readable_size($bytes, $decimals = 2) : string
 }
 
 /**
- * formatting ISO8601MICROSENDS date
+ * formatting ISO8601MICROSENDS date.
  *
  * @param float $float microtime
- *
- * @return string
  */
 function iso8601micro(float $float) : string
 {
@@ -845,9 +850,7 @@ function iso8601micro(float $float) : string
 }
 
 /**
- * env to array
- *
- * @param string $envPath
+ * env to array.
  */
 function env_to_array(string $envPath) : array
 {
@@ -871,8 +874,6 @@ function env_to_array(string $envPath) : array
  *
  * @param array $array
  * @param bool  $isMulti
- *
- * @return bool
  */
 function is_file_array($array = [], $isMulti = false) : bool
 {
@@ -890,7 +891,8 @@ function is_file_array($array = [], $isMulti = false) : bool
         if (true === $isMulti) {
             foreach ($array as $file) {
                 if (
-                    true === isset($file['name'])
+                    true === \is_array($file)
+                    && true === isset($file['name'])
                     && true === isset($file['type'])
                     //&& true === isset($file['tmp_name'])
                     && true === isset($file['error'])
@@ -909,7 +911,11 @@ function get_language() : string
 {
     $locale = \Limepie\Cookie::get(\Limepie\Cookie::getKeyStore('locale'));
 
-    return \explode('_', $locale)[0];
+    if ($locale) {
+        return \explode('_', $locale)[0];
+    }
+
+    return 'ko';
 
     return $_COOKIE['client-language'] ?? 'ko';
 }
@@ -920,7 +926,7 @@ function mkdir($dir)
         $dirs       = \explode('/', $dir);
         $createPath = '';
 
-        for ($dirIndex = 0, $dirCount = \count($dirs); $dirIndex < $dirCount; $dirIndex++) {
+        for ($dirIndex = 0, $dirCount = \count($dirs); $dirIndex < $dirCount; ++$dirIndex) {
             $createPath .= $dirs[$dirIndex] . '/';
 
             if (false === \is_dir($createPath)) {
@@ -951,11 +957,17 @@ function is_boolean_type($var)
 {
     if (true === \is_int($var)) {
         return true;
-    } elseif (true === \is_numeric($var)) {
+    }
+
+    if (true === \is_numeric($var)) {
         return true;
-    } elseif (true === \is_bool($var)) {
+    }
+
+    if (true === \is_bool($var)) {
         return true;
-    } elseif (true === \is_array($var)) {
+    }
+
+    if (true === \is_array($var)) {
         return false;
     }
 
@@ -972,8 +984,29 @@ function is_boolean_type($var)
         case 'n':
         case '':
             return true;
+
         default:
             return false;
+    }
+}
+
+function createTree($array)
+{
+    switch (count($array)) {
+    case 0:
+        exit('Illegal argument.');
+    case 1:
+        return $array[0];
+
+    default:
+        $lastArray = \array_pop($array);
+        $subArray  = \Limepie\createTree($array);
+
+        foreach ($lastArray as $item) {
+            $return[] = [$item, $subArray];
+        }
+
+        return $return;
     }
 }
 
@@ -1017,11 +1050,7 @@ function array_cross($arrays)
 }
 
 /**
- * Generate a unique ID
- *
- * @param int $length
- *
- * @return string
+ * Generate a unique ID.
  */
 function uniqid(int $length = 13) : string
 {
@@ -1044,7 +1073,8 @@ function genRandomString($length = 5)
     $char = 'abcdefghjkmnpqrstuvwxyz';
     $char .= '23456789';
     $result = '';
-    for ($i = 0; $i < $length; $i++) {
+
+    for ($i = 0; $i < $length; ++$i) {
         $result .= $char[\mt_rand(0, \strlen($char) - 1)];
     }
 
@@ -1053,25 +1083,29 @@ function genRandomString($length = 5)
 
 function decamelize($word)
 {
-    return \strtolower(\preg_replace('/(?<!^)[A-Z]/', '_$0', $word));
+    return \str_replace(['(', ')'], ['_(', '_)'], \strtolower(\preg_replace('/(?<!^)[A-Z]/', '_$0', $word)));
 }
 
 function camelize($word)
 {
     return \preg_replace_callback(
         '/(^|_|-)([a-zA-Z]+)/',
-        function($m) {
+        function ($m) {
             return \ucfirst(\strtolower("{$m[2]}"));
         },
         $word
     );
 }
 
-function array_extract($arrays, $key, $index = null)
+function array_extract(
+    array | object | null $arrays = [],
+    array | string $key = [],
+    $index = null
+)
 {
     $return = [];
 
-    foreach ($arrays as $i => $value) {
+    foreach ($arrays ?? [] as $i => $value) {
         if (true === isset($index)) {
             if (true === \is_array($index)) {
                 $tmp = $value;
@@ -1173,13 +1207,20 @@ function array_flatten_remove($data, $flattenKey)
 function guid($l = 10)
 {
     $str = '';
-    for ($x = 0; $x < $l; $x++) {
+
+    for ($x = 0; $x < $l; ++$x) {
         $str .= \substr(\str_shuffle('0123456789abcdefghijklmnopqrstuvwxyz'), 0, 1);
     }
 
     return $str;
 }
-
+function define($key, $name)
+{
+    if (\defined($key)) {
+    } else {
+        \define($key, $name);
+    }
+}
 function is_ajax()
 {
     return true === isset($_SERVER['HTTP_X_REQUESTED_WITH'])
@@ -1188,6 +1229,10 @@ function is_ajax()
 
 function is_cli() : bool
 {
+    if (true === isset($_ENV['is_swoole']) && 1 === (int) $_ENV['is_swoole']) {
+        return false;
+    }
+
     return 'cli' === \php_sapi_name();
 }
 
@@ -1245,6 +1290,15 @@ function url()
     return $request->getUrl();
 }
 
+function is_binary(string $string) : bool
+{
+    if (!\ctype_print($string)) {
+        return true;
+    }
+
+    return false;
+}
+
 function decimal($number) : float
 {
     // $tmp = new \Decimal\Decimal((string) $number);
@@ -1252,7 +1306,7 @@ function decimal($number) : float
     // return $tmp->trim();
 
     if (0 < \strlen((string) $number)) {
-        $parts  = \explode('.', $number);
+        $parts  = \explode('.', (string) $number);
         $result = $parts[0];
 
         if (true === isset($parts[1])) {
@@ -1266,16 +1320,20 @@ function decimal($number) : float
 
     return 0;
 }
-
-function number_format($number)
+function nf($number)
+{
+    return \Limepie\number_format($number);
+}
+function number_format($number, $int = 0)
 {
     //$stripzero = sprintf('%g',$number);
+
     if (0 < \strlen((string) $number)) {
         $parts  = \explode('.', (string) $number);
         $result = \number_format((int) $parts[0]);
 
         if (true === isset($parts[1])) {
-            if ($r = \rtrim($parts[1], '0')) {
+            if ($r = \rtrim(\substr($parts[1], 0, $int), '0')) {
                 $result .= '.' . $r;
             }
         }
@@ -1284,6 +1342,15 @@ function number_format($number)
     }
 
     return 0;
+}
+
+function array_last($array)
+{
+    if ($array instanceof \Limepie\ArrayObject) {
+        $array = $array->toArray();
+    }
+
+    return \array_pop($array);
 }
 
 function array_insert(&$array, $position, $insert)
@@ -1316,7 +1383,11 @@ function seqtoid($seq)
 
 function seqtokey($seq)
 {
-    return '__-' . \str_pad((string) $seq, 11, '0', \STR_PAD_LEFT) . '-__';
+    if (true === \is_numeric($seq)) {
+        return '__-' . \str_pad((string) $seq, 11, '0', \STR_PAD_LEFT) . '-__';
+    }
+
+    return $seq;
 }
 
 function seq2key($seq)
@@ -1327,7 +1398,7 @@ function seq2key($seq)
 function keytoseq($key)
 {
     if (1 === \preg_match('#^__-([0]+)?(?P<seq>\d+)-__$#', $key, $m)) {
-        return $m['seq'];
+        return (int) $m['seq'];
     }
 
     return null;
@@ -1336,7 +1407,7 @@ function keytoseq($key)
 function idtoseq($key)
 {
     if (1 === \preg_match('#^-([0]+)?(?P<seq>\d+)-$#', $key, $m)) {
-        return $m['seq'];
+        return (int) $m['seq'];
     }
 
     return null;
@@ -1345,6 +1416,11 @@ function idtoseq($key)
 function key2seq($key)
 {
     return \Limepie\keytoseq($key);
+}
+
+function strtoint($str)
+{
+    return \gmp_intval(\gmp_init($str));
 }
 
 function cartesian_product(array $input)
@@ -1365,15 +1441,24 @@ function cartesian_product(array $input)
     return $result;
 }
 
-function http_build_query(array $data = [], $glue = '=', $separator = '&')
+function http_build_query($data = [], $glue = '=', $separator = '&')
 {
-    $return = [];
+    $results = [];
+    $isAssoc = \Limepie\is_assoc($data);
 
-    foreach ($data as $key => $value) {
-        $return[] = $key . $glue . $value;
+    foreach ($data as $k => $v) {
+        if (true === \is_array($v)) {
+            $results[] = $k . $glue . '[' . http_build_query($v, $glue, $separator) . ']';
+        } else {
+            if ($isAssoc) {
+                $results[] = $k . $glue . $v;
+            } else {
+                $results[] = $v;
+            }
+        }
     }
 
-    return \implode($separator, $return);
+    return \implode($separator, $results);
 }
 
 function nest(array $flat, $value = []) : array
@@ -1427,7 +1512,7 @@ function flatten($arr, $base = '', $divider_char = '/')
         $index = -1;
 
         foreach ($arr as $k => $v) {
-            $index++;
+            ++$index;
 
             if (1 === \preg_match('#^__([^_]{13})__$#', $k, $m)) {
                 $k = $index;
@@ -1456,15 +1541,13 @@ function flatten_diff($arraya, $arrayb)
         foreach ($arrayb as $key2 => $value2) {
             if ($key1 === $key2) {
                 if ($value1 === $value2) {
-                    unset($old[$key1]);
-                    unset($new[$key2]);
+                    unset($old[$key1], $new[$key2]);
                 } else {
                     $diff[$key1] = [
                         'old' => $value1,
                         'new' => $value2,
                     ];
-                    unset($old[$key1]);
-                    unset($new[$key2]);
+                    unset($old[$key1], $new[$key2]);
                 }
             }
         }
@@ -1492,17 +1575,29 @@ function getIp()
 {
     if (true === isset($_SERVER['HTTP_CLIENT_IP'])) {
         return $_SERVER['HTTP_CLIENT_IP'];
-    } elseif (true === isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    }
+
+    if (true === isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
         return $_SERVER['HTTP_X_FORWARDED_FOR'];
-    } elseif (true === isset($_SERVER['HTTP_X_FORWARDED'])) {
+    }
+
+    if (true === isset($_SERVER['HTTP_X_FORWARDED'])) {
         return $_SERVER['HTTP_X_FORWARDED'];
-    } elseif (true === isset($_SERVER['HTTP_X_CLUSTER_CLIENT_IP'])) {
+    }
+
+    if (true === isset($_SERVER['HTTP_X_CLUSTER_CLIENT_IP'])) {
         return $_SERVER['HTTP_X_CLUSTER_CLIENT_IP'];
-    } elseif (true === isset($_SERVER['HTTP_FORWARDED_FOR'])) {
+    }
+
+    if (true === isset($_SERVER['HTTP_FORWARDED_FOR'])) {
         return $_SERVER['HTTP_FORWARDED_FOR'];
-    } elseif (true === isset($_SERVER['HTTP_FORWARDED'])) {
+    }
+
+    if (true === isset($_SERVER['HTTP_FORWARDED'])) {
         return $_SERVER['HTTP_FORWARDED'];
-    } elseif (true === isset($_SERVER['REMOTE_ADDR'])) {
+    }
+
+    if (true === isset($_SERVER['REMOTE_ADDR'])) {
         return $_SERVER['REMOTE_ADDR'];
     }
 
@@ -1543,7 +1638,7 @@ function inet_ntoa($num)
 }
 
 /**
- * Produce a version of the AES key in the same manor as MySQL
+ * Produce a version of the AES key in the same manor as MySQL.
  *
  * @param string $key
  *
@@ -1557,7 +1652,7 @@ function mysql_aes_key($key)
     $newKey = \str_repeat(\chr(0), $bytes);
     $length = \strlen($key);
 
-    for ($i = 0; $i < $length; $i++) {
+    for ($i = 0; $i < $length; ++$i) {
         $index          = $i % $bytes;
         $newKey[$index] = $newKey[$index] ^ $key[$i];
     }
@@ -1567,12 +1662,12 @@ function mysql_aes_key($key)
 
 /**
  * \putenv('AES_SALT=1234567890abcdefg');
- * Programmatically mimic a MySQL AES_ENCRYPT() action as a way of avoiding unnecessary database calls
+ * Programmatically mimic a MySQL AES_ENCRYPT() action as a way of avoiding unnecessary database calls.
  *
  * @param string     $decrypted
  * @param string     $cypher
  * @param bool       $mySqlKey
- * @param mixed|null $salt
+ * @param null|mixed $salt
  *
  * @return string
  */
@@ -1592,12 +1687,12 @@ function aes_encrypt($decrypted, $salt = null)
 }
 
 /**
- * Programmatically mimic a MySQL AES_DECRYPT() action as a way of avoiding unnecessary database calls
+ * Programmatically mimic a MySQL AES_DECRYPT() action as a way of avoiding unnecessary database calls.
  *
  * @param string     $encrypted
  * @param string     $cypher
  * @param bool       $mySqlKey
- * @param mixed|null $salt
+ * @param null|mixed $salt
  *
  * @return string
  */
@@ -1618,7 +1713,7 @@ function aes_decrypt($encrypted, $salt = null)
 
 function array_to_object($array)
 {
-    if (\is_array($array)) {
+    if (true === \is_array($array)) {
         return new \Limepie\ArrayObject($array);
     }
 
@@ -1632,11 +1727,126 @@ function ato($array)
 
 function array_change_key_case_recursive(array $arr, int $case = \CASE_LOWER)
 {
-    return \array_map(function($item) use ($case) {
+    return \array_map(function ($item) use ($case) {
         if (true === \is_array($item)) {
             $item = \Limepie\array_change_key_case_recursive($item, $case);
         }
 
         return $item;
     }, \array_change_key_case($arr, $case));
+}
+
+function date_period($start, $end, $is_after_today = false)
+{
+    if ($start instanceof \DateTime) {
+        $first = $start;
+    } else {
+        $first = new \DateTime($start);
+    }
+
+    if ($end instanceof \DateTime) {
+        $last = $end;
+    } else {
+        $last = new \DateTime($end);
+    }
+
+    if (true === $is_after_today) {
+        $today = new \DateTime();
+
+        if ($first < $today) {
+            $first = $today;
+        }
+    }
+
+    return new \DatePeriod(
+        $first->setTime(0, 0),
+        new \DateInterval('P1D'),
+        $last->setTime(0, 0)//->modify('+1 day') // include end date
+    );
+}
+function date_period2($start, $end, $is_after_today = false)
+{
+    if ($start instanceof \DateTime) {
+        $first = $start;
+    } else {
+        $first = new \DateTime($start);
+    }
+
+    if ($end instanceof \DateTime) {
+        $last = $end;
+    } else {
+        $last = new \DateTime($end);
+    }
+
+    if (true === $is_after_today) {
+        $today = new \DateTime();
+
+        if ($first < $today) {
+            $first = $today;
+        }
+    }
+
+    return new \DatePeriod(
+        $first->setTime(0, 0),
+        new \DateInterval('P1D'),
+        $last->setTime(0, 0)->modify('+1 day') // include end date
+    );
+}
+
+function add_slash($string)
+{
+    $wichs = \func_get_args();
+    \array_shift($wichs);
+
+    $test = [];
+
+    $length = 0;
+
+    foreach ($wichs as $wich) {
+        $test[] = \substr($string, $length, $wich);
+        $length += $wich;
+    }
+    $b = \substr($string, $length);
+
+    return \implode('/', $test) . '/' . $b;
+}
+
+function get_tree(array $data = []) : array{
+    $permalink = new \Limepie\Menu('', '');
+
+    foreach ($data as $row) {
+        $permalink->addSeq($row['name'], $row['current_seq'], '', $row['parent_seq'], ['seq' => $row['seq']]);
+    }
+
+    return $permalink->get(0);
+}
+
+function get_tree_item(array $data = []) : array
+{
+    $permalink = new \Limepie\Menu('', '');
+
+    foreach ($data as $row) {
+        $permalink->addSeq($row['name'], $row['current_seq'], '', $row['parent_seq'], ['seq' => $row['seq']]);
+    }
+
+    $iterator = new \RecursiveIteratorIterator(
+        new \Limepie\RecursiveIterator\AdjacencyList($permalink->menu),
+        \RecursiveIteratorIterator::SELF_FIRST
+    );
+
+    $items = [];
+
+    foreach ($iterator as $key => $value) {
+        // Build long key name based on parent keys
+        $names = [];
+
+        for ($i = 0; $iterator->getDepth() >= $i; ++$i) {
+            $it      = $iterator->getSubIterator($i)->current();
+            $names[] = $it['name'];
+        }
+
+        $items[$value['params']['seq']] = \implode(' > ', $names);
+    }
+
+    return $items;
 }

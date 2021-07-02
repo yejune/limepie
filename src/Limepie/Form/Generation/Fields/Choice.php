@@ -6,6 +6,15 @@ class Choice extends \Limepie\Form\Generation\Fields
 {
     public static function write($key, $property, $value)
     {
+        if(true === is_object($value)) {
+            if(true === property_exists($value, 'property')) {
+                $property = $value->property + $property;
+            }
+
+            if (true === property_exists($value, 'value')) {
+                $value = $value->value;
+            }
+        }
         $value = (string) $value;
 
         if (0 === \strlen($value) && true === isset($property['default'])) {
@@ -45,7 +54,7 @@ class Choice extends \Limepie\Form\Generation\Fields
 
         $readonly = '';
 
-        if (true === isset($property['readonly'])) {
+        if (true === isset($property['readonly']) && $property['readonly']) {
             $readonly = ' disabled-group';
         }
 

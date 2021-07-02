@@ -173,8 +173,6 @@ class Template
      * @param  $fid
      * @param mixed $addAssign
      * @param mixed $scope
-     *
-     * @return null
      */
     public function printContents($fid, array $addAssign = [], $scope = '') : void
     {
@@ -185,19 +183,8 @@ class Template
         if (true === isset($this->var_[$fid])) {
             $scope = $fid;
         }
+        $this->requireFile($this->getCompilePath($fid), $addAssign, $scope);
 
-        $this->noticeReporting = \error_reporting();
-
-        if ($this->notice) {
-            \error_reporting($this->noticeReporting | \E_NOTICE);
-            \set_error_handler([$this, 'templateNoticeHandler']);
-            $this->requireFile($this->getCompilePath($fid), $addAssign, $scope);
-            \restore_error_handler();
-        } else {
-            \error_reporting($this->noticeReporting & ~\E_NOTICE);
-            $this->requireFile($this->getCompilePath($fid), $addAssign, $scope);
-        }
-        \error_reporting($this->noticeReporting);
     }
 
     public function compilePath($filename)
@@ -305,8 +292,8 @@ class Template
         }
 
         $exception = new Exception($msg, 11003);
-        $exception->setFile($file);
-        $exception->setLine($line);
+        // $exception->setFile($file);
+        // $exception->setLine($line);
 
         throw $exception;
     }
@@ -344,7 +331,7 @@ class Template
             throw new Exception('cannot find defined template "' . $tplPath . '"', 11004);
         }
         //( 24 + 1 + 40 + 1 ) + ( 11 + 1 )
-        $cplHead = "<?php /* Peanut\Template " . \sha1_file($tplPath, false) . ' ' . \date('Y/m/d H:i:s', \filemtime($tplPath)) . ' ' . $tplPath . ' ';
+        $cplHead = '<?php /* Peanut\\Template ' . \sha1_file($tplPath, false) . ' ' . \date('Y/m/d H:i:s', \filemtime($tplPath)) . ' ' . $tplPath . ' ';
 
         if ('dev' !== $this->compileCheck && false !== $cplPath) {
             if (true === \file_exists($cplPath)) {

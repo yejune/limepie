@@ -3,9 +3,8 @@
 namespace Limepie;
 
 /**
- * 복호화 가능한 문자열로 암호화
+ * 복호화 가능한 문자열로 암호화.
  *
- * @package       system\encrypt
  * @category      system
  *
  * @param mixed $key
@@ -29,7 +28,7 @@ class Crypt
 
     protected static $availableCiphers = [];
 
-    public static function setAlgo($algo) : Crypt
+    public static function setAlgo($algo)
     {
         static::$_hashAlgo = $algo;
     }
@@ -191,7 +190,7 @@ class Encrypt extends Crypt
     private static function _bytexor($a, $b, $ilimit)
     {
         $c = '';
-        for ($i = 0; $i < $ilimit; $i++) {
+        for ($i = 0; $i < $ilimit; ++$i) {
             $c .= $a[$i] ^ $b[$i];
         }
 
@@ -205,7 +204,7 @@ class UnsafeCrypto
     public const METHOD = 'aes-256-ctr';
 
     /**
-     * Encrypts (but does not authenticate) a message
+     * Encrypts (but does not authenticate) a message.
      *
      * @param string $message - plaintext message
      * @param string $key     - encryption key (raw binary expected)
@@ -236,7 +235,7 @@ class UnsafeCrypto
     }
 
     /**
-     * Decrypts (but does not verify) a message
+     * Decrypts (but does not verify) a message.
      *
      * @param string $message - ciphertext message
      * @param string $key     - encryption key (raw binary expected)
@@ -258,15 +257,13 @@ class UnsafeCrypto
         $nonce      = \mb_substr($message, 0, $nonceSize, '8bit');
         $ciphertext = \mb_substr($message, $nonceSize, null, '8bit');
 
-        $plaintext = \openssl_decrypt(
+        return \openssl_decrypt(
             $ciphertext,
             self::METHOD,
             $key,
             \OPENSSL_RAW_DATA,
             $nonce
         );
-
-        return $plaintext;
     }
 }
 class SaferCrypto extends UnsafeCrypto
@@ -274,7 +271,7 @@ class SaferCrypto extends UnsafeCrypto
     public const HASH_ALGO = 'sha256';
 
     /**
-     * Encrypts then MACs a message
+     * Encrypts then MACs a message.
      *
      * @param string $message - plaintext message
      * @param string $key     - encryption key (raw binary expected)
@@ -300,7 +297,7 @@ class SaferCrypto extends UnsafeCrypto
     }
 
     /**
-     * Decrypts a message (after verifying integrity)
+     * Decrypts a message (after verifying integrity).
      *
      * @param string $message - ciphertext message
      * @param string $key     - encryption key (raw binary expected)
@@ -338,14 +335,12 @@ class SaferCrypto extends UnsafeCrypto
         }
 
         // Pass to UnsafeCrypto::decrypt
-        $plaintext = parent::decrypt($ciphertext, $encKey);
-
-        return $plaintext;
+        return parent::decrypt($ciphertext, $encKey);
     }
 
     /**
      * Splits a key into two separate keys; one for encryption
-     * and the other for authenticaiton
+     * and the other for authenticaiton.
      *
      * @param string $masterKey (raw binary)
      *
@@ -361,7 +356,7 @@ class SaferCrypto extends UnsafeCrypto
     }
 
     /**
-     * Compare two strings without leaking timing information
+     * Compare two strings without leaking timing information.
      *
      * @param string $a
      * @param string $b

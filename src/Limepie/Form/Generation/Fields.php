@@ -19,7 +19,7 @@ class Fields
         if (1 < \count($parts)) {
             $first = \array_shift($parts);
 
-            return $first . '[' . \implode('][', $parts) . ']';
+            return $first.'['.\implode('][', $parts).']';
         }
 
         return $dotName;
@@ -30,20 +30,20 @@ class Fields
         if (1 < \count($parts)) {
             $first = \array_shift($parts);
 
-            return $first . '[' . \implode('][', $parts) . ']';
+            return $first.'['.\implode('][', $parts).']';
         }
 
         return $dotName;
     }
 
-    public static function getMultipleHtml($key)
-    {
-        return '<span class="btn-group input-group-btn wrap-btn-plus" data-uniqid="' . $key . '"><button class="btn btn-success btn-plus" type="button"><span class="fas fa-plus"></span></button></span>';
-    }
+    // public static function getMultipleHtml($key)
+    // {
+    //     return '<span class="btn-group input-group-btn wrap-btn-plus" data-uniqid="'.$key.'"><button class="btn btn-plus" type="button">2222<span class="fas fa-plus"></span></button></span>';
+    // }
 
-    public static function getKey(string $key, string $id) : string
+    public static function getKey(string $key, string $id): string
     {
-        return \str_replace('[]', '[' . $id . ']', $key);
+        return \str_replace('[]', '['.$id.']', $key);
         // return \preg_replace_callback('#\[\]#', function($match) {
         //     return '[' . static::getUniqueId() . ']';
         // }, $key);
@@ -51,26 +51,36 @@ class Fields
 
     public static function getUniqueId()
     {
-        return '__' . \uniqid() . '__';
+        return '__'.\uniqid().'__';
     }
 
     // arr[arr[]] 형태를 arr[arr][]로 교정
-    public static function fixKey(string $key) : string
+    public static function fixKey(string $key): string
     {
         $arrCount = \substr_count($key, '[]');
 
-        return '[' . \str_replace('[]', '', $key) . ']' . \str_repeat('[]', $arrCount);
+        return '['.\str_replace('[]', '', $key).']'.\str_repeat('[]', $arrCount);
     }
 
-    public static function fixKey2(string $key) : string
+    public static function fixKey2(string $key): string
     {
-        return '[' . \str_replace('[]', '', $key) . ']';
+        return '['.\str_replace('[]', '', $key).']';
     }
 
     public static function isValue($value)
     {
         if (true === \Limepie\is_file_array($value, true)) {
             return true;
+        }
+
+        if ($value instanceof \Limepie\ArrayObject) {
+            $value = $value->toArray();
+        }
+
+        if (true === \is_object($value)) {
+            if (true === property_exists($value, 'value')) {
+                $value = $value->value;
+            }
         }
 
         if (true === \is_array($value)) {
@@ -96,7 +106,7 @@ class Fields
             $arrow = 'right';
         }
 
-        return '<span class="button-collapse" data-feather="chevron-' . $arrow . '"></span>';
+        return '<span class="button-collapse" data-feather="chevron-'.$arrow.'"></span>';
         //return '<i class="button-collapse glyphicon glyphicon-triangle-' . $arrow . '"></i> ';
     }
 
@@ -111,7 +121,7 @@ class Fields
                 $a = static::testValue($v);
 
                 if (false === $a) {
-                    $j++;
+                    ++$j;
                 }
             }
 
@@ -207,8 +217,8 @@ class Fields
                 continue;
             }
 
-            if (true === isset($value['properties'][$id . '[]'])) {
-                $value = $value['properties'][$id . '[]'];
+            if (true === isset($value['properties'][$id.'[]'])) {
+                $value = $value['properties'][$id.'[]'];
 
                 continue;
             }
@@ -219,7 +229,7 @@ class Fields
         return $value['default'] ?? null;
     }
 
-    public static function addElement($html, int $index, bool $isMultiple, bool $isCollapse, bool $isValue, string $parentId)
+    public static function addElement($html, int $index, bool $isMultiple, bool $isSotableButton, bool $isValue, string $parentId, $multiple_button_onclick='')
     {
         $btn = '';
 
@@ -235,28 +245,35 @@ class Fields
         }
 
         if (true === $isMultiple) {
-            $btn .= '<button class="btn btn-success btn-plus" type="button"><span class="fas fa-plus"></span></button>';
+            $click = '';
+            if($multiple_button_onclick) {
+                $click = ' onclick="'.$multiple_button_onclick.'"';
+            }
+
+            if($isSotableButton) {
+                $btn .= '<span class="btn btn-move fas fa-expand-arrows-alt"></span>';
+            }
+
+            $btn .= '<button class="btn btn-plus" type="button"'.$click.'><span class="fas fa-plus"></span></button>';
+
 
             if (1 < $index) {
-                $btn .= '<button class="btn btn-danger btn-minus" type="button"><span class="fas fa-minus"></span></button>';
+                $btn .= '<button class="btn btn-minus" type="button"'.$click.'><span class="fas fa-minus"></span></button>';
             } else {
-                $btn .= '<button class="btn btn-danger btn-minus" type="button"><span class="fas fa-minus"></span></button>';
+                $btn .= '<button class="btn btn-minus" type="button"'.$click.'><span class="fas fa-minus"></span></button>';
             }
         }
         $addClass = '';
 
         if ($btn) {
-            $html .= '<span class="btn-group input-group-btn' . $class . '">' . $btn . '</span>';
+            $html .= '<span class="btn-group input-group-btn'.$class.'">'.$btn.'</span>';
         }
-        $html = '<div data-uniqid="' . $parentId . '" class="wrap-element ' . (1 < $index ? 'clone-element' : '') . '' . $addClass . '">' . $html . '</div>';
 
-        return $html;
+        return '<div data-uniqid="'.$parentId.'" class="wrap-element '.(1 < $index ? 'clone-element' : '').''.$addClass.'">'.$html.'</div>';
     }
 
     public static function readElement($html, int $index = 1)
     {
-        $html = '<div class="wrap-element ' . (1 < $index ? 'clone-element' : '') . '">' . $html . '</div>';
-
-        return $html;
+        return '<div class="wrap-element '.(1 < $index ? 'clone-element' : '').'">'.$html.'</div>';
     }
 }

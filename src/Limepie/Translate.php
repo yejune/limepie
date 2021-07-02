@@ -10,6 +10,7 @@ class Translate implements \Iterator, \ArrayAccess, \Countable
     {
         $this->language = $language;
     }
+
     public function __get($property)
     {
         if (true === isset($this->language[$property])) {
@@ -27,18 +28,21 @@ class Translate implements \Iterator, \ArrayAccess, \Countable
     public function __call($property, $arguments)
     {
         if (0 === \strpos($property, 'set')) {
-            $fieldName                    = \Limepie\decamelize(\substr($property, 3));
+            $fieldName                  = \Limepie\decamelize(\substr($property, 3));
             $this->language[$fieldName] = $arguments[0];
 
             return $this;
-        } elseif (0 === \strpos($property, 'get')) {
+        }
+
+        if (0 === \strpos($property, 'get')) {
             $fieldName = \Limepie\decamelize(\substr($property, 3));
 
             return $this->language[$fieldName] ?? null;
-        } else {
-            throw new \Limepie\Exception('"' . $property . '" function not found', 999);
         }
+
+        throw new \Limepie\Exception('"' . $property . '" function not found', 999);
     }
+
     public function count()
     {
         return \count($this->language);
@@ -67,7 +71,7 @@ class Translate implements \Iterator, \ArrayAccess, \Countable
     {
         return $this->language[$offset];
 
-        return isset($this->language[$offset]) ? $this->language[$offset] : null;
+        return $this->language[$offset] ?? null;
     }
 
     //iterator_to_array
@@ -93,30 +97,23 @@ class Translate implements \Iterator, \ArrayAccess, \Countable
 
     public function current()
     {
-        $var = \current($this->language);
-
-        return $var;
+        return \current($this->language);
     }
 
     public function key()
     {
-        $var = \key($this->language);
-
-        return $var;
+        return \key($this->language);
     }
 
     public function next()
     {
-        $var = \next($this->language);
-
-        return $var;
+        return \next($this->language);
     }
 
     public function valid()
     {
         $key = \key($this->language);
-        $var = (null !== $key && false !== $key);
 
-        return $var;
+        return (null !== $key && false !== $key);
     }
 }

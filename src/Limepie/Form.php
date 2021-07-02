@@ -54,11 +54,11 @@ class Form
         return $this->validation->errors;
     }
 
-    public function write(array | \Limepie\ArrayObject $data = [])
+    public function write(array | \Limepie\ArrayObject | null $data = [])
     {
         $generation = new \Limepie\Form\Generation;
 
-        return $generation->write($this->spec, $data);
+        return $generation->write($this->spec, $data ?? []);
     }
 
     public function read(array $data = [])

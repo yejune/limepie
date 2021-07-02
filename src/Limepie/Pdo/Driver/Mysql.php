@@ -172,6 +172,7 @@ class Mysql extends \Limepie\Pdo
         try {
             return $this->execute($statement, $bindParameters, true);
         } catch (\PDOException $e) {
+            //\print_r($statement, $bindParameters);
             throw new Exception\Execute($e, $statement, $bindParameters);
         }
     }
@@ -471,6 +472,8 @@ class Mysql extends \Limepie\Pdo
 
     private function execute($statement, $bindParameters = [], $ret = false)
     {
+        //pr($statement, $bindParameters);
+
         $stmt  = parent::prepare($statement);
         $binds = [];
 
@@ -497,11 +500,11 @@ class Mysql extends \Limepie\Pdo
                 return $result;
             }
         } catch (\Limepie\Exception $e) {
-            throw new Exception\Execute($e, $this->getErrorFormat($statement, $bindParameters));
+            throw new Exception\Execute($e, $statement, $bindParameters);
             //throw ($e)->setDisplayMessage($stmt->errorInfo()[2]);
             //throw new \Limepie\Exception($e->getMessage(). ' ' .$stmt->errorInfo()[2]);
         } catch (\Throwable $e) {
-            throw new Exception\Execute($e, $this->getErrorFormat($statement, $bindParameters));
+            throw new Exception\Execute($e, $statement, $bindParameters);
             //throw (new \Limepie\Exception($e))->setDisplayMessage($stmt->errorInfo()[2]);
             //throw new \Limepie\Exception($e->getMessage(). ' ' .$stmt->errorInfo()[2]);
         }
@@ -520,12 +523,6 @@ class Mysql extends \Limepie\Pdo
 
     private function getErrorFormat($statement, array $binds = [])
     {
-        $newBinds = [];
-
-        foreach ($binds as $key => $value) {
-            $newBinds[] = ':' . $key . ' => ' . $value;
-        }
-
-        return $statement . ', [' . \implode(', ', $newBinds) . ']';
+        return trim($statement) . ', [' . \Limepie\http_build_query($binds, '=', ', ') . ']';
     }
 }

@@ -48,6 +48,8 @@ class Validation
         } else {
             $this->language = \Limepie\get_language();
         }
+
+        Validation::init();
     }
 
     public function setStrictMode($mode)
@@ -60,6 +62,207 @@ class Validation
     public static function addMethod($name, $callback)
     {
         static::$methods[$name] = $callback;
+    }
+
+    public static function init()
+    {
+        Validation::addMethod('required', function ($value, $name, $param) {
+            if (false === \Limepie\is_boolean_type($param)) {
+                return true;
+            }
+            // require = false일 경우 true
+            if (false === $param) {
+                return true;
+            }
+
+            if (true === \is_array($value) && \count($value)) {
+                return true;
+            }
+
+            if (0 < \strlen((string) $value)) {
+                return true;
+            }
+
+            return false;
+        });
+
+        Validation::addMethod('recaptcha', function ($value, $name, $param) {
+            return $this->optional($value) || $value;
+        });
+
+        Validation::addMethod('minlength', function ($value, $name, $param) {
+            $length = $this->getLength($value);
+
+            return $this->optional($value) || $length >= $param;
+        });
+
+        Validation::addMethod('even', function ($value, $name, $param) {
+            $length = $this->getLength($value);
+
+            return $this->optional($value) || 0 === (int) $value % 2;
+        });
+
+        Validation::addMethod('odd', function ($value, $name, $param) {
+            $length = $this->getLength($value);
+
+            return $this->optional($value) || 1 === (int) $value % 2;
+        });
+
+        Validation::addMethod('match', function ($value, $name, $param) {
+            return $this->optional($value, $name) || \preg_match('/^' . $param . '$/', (string) $value, $m);
+            // \pr($m);
+            //pr(Validation::getMethod('required')($value,'',''),$value, $name, $param, $this->optional($value), \preg_match('/^' . $param . '$/', $value));
+        });
+
+        Validation::addMethod('maxlength', function ($value, $name, $param) {
+            $length = $this->getLength($value);
+
+            return $this->optional($value) || $length <= $param;
+        });
+
+        Validation::addMethod('rangelength', function ($value, $name, $param) {
+            $length = $this->getLength($value);
+
+            return $this->optional($value) || $length >= $param[0] && $length <= $param[1];
+        });
+
+        Validation::addMethod('min', function ($value, $name, $param) {
+            return $this->optional($value) || $value >= $param;
+        });
+
+        Validation::addMethod('max', function ($value, $name, $param) {
+            return $this->optional($value) || $value <= $param;
+        });
+
+        Validation::addMethod('range', function ($value, $name, $param) {
+            return $this->optional($value) || $value >= $param[0] && $value <= $param[1];
+        });
+
+        Validation::addMethod('in', function ($value, $name, $param) {
+            $enum = \Limepie\array_value_flatten($param);
+
+            return $this->optional($value) || false !== \in_array($value, $enum, false);
+        });
+
+        // required일때 동작
+        Validation::addMethod('mincount', function ($value, $name, $param) {
+            $elements = $this->getValue($name);
+            $count = 0;
+
+            if (true === \is_array($elements)) {
+                foreach ($elements as $val) {
+                    if (0 < \strlen($val)) {
+                        ++$count;
+                    }
+                }
+            }
+
+            return $this->optional($value) || $count >= $param;
+
+            return $count >= $param;
+        });
+
+        Validation::addMethod('maxcount', function ($value, $name, $param) {
+            $elements = $this->getValue($name);
+            $count = 0;
+
+            if (true === \is_array($elements)) {
+                foreach ($elements as $val) {
+                    if (0 < \strlen($val)) {
+                        ++$count;
+                    }
+                }
+            }
+
+            return $this->optional($value) || $count <= $param;
+
+            return $count >= $param;
+        });
+
+        Validation::addMethod('unique', function ($value, $name, $param) {
+            $unique = [];
+            $check = false;
+            $name = \preg_replace('#\[__([0-9a-z\*]{13,})__\]$#', '', $name);
+            $data = $this->getValue($name);
+
+            if (true === \is_array($data)) {
+                foreach ($data as $v) {
+                    if (true === isset($unique[$v])) {
+                        $check = true;
+                    }
+                    $unique[$v] = 1;
+                }
+
+                return $this->optional($value) || !$check; //$length == $unique;
+            }
+
+            return true;
+        });
+        Validation::addMethod('accept', function ($value, $name, $pattern) {
+            if ($optionValue = $this->optional($value)) {
+                return $optionValue;
+            }
+
+            if (isset($value['type'])) {
+                $pattern = \str_replace(',', '|', $pattern);
+                $pattern = \str_replace('/*', '/.*', $pattern);
+
+                return \preg_match('#\.?(' . $pattern . ')$#', $value['type']);
+            }
+
+            return true;
+        });
+        Validation::addMethod('email', function ($value, $name, $param) {
+            return $this->optional($value) || false !== \filter_var($value, \FILTER_VALIDATE_EMAIL);
+        });
+
+        Validation::addMethod('url', function ($value, $name, $param) {
+            return $this->optional($value) || false !== \filter_var($value, \FILTER_VALIDATE_URL);
+        });
+
+        Validation::addMethod('date', function ($value, $name, $param) {
+            return $this->optional($value) || false !== \strtotime($value);
+        });
+
+        Validation::addMethod('dateISO', function ($value, $name, $param) {
+            return $this->optional($value) || \preg_match('/^\d{4}[\/\-](0?[1-9]|1[012])[\/\-](0?[1-9]|[12][0-9]|3[01])$/', $value);
+        });
+
+        Validation::addMethod('number', function ($value, $name, $param) {
+            return $this->optional($value) || \is_numeric($value);
+        });
+
+        Validation::addMethod('digits', function ($value, $name, $param) {
+            return $this->optional($value) || \preg_match('/^\d+$/', $value);
+        });
+
+        Validation::addMethod('equalTo', function ($value, $name, $param) {
+            if ($this->optional($value)) {
+                return true;
+            }
+
+            $target = \ltrim($param, '#.');
+
+            return $this->getValue($target) === $value;
+        });
+
+        Validation::addMethod('maxTo', function ($value, $name, $param) {
+            if ($this->optional($value)) {
+                return true;
+            }
+            $start = $this->getValue($this->getNameByDot($param));
+
+            return $start <= $value || 0 === $value;
+        });
+
+        Validation::addMethod('enddate', function ($value, $name, $param) {
+            if ($this->optional($value)) {
+                return true;
+            }
+            $start = $this->getValue($this->getNameByDot($param));
+
+            return \strtotime($start) <= \strtotime($value) || '' === $value;
+        });
     }
 
     public function getMethod($name)
@@ -76,10 +279,10 @@ class Validation
     public function validate(array $specs, ?array $data = [], string $name = '')
     {
         $valid = true;
-// if(false === isset($specs['properties'])) {
-//     \pr($specs);
-// }
-        foreach ($specs['properties'] as $propertyKey => $propertyValue) {
+        // if(false === isset($specs['properties'])) {
+        // \pr($specs,$data, $name);
+        // }
+        foreach ($specs['properties'] ?? [] as $propertyKey => $propertyValue) {
             $propertyValue['key'] = $propertyKey;
             $fixPropertyKey       = $propertyKey;
             $isArray              = false;
@@ -204,7 +407,7 @@ class Validation
         if (false === \is_array($param)) {
             $param = [$param];
         }
-        $format = \preg_replace("/\{([0-9]+)\}/", '%s', $format);
+        $format = \preg_replace('/\\{([0-9]+)\\}/', '%s', $format);
 
         return \call_user_func_array('sprintf', \array_merge([$format], $param));
     }
@@ -241,7 +444,7 @@ class Validation
             return $first . '[' . \implode('][', $parts) . ']';
         }
 
-        return $dotName;
+        return $parts[0];
     }
 
     public function getValue($name)
@@ -334,189 +537,3 @@ class Validation
         return true;
     }
 }
-Validation::addMethod('required', function($value, $name, $param) {
-    if (false === \Limepie\is_boolean_type($param)) {
-        return true;
-    }
-    // require = false일 경우 true
-    if (false === $param) {
-        return true;
-    }
-
-    if (true === \is_array($value) && \count($value)) {
-        return true;
-    }
-
-    if (0 < \strlen((string) $value)) {
-        return true;
-    }
-
-    return false;
-});
-
-Validation::addMethod('recaptcha', function($value, $name, $param) {
-    return $this->optional($value) || $value;
-});
-
-Validation::addMethod('minlength', function($value, $name, $param) {
-    $length = $this->getLength($value);
-
-    return $this->optional($value) || $length >= $param;
-});
-
-Validation::addMethod('even', function($value, $name, $param) {
-    $length = $this->getLength($value);
-
-    return $this->optional($value) || 0 === (int) $value % 2;
-});
-
-Validation::addMethod('odd', function($value, $name, $param) {
-    $length = $this->getLength($value);
-
-    return $this->optional($value) || 1 === (int) $value % 2;
-});
-
-Validation::addMethod('match', function($value, $name, $param) {
-    $a = $this->optional($value, $name) || \preg_match('/^' . $param . '$/', (string) $value, $m);
-    // \pr($m);
-    //pr(Validation::getMethod('required')($value,'',''),$value, $name, $param, $this->optional($value), \preg_match('/^' . $param . '$/', $value));
-    return $a;
-});
-
-Validation::addMethod('maxlength', function($value, $name, $param) {
-    $length = $this->getLength($value);
-
-    return $this->optional($value) || $length <= $param;
-});
-
-Validation::addMethod('rangelength', function($value, $name, $param) {
-    $length = $this->getLength($value);
-
-    return $this->optional($value) || $length >= $param[0] && $length <= $param[1];
-});
-
-Validation::addMethod('min', function($value, $name, $param) {
-    return $this->optional($value) || $value >= $param;
-});
-
-Validation::addMethod('max', function($value, $name, $param) {
-    return $this->optional($value) || $value <= $param;
-});
-
-Validation::addMethod('range', function($value, $name, $param) {
-    return $this->optional($value) || $value >= $param[0] && $value <= $param[1];
-});
-
-Validation::addMethod('in', function($value, $name, $param) {
-    $enum = \Limepie\array_value_flatten($param);
-
-    return $this->optional($value) || false !== \in_array($value, $enum, false);
-});
-
-// required일때 동작
-Validation::addMethod('mincount', function($value, $name, $param) {
-    $elements = $this->getValue($name);
-    $count = 0;
-
-    if (true === \is_array($elements)) {
-        foreach ($elements as $val) {
-            if (0 < \strlen($val)) {
-                $count++;
-            }
-        }
-    }
-
-    return $this->optional($value) || $count >= $param;
-
-    return $count >= $param;
-});
-
-Validation::addMethod('maxcount', function($value, $name, $param) {
-    $elements = $this->getValue($name);
-    $count = 0;
-
-    if (true === \is_array($elements)) {
-        foreach ($elements as $val) {
-            if (0 < \strlen($val)) {
-                $count++;
-            }
-        }
-    }
-
-    return $this->optional($value) || $count <= $param;
-
-    return $count >= $param;
-});
-
-Validation::addMethod('unique', function($value, $name, $param) {
-    $unique = [];
-    $check = false;
-    $name = \preg_replace('#\[__([0-9a-z\*]{13,13})__\]$#', '', $name);
-    $data = $this->getValue($name);
-
-    if (true === \is_array($data)) {
-        foreach ($data as $v) {
-            if (true === isset($unique[$v])) {
-                $check = true;
-            }
-            $unique[$v] = 1;
-        }
-
-        return $this->optional($value) || !$check; //$length == $unique;
-    }
-
-    return true;
-});
-Validation::addMethod('accept', function($value, $name, $pattern) {
-    if ($optionValue = $this->optional($value)) {
-        return $optionValue;
-    }
-
-    if (isset($value['type'])) {
-        $pattern = \str_replace(',', '|', $pattern);
-        $pattern = \str_replace('/*', '/.*', $pattern);
-
-        return \preg_match('#\.?(' . $pattern . ')$#', $value['type']);
-    }
-
-    return true;
-});
-Validation::addMethod('email', function($value, $name, $param) {
-    return $this->optional($value) || false !== \filter_var($value, \FILTER_VALIDATE_EMAIL);
-});
-
-Validation::addMethod('url', function($value, $name, $param) {
-    return $this->optional($value) || false !== \filter_var($value, \FILTER_VALIDATE_URL);
-});
-
-Validation::addMethod('date', function($value, $name, $param) {
-    return $this->optional($value) || false !== \strtotime($value);
-});
-
-Validation::addMethod('dateISO', function($value, $name, $param) {
-    return $this->optional($value) || \preg_match('/^\d{4}[\/\-](0?[1-9]|1[012])[\/\-](0?[1-9]|[12][0-9]|3[01])$/', $value);
-});
-
-Validation::addMethod('number', function($value, $name, $param) {
-    return $this->optional($value) || \is_numeric($value);
-});
-
-Validation::addMethod('digits', function($value, $name, $param) {
-    return $this->optional($value) || \preg_match('/^\d+$/', $value);
-});
-
-Validation::addMethod('equalTo', function($value, $name, $param) {
-    if ($this->optional($value)) {
-        return true;
-    }
-
-    $target = \ltrim($param, '#.');
-
-    return $this->getValue($target) === $value;
-});
-
-Validation::addMethod('enddate', function($value, $name, $param) {
-    $start = $this->getValue($this->getNameByDot($param));
-
-    return \strtotime($start) <= \strtotime($value) || '' === $value;
-});

@@ -10,6 +10,13 @@ class Month
 
     public $end;
 
+    public $holidays = [];
+
+    public function setHolidays(array $holidays = [])
+    {
+        $this->holidays = $holidays;
+    }
+
     // 달력에 들어갈 한달치 날짜정보를 만들어 리턴한다.
     public function getTable(\DateTime $start, \DateTime $end)
     {
@@ -37,20 +44,30 @@ class Month
             );
 
             foreach ($prependPeriod as $key => $value) {
+                $holiday      = $this->holidays[$value->format('Y-m-d')] ?? ['name' => null, 'is_holiday' => 0];
                 $this->days[] = [
-                    'is_blank'   => true,
-                    'is_current' => $value >= $this->start && $value <= $this->end,
-                    'datetime'   => $value,
+                    'name'        => $holiday['name'],
+                    'datetime'    => $value,
+                    'is_holiday'  => $holiday['is_holiday'],
+                    'is_blank'    => 1,
+                    'is_current'  => (int)( $value >= $this->start && $value <= $this->end),
+                    'yoil_number' => $value->format('w'),
+                    'day_number'  => $value->format('j')
                 ];
             }
         }
 
         foreach ($period as $key => $value) {
+            $holiday = $this->holidays[$value->format('Y-m-d')] ?? ['name' => null, 'is_holiday' => 0];
             //\pr($value, $start, $value >= $start);
             $this->days[] = [
-                'is_blank'   => false,
-                'is_current' => $value >= $this->start && $value <= $this->end,
-                'datetime'   => $value,
+                'name'        => $holiday['name'],
+                'datetime'    => $value,
+                'is_holiday'  => $holiday['is_holiday'],
+                'is_blank'    => 0,
+                'is_current'  => (int) ($value >= $this->start && $value <= $this->end),
+                'yoil_number' => $value->format('w'),
+                'day_number'  => $value->format('j')
             ];
         }
 
@@ -65,10 +82,15 @@ class Month
             );
 
             foreach ($appendPeriod as $key => $value) {
+                $holiday      = $this->holidays[$value->format('Y-m-d')] ?? ['name' => null, 'is_holiday' => 0];
                 $this->days[] = [
-                    'is_blank'   => true,
-                    'is_current' => $value >= $this->start && $value <= $this->end,
-                    'datetime'   => $value,
+                    'name'        => $holiday['name'],
+                    'datetime'    => $value,
+                    'is_holiday'  => $holiday['is_holiday'],
+                    'is_blank'    => 1,
+                    'is_current'  => (int)($value >= $this->start && $value <= $this->end),
+                    'yoil_number' => $value->format('w'),
+                    'day_number'  => $value->format('j')
                 ];
             }
         }

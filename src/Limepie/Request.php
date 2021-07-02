@@ -64,8 +64,10 @@ class Request
             $this->requestUri = $requestUri;
         }
         $this->uri      = $this->getRequestUri();
+
         $this->url      = $this->getUrl();
         $this->urlParts = \parse_url($this->url);
+        $this->host = $this->urlParts['host'];
 
         $tmp         = \explode('?', $this->uri, 2);
         $this->path  = $tmp[0] ?? '';
@@ -101,10 +103,14 @@ class Request
     }
 
     /**
-     * Gets HTTP schema (http/https)
+     * Gets HTTP schema (http/https).
      */
     public function getScheme() : string
     {
+        if(true === isset($_ENV['is_swoole']) && 1 === (int)$_ENV['is_swoole']) {
+            $this->scheme = 'https';
+        }
+
         if ($this->scheme) {
             return $this->scheme;
         }
@@ -287,7 +293,7 @@ class Request
     {
         $matches = [];
 
-        if (1 === \preg_match("/(?P<domain>[a-z0-9][a-z0-9\-]{1,63}\.[a-z\.]{2,6})$/i", $domain, $matches)) {
+        if (1 === \preg_match('/(?P<domain>[a-z0-9][a-z0-9\\-]{1,63}\\.[a-z\\.]{2,6})$/i', $domain, $matches)) {
             return $matches['domain'];
         }
 
@@ -327,7 +333,7 @@ class Request
     }
 
     /**
-     * Gets an array with mime/types and their quality accepted by the browser/client from _SERVER["HTTP_ACCEPT"]
+     * Gets an array with mime/types and their quality accepted by the browser/client from _SERVER["HTTP_ACCEPT"].
      */
     public function getAcceptableContent() : array
     {
@@ -335,7 +341,7 @@ class Request
     }
 
     /**
-     * Gets content type which request has been made
+     * Gets content type which request has been made.
      */
     public function getContentType() : ?string
     {
@@ -355,7 +361,7 @@ class Request
     }
 
     /**
-     * Gets HTTP raw request body
+     * Gets HTTP raw request body.
      */
     public function getRawBody() : string
     {
@@ -363,7 +369,7 @@ class Request
     }
 
     /**
-     * Gets web page that refers active request. ie: http://www.google.com
+     * Gets web page that refers active request. ie: http://www.google.com.
      */
     public function getHTTPReferer() : string
     {
@@ -372,9 +378,7 @@ class Request
 
     /**
      * Gets decoded JSON HTTP raw request body
-     * return <\stdClass> | array | bool
-     *
-     * @param bool $associative
+     * return <\stdClass> | array | bool.
      */
     public function getJsonRawBody(bool $associative = false)
     {
@@ -389,7 +393,7 @@ class Request
 
     /**
      * Gets best language accepted by the browser/client from
-     * _SERVER["HTTP_ACCEPT_LANGUAGE"]
+     * _SERVER["HTTP_ACCEPT_LANGUAGE"].
      */
     public function getBestLanguage()
     {
@@ -397,7 +401,7 @@ class Request
     }
 
     /**
-     * Gets languages array and their quality accepted by the browser/client from _SERVER["HTTP_ACCEPT_LANGUAGE"]
+     * Gets languages array and their quality accepted by the browser/client from _SERVER["HTTP_ACCEPT_LANGUAGE"].
      */
     public function getLanguages() : array
     {
@@ -405,7 +409,7 @@ class Request
     }
 
     /**
-     * Gets HTTP method which request has been made
+     * Gets HTTP method which request has been made.
      *
      * If the X-HTTP-Method-Override header is set, and if the method is a POST,
      * then it is used to determine the "real" intended HTTP method.
@@ -447,7 +451,7 @@ class Request
     }
 
     /**
-     * Gets HTTP user agent used to made the request
+     * Gets HTTP user agent used to made the request.
      */
     public function getUserAgent() : string
     {
@@ -477,7 +481,7 @@ class Request
     }
 
     /**
-     * Gets HTTP URI which request has been made
+     * Gets HTTP URI which request has been made.
      */
     final public function getURI() : string
     {
@@ -625,7 +629,7 @@ class Request
     }
 
     /**
-     * Checks whether request has been made using ajax
+     * Checks whether request has been made using ajax.
      */
     public function isAjax() : bool
     {
@@ -633,7 +637,7 @@ class Request
     }
 
     /**
-     * Checks whether HTTP method is CONNECT. if _SERVER["REQUEST_METHOD"]==="CONNECT"
+     * Checks whether HTTP method is CONNECT. if _SERVER["REQUEST_METHOD"]==="CONNECT".
      */
     public function isConnect() : bool
     {
@@ -641,7 +645,7 @@ class Request
     }
 
     /**
-     * Checks whether HTTP method is DELETE. if _SERVER["REQUEST_METHOD"]==="DELETE"
+     * Checks whether HTTP method is DELETE. if _SERVER["REQUEST_METHOD"]==="DELETE".
      */
     public function isDelete() : bool
     {
@@ -649,7 +653,7 @@ class Request
     }
 
     /**
-     * Checks whether HTTP method is GET. if _SERVER["REQUEST_METHOD"]==="GET"
+     * Checks whether HTTP method is GET. if _SERVER["REQUEST_METHOD"]==="GET".
      */
     public function isGet() : bool
     {
@@ -657,7 +661,7 @@ class Request
     }
 
     /**
-     * Checks whether HTTP method is HEAD. if _SERVER["REQUEST_METHOD"]==="HEAD"
+     * Checks whether HTTP method is HEAD. if _SERVER["REQUEST_METHOD"]==="HEAD".
      */
     public function isHead() : bool
     {
@@ -666,10 +670,9 @@ class Request
 
     /**
      * Check if HTTP method match any of the passed methods
-     * When strict is true it checks if validated methods are real HTTP methods
+     * When strict is true it checks if validated methods are real HTTP methods.
      *
      * @param mixed $methods
-     * @param bool  $strict
      */
     public function isMethod($methods, bool $strict = false) : bool
     {
@@ -701,7 +704,7 @@ class Request
     }
 
     /**
-     * Checks whether HTTP method is OPTIONS. if _SERVER["REQUEST_METHOD"]==="OPTIONS"
+     * Checks whether HTTP method is OPTIONS. if _SERVER["REQUEST_METHOD"]==="OPTIONS".
      */
     public function isOptions() : bool
     {
@@ -709,7 +712,7 @@ class Request
     }
 
     /**
-     * Checks whether HTTP method is PATCH. if _SERVER["REQUEST_METHOD"]==="PATCH"
+     * Checks whether HTTP method is PATCH. if _SERVER["REQUEST_METHOD"]==="PATCH".
      */
     public function isPatch() : bool
     {
@@ -717,7 +720,7 @@ class Request
     }
 
     /**
-     * Checks whether HTTP method is POST. if _SERVER["REQUEST_METHOD"]==="POST"
+     * Checks whether HTTP method is POST. if _SERVER["REQUEST_METHOD"]==="POST".
      */
     public function isPost() : bool
     {
@@ -725,7 +728,7 @@ class Request
     }
 
     /**
-     * Checks whether HTTP method is PUT. if _SERVER["REQUEST_METHOD"]==="PUT"
+     * Checks whether HTTP method is PUT. if _SERVER["REQUEST_METHOD"]==="PUT".
      */
     public function isPut() : bool
     {
@@ -733,7 +736,7 @@ class Request
     }
 
     /**
-     * Checks whether HTTP method is PURGE (Squid and Varnish support). if _SERVER["REQUEST_METHOD"]==="PURGE"
+     * Checks whether HTTP method is PURGE (Squid and Varnish support). if _SERVER["REQUEST_METHOD"]==="PURGE".
      */
     public function isPurge() : bool
     {
@@ -741,7 +744,7 @@ class Request
     }
 
     /**
-     * Checks whether request has been made using any secure layer
+     * Checks whether request has been made using any secure layer.
      */
     public function isSecure() : bool
     {
@@ -749,7 +752,7 @@ class Request
     }
 
     /**
-     * Checks if the `Request::getHttpHost` method will be use strict validation of host name or not
+     * Checks if the `Request::getHttpHost` method will be use strict validation of host name or not.
      */
     public function isStrictHostCheck() : bool
     {
@@ -757,7 +760,7 @@ class Request
     }
 
     /**
-     * Checks whether request has been made using SOAP
+     * Checks whether request has been made using SOAP.
      */
     public function isSoap() : bool
     {
@@ -776,7 +779,7 @@ class Request
     }
 
     /**
-     * Checks whether HTTP method is TRACE. if _SERVER["REQUEST_METHOD"]==="TRACE"
+     * Checks whether HTTP method is TRACE. if _SERVER["REQUEST_METHOD"]==="TRACE".
      */
     public function isTrace() : bool
     {
@@ -784,9 +787,7 @@ class Request
     }
 
     /**
-     * Checks if a method is a valid HTTP method
-     *
-     * @param string $method
+     * Checks if a method is a valid HTTP method.
      */
     public function isValidHttpMethod(string $method) : bool
     {
@@ -808,9 +809,7 @@ class Request
     }
 
     /**
-     * Sets if the `Request::getHttpHost` method must be use strict validation of host name or not
-     *
-     * @param bool $flag
+     * Sets if the `Request::getHttpHost` method must be use strict validation of host name or not.
      */
     public function setStrictHostCheck(bool $flag = true) : self
     {
@@ -986,9 +985,8 @@ class Request
     }
 
     /**
-     * Process a request header and return the one with best quality
+     * Process a request header and return the one with best quality.
      *
-     * @param array   $qualityParts
      * @param ?string $name
      */
     final protected function getBestQuality(array $qualityParts, ?string $name) : string
@@ -1009,7 +1007,7 @@ class Request
                     $selectedName = $accept[$name];
                 }
             }
-            $i++;
+            ++$i;
         }
 
         return $selectedName;
@@ -1022,7 +1020,7 @@ class Request
 
         foreach ($parts as $part) {
             $headerParts = [];
-            $tmp         = \preg_split("/\s*;\s*/", \trim($part), -1, \PREG_SPLIT_NO_EMPTY);
+            $tmp         = \preg_split('/\\s*;\\s*/', \trim($part), -1, \PREG_SPLIT_NO_EMPTY);
 
             foreach ($tmp as $headerPart) {
                 if (false !== \strpos($headerPart, '=')) {
@@ -1063,9 +1061,7 @@ class Url
 
     /**
      * 예)  http://localhost:8080/project/list.jsp
-     *  [return]        /project/list.js
-     *
-     * @return void
+     *  [return]        /project/list.js.
      */
     public static function getRequestURI()
     {
@@ -1081,11 +1077,9 @@ class Url
 
     /**
      * path 메소드는 request의 URI를 반환합니다.
-     * 따라서 들어오는 request가 http://domain.com/foo/bar/를 대상으로 한다면 path 메소드는 /foo/bar를 반환합니다:
+     * 따라서 들어오는 request가 http://domain.com/foo/bar/를 대상으로 한다면 path 메소드는 /foo/bar를 반환합니다:.
      *
      * @param mixed $removeLeadingSlashes
-     *
-     * @return void
      */
     public static function getPath($removeLeadingSlashes = false)
     {
@@ -1098,9 +1092,7 @@ class Url
     /**
      * 전체 경로를 가져옵니다. query string 제외
      * 예) http://localhost:8080/project/list.jsp?bid=free
-     * [return]   http://localhost:8080/project/list.jsp
-     *
-     * @return void
+     * [return]   http://localhost:8080/project/list.jsp.
      */
     public static function getRequestURL()
     {
@@ -1113,9 +1105,7 @@ class Url
     /**
      * Get방식으로 넘어온 쿼리문자열을 구하기 위한 request 객체의 메소드는 getQueryString() 입니다. 이 getQueryString() 메소드는 쿼리문자열이 없을때는 null을 리턴해 줍니다.
      * http://localhost/community/board.jsp?bid=free&page=1
-     * bid=free&page=1
-     *
-     * @return void
+     * bid=free&page=1.
      */
     public static function getQueryString()
     {

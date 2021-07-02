@@ -6,11 +6,13 @@ class Model extends ArrayObject
 {
     public $pdo;
 
+    public $dataStyles = [];
+
     public $dataTypes = [];
 
     public $tableName;
 
-    public $aliasTableName;
+    public $newTableName;
 
     public $tableAliasName;
 
@@ -20,13 +22,15 @@ class Model extends ArrayObject
 
     public $primaryKeyValue;
 
-    public $fields = [];
+    public $normalColumns = [];
 
-    public $timestampFields = [];
+    public $timestampColumns = [];
 
     public $attributes = [];
 
-    public $selectFields = ['*'];
+    public $functions = [];
+
+    public $selectColumns = ['*'];
 
     public $orderBy = '';
 
@@ -54,13 +58,26 @@ class Model extends ArrayObject
 
     public $conditions = [];
 
-    public $joinModel;
-
-    public $joinOn = '';
+    public $joinModels = [];
 
     public $bindcount = 0;
 
-    public function __construct($pdo = '', $attributes = [])
+    public $secondKeyName;
+
+    public $removeColumns = [];
+
+    public $parent;
+
+    public $forceIndexes = [];
+
+    public static $debug = false;
+
+    public static function newInstance(\Pdo $pdo = null, $attributes = []) : self
+    {
+        return new self($pdo, $attributes);
+    }
+
+    public function __construct(\Pdo $pdo = null, $attributes = [])
     {
         if ($pdo) {
             $this->setConnect($pdo);
@@ -72,7 +89,7 @@ class Model extends ArrayObject
         $this->keyName = $this->primaryKeyName;
     }
 
-    public function __invoke($pdo = null)
+    public function __invoke(\Pdo $pdo = null)
     {
         if ($pdo) {
             $this->setConnect($pdo);
@@ -83,48 +100,123 @@ class Model extends ArrayObject
 
     public function __call($name, $arguments)
     {
-        if ('gets' === $name) {
-            return $this->buildGets($name, $arguments);
-        } elseif ('get' === $name) {
-            return $this->buildGet($name, $arguments);
-        } elseif (0 === \strpos($name, 'orderBy')) {
+        // if ('gets' === $name) {
+        //     return $this->buildGets($name, $arguments);
+        // } elseif ('get' === $name) {
+        //     return $this->buildGet($name, $arguments);
+        // } else
+        if (0 === \strpos($name, 'orderBy')) {
             return $this->buildOrderBy($name, $arguments);
-        } elseif (0 === \strpos($name, 'where')) {
+        }
+
+        if (0 === \strpos($name, 'condition')) {
+            return $this->buildCondition($name, $arguments);
+        }
+
+        if (0 === \strpos($name, 'where')) {
             return $this->buildWhere($name, $arguments);
-        } elseif (0 === \strpos($name, 'and')) {
+        }
+
+        if (0 === \strpos($name, 'and')) {
             return $this->buildAnd($name, $arguments);
-        } elseif (0 === \strpos($name, 'or')) {
+        }
+
+        if (0 === \strpos($name, 'or')) {
             return $this->buildOr($name, $arguments);
-        } elseif (0 === \strpos($name, 'key')) {
-            return $this->buildKey($name, $arguments);
-        } elseif (0 === \strpos($name, 'alias')) {
+        }
+
+        if (0 === \strpos($name, 'keyName')) {
+            return $this->buildKeyName($name, $arguments);
+        }
+
+        if (0 === \strpos($name, 'alias')) {
             return $this->buildAlias($name, $arguments);
-        } elseif (0 === \strpos($name, 'match')) {
+        }
+
+        if (0 === \strpos($name, 'matchAll')) {
+            $this->getAllColumns();
+
             return $this->buildMatch($name, $arguments);
-        } elseif (0 === \strpos($name, 'getBy')) {
+        }
+
+        if (0 === \strpos($name, 'match')) {
+            return $this->buildMatch($name, $arguments);
+        }
+
+        if (0 === \strpos($name, 'join')) {
+            return $this->buildJoin($name, $arguments);
+        }
+
+        if (0 === \strpos($name, 'leftJoin')) {
+            return $this->buildJoin($name, $arguments);
+        }
+
+        if (0 === \strpos($name, 'getAllBy')) {
+            $this->getAllColumns();
+
+            return $this->buildGetBy($name, $arguments, 8);
+        }
+
+        if (0 === \strpos($name, 'getBy')) {
             return $this->buildGetBy($name, $arguments);
-        } elseif (0 === \strpos($name, 'getCount')) {
+        }
+
+        if (0 === \strpos($name, 'getCount')) {
             return $this->buildGetCount($name, $arguments);
-        } elseif (0 === \strpos($name, 'getsBy')) {
+        }
+
+        if (0 === \strpos($name, 'getsAllBy')) {
+            $this->getAllColumns();
+
+            return $this->buildGetsBy($name, $arguments, 9);
+        }
+
+        if (0 === \strpos($name, 'getsBy')) {
             return $this->buildGetsBy($name, $arguments);
-        } elseif (0 === \strpos($name, 'set')) {
+        }
+
+        if (0 === \strpos($name, 'addColumn')) {
+            return $this->buildAddColumn($name, $arguments);
+        }
+
+        if (0 === \strpos($name, 'set')) {
             return $this->buildSet($name, $arguments);
-        } elseif (0 === \strpos($name, 'get')) { // get field
-            return $this->buildGetField($name, $arguments);
-        } elseif (0 === \strpos($name, 'gt')) {
+        }
+
+        if (0 === \strpos($name, 'get')) { // get column
+            return $this->buildGetColumn($name, $arguments);
+        }
+
+        if (0 === \strpos($name, 'gt')) {
             return $this->buildGt($name, $arguments);
-        } elseif (0 === \strpos($name, 'lt')) {
+        }
+
+        if (0 === \strpos($name, 'lt')) {
             return $this->buildLt($name, $arguments);
-        } elseif (0 === \strpos($name, 'ge')) {
+        }
+
+        if (0 === \strpos($name, 'ge')) {
             return $this->buildGe($name, $arguments);
-        } elseif (0 === \strpos($name, 'le')) {
+        }
+
+        if (0 === \strpos($name, 'le')) {
             return $this->buildLe($name, $arguments);
-        } elseif (0 === \strpos($name, 'eq')) {
+        }
+
+        if (0 === \strpos($name, 'eq')) {
             return $this->buildEq($name, $arguments);
-        } elseif (0 === \strpos($name, 'ne')) {
+        }
+
+        if (0 === \strpos($name, 'ne')) {
             return $this->buildNe($name, $arguments);
-        } elseif (0 === \strpos($name, 'lk')) {
+        }
+
+        if (0 === \strpos($name, 'lk')) {
             return $this->buildLk($name, $arguments);
+        }
+
+        if (0 === \strpos($name, 'between')) {
+            return $this->buildBetween($name, $arguments);
         }
 
         throw new \Limepie\Exception('"' . $name . '" method not found', 1999);
@@ -140,19 +232,19 @@ class Model extends ArrayObject
                     if (false === \strpos($trace['file'], '/limepie-framework/src/')) {
                         //if($trace['function'] == '__call') continue;
 
-                        if (false === \in_array($offset, $this->allFields, true)) {
+                        if (false === \in_array($offset, $this->allColumns, true)) {
                             $message = 'Undefined offset: ' . $offset;
-                            $code    = '234';
+                            $code    = 234;
                         } else {
                             $message = 'offset ' . $offset . ' is null';
-                            $code    = '123';
+                            $code    = 123;
                         }
                         $filename = $trace['file'];
                         $line     = $trace['line'];
 
                         // $message = "{$code}: {$message} in <b>{$filename}</b> on line <b>{$line}</b>\n\n";
 
-                        $e = (new \Limepie\Exception($message))->setFile($filename)->setLine($line)->setCode($code);
+                        $e = (new \Limepie\Exception($message, $code)); //->setFile($filename)->setLine($line)->setCode($code);
 
                         throw $e;
 
@@ -163,17 +255,20 @@ class Model extends ArrayObject
         }
 
         return $this->attributes[$offset];
-        //return isset($this->attributes[$offset]) ? $this->attributes[$offset] : null;
     }
 
-    public function setAttribute($field, $attribute)
+    public function setAttribute($column, $attribute)
     {
-        $this->attributes[$field] = $attribute;
+        $this->attributes[$column] = $attribute;
     }
 
-    public function setAttributeses(array $attributes = [])
+    public function setAttributeses(array | \Limepie\ArrayObject $attributes = [])
     {
         $class = \get_called_class();
+
+        if ($attributes instanceof \Limepie\ArrayObject) {
+            $attributes = $attributes->attributes;
+        }
 
         foreach ($attributes as $attribute) {
             $this->attributes[] = new $class($this->pdo, $attribute);
@@ -182,21 +277,25 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function setAttributes(array $attributes = [])
+    public function setAttributes(array | \Limepie\ArrayObject $attributes = [])
     {
+        if ($attributes instanceof \Limepie\ArrayObject) {
+            $attributes = $attributes->attributes;
+        }
+
         if ($attributes) {
             $type = 0;
 
             // 정해진 필드만
             if (1 === $type) {
-                foreach ($this->allFields as $field) {
-                    if (true === isset($attributes[$field])) {
-                        $this->attributes[$field] = $attributes[$field];
-                    } elseif (true === isset($attributes[$this->tableName . '_' . $field])) {
-                        $field1                   = $this->tableName . '_' . $field;
-                        $this->attributes[$field] = $attributes[$field1];
+                foreach ($this->allColumns as $column) {
+                    if (true === isset($attributes[$column])) {
+                        $this->attributes[$column] = $attributes[$column];
+                    } elseif (true === isset($attributes[$this->tableName . '_' . $column])) {
+                        $column1                   = $this->tableName . '_' . $column;
+                        $this->attributes[$column] = $attributes[$column1];
                     } else {
-                        $this->attributes[$field] = null;
+                        $this->attributes[$column] = null;
                     }
                 }
             } else {
@@ -216,12 +315,11 @@ class Model extends ArrayObject
     public function buildDataType(array $attributes = [])
     {
         if ($attributes) {
-            foreach ($attributes as $field => &$value) {
-                if (true === isset($this->dataTypes[$field])) {
-                    switch ($this->dataTypes[$field]) {
+            foreach ($attributes as $column => &$value) {
+                if (true === isset($this->dataStyles[$column])) {
+                    switch ($this->dataStyles[$column]) {
                         case 'serialize':
                             if ($value) {
-
                                 try {
                                     $value = new \Limepie\ArrayObject(\unserialize($value));
                                 } catch (\Exception $e) {
@@ -234,7 +332,19 @@ class Model extends ArrayObject
                             break;
                         case 'base64':
                             if ($value) {
-                                $value = new \Limepie\ArrayObject(\unserialize(\base64_decode($value)));
+                                $value = new \Limepie\ArrayObject(\unserialize(\base64_decode($value, true)));
+                            } else {
+                                $value = [];
+                            }
+
+                            break;
+                        case 'gz':
+                            if ($value) {
+                                if (\Limepie\is_binary($value)) {
+                                    $value = new \Limepie\ArrayObject(\unserialize(\gzuncompress($value)));
+                                } else {
+                                    $value = [];
+                                }
                             } else {
                                 $value = [];
                             }
@@ -255,11 +365,20 @@ class Model extends ArrayObject
                             } else {
                                 $value = [];
                             }
+                            // no break
+                        case 'int':
+                        case 'tinyint':
+                            (int) $value;
+                            // no break
+                        case 'float':
+                        case 'decimal':
+                            (float) $value;
 
                             break;
                     }
                 }
             }
+
             return $attributes;
         }
     }
@@ -268,6 +387,15 @@ class Model extends ArrayObject
     {
         if ($this->oneToOne) {
             foreach ($this->oneToOne as $class) {
+                $parent = null;
+
+                if (true === \is_array($class)) {
+                    $parent = $class[1];
+                    $class  = $class[0];
+                } elseif ($class->parent) {
+                    $parent = $class->parent;
+                }
+
                 if ($class->leftKeyName) {
                     $leftKeyName = $class->leftKeyName;
                 } else {
@@ -282,10 +410,27 @@ class Model extends ArrayObject
 
                 $functionName = 'getBy' . \Limepie\camelize($rightKeyName);
 
-                if (false === \array_key_exists($leftKeyName, $attributes)) {
-                    throw new \Limepie\Exception('relation left ' . $this->tableName . ' "' . $leftKeyName . '" field not found');
+                if ($parent) {
+                    $parentClass = true === \is_string($parent) ? new $parent : $parent;
+
+                    if ($parentClass->newTableName) {
+                        $parentTableName = $parentClass->newTableName;
+                    } else {
+                        $parentTableName = $parentClass->tableName . '_model';
+                    }
+
+                    if (false === \array_key_exists($leftKeyName, $attributes[$parentTableName]->toArray())) {
+                        throw new \Limepie\Exception($class->tableName . ': Undefined left key "' . $leftKeyName . '"');
+                    }
+
+                    $args = [$attributes[$parentTableName][$leftKeyName]];
+                } else {
+                    if (false === \array_key_exists($leftKeyName, $attributes)) {
+                        throw new \Limepie\Exception($class->tableName . ': Undefined left key "' . $leftKeyName . '"');
+                    }
+
+                    $args = [$attributes[$leftKeyName]];
                 }
-                $args = [$attributes[$leftKeyName]];
 
                 foreach ($class->and as $key => $value) {
                     $functionName .= 'And' . \Limepie\camelize($key);
@@ -299,19 +444,46 @@ class Model extends ArrayObject
                 }
 
                 $class->keyName = $rightKeyName;
+
+                //\pr($class->condition, $functionName);
                 //pr([$class($connect), $functionName], var_dump($args));
                 $data = \call_user_func_array([$class($connect), $functionName], $args);
+\pr($data);
+                if ($parent) {
+                    $parentClass = true === \is_string($parent) ? new $parent : $parent;
 
-                if ($class->aliasTableName) {
-                    $attributes[$class->aliasTableName] = $data;
+                    if ($parentClass->newTableName) {
+                        $parentTableName = $parentClass->newTableName;
+                    } else {
+                        $parentTableName = $parentClass->tableName . '_model';
+                    }
+
+                    if ($class->newTableName) {
+                        $attributes[$parentTableName][$class->newTableName] = $data;
+                    } else {
+                        $attributes[$parentTableName][$class->tableName . '_model'] = $data;
+                    }
                 } else {
-                    $attributes[$class->tableName . '_model'] = $data;
+                    if ($class->newTableName) {
+                        $attributes[$class->newTableName] = $data;
+                    } else {
+                        $attributes[$class->tableName . '_model'] = $data;
+                    }
                 }
             }
         }
 
         if ($this->oneToMany) {
             foreach ($this->oneToMany as $class) {
+                $parent = null;
+
+                if (true === \is_array($class)) {
+                    $parent = $class[1];
+                    $class  = $class[0];
+                } elseif ($class->parent) {
+                    $parent = $class->parent;
+                }
+
                 if ($class->leftKeyName) {
                     $leftKeyName = $class->leftKeyName;
                 } else {
@@ -325,7 +497,28 @@ class Model extends ArrayObject
                 }
 
                 $functionName = 'getsBy' . \Limepie\camelize($rightKeyName);
-                $args         = [$attributes[$leftKeyName]];
+
+                if ($parent) {
+                    $parentClass = true === \is_string($parent) ? new $parent : $parent;
+
+                    if ($parentClass->newTableName) {
+                        $parentTableName = $parentClass->newTableName;
+                    } else {
+                        $parentTableName = $parentClass->tableName . '_model';
+                    }
+
+                    if (false === \array_key_exists($leftKeyName, $attributes[$parentTableName])) {
+                        throw new \Limepie\Exception($class->tableName . ': Undefined left key "' . $leftKeyName . '"');
+                    }
+
+                    $args = [$attributes[$parentTableName][$leftKeyName]];
+                } else {
+                    if (false === \array_key_exists($leftKeyName, $attributes)) {
+                        throw new \Limepie\Exception($class->tableName . ': Undefined left key "' . $leftKeyName . '"');
+                    }
+
+                    $args = [$attributes[$leftKeyName]];
+                }
 
                 foreach ($class->and as $key1 => $value) {
                     $functionName .= 'And' . \Limepie\camelize($key1);
@@ -340,10 +533,26 @@ class Model extends ArrayObject
 
                 $data = \call_user_func_array([$class($connect), $functionName], $args);
 
-                if ($class->aliasTableName) {
-                    $attributes[$class->aliasTableName] = $data;
+                if ($parent) {
+                    $parentClass = true === \is_string($parent) ? new $parent : $parent;
+
+                    if ($parentClass->newTableName) {
+                        $parentTableName = $parentClass->newTableName;
+                    } else {
+                        $parentTableName = $parentClass->tableName . '_model';
+                    }
+
+                    if ($class->newTableName) {
+                        $attributes[$parentTableName][$class->newTableName] = $data;
+                    } else {
+                        $attributes[$parentTableName][$class->tableName . '_models'] = $data;
+                    }
                 } else {
-                    $attributes[$class->tableName . '_models'] = $data;
+                    if ($class->newTableName) {
+                        $attributes[$class->newTableName] = $data;
+                    } else {
+                        $attributes[$class->tableName . '_models'] = $data;
+                    }
                 }
             }
         }
@@ -355,8 +564,17 @@ class Model extends ArrayObject
     {
         if ($this->oneToOne) {
             foreach ($this->oneToOne as $class) {
-                if ($class->aliasTableName) {
-                    $moduleName = $class->aliasTableName;
+                $parent = null;
+
+                if (true === \is_array($class)) {
+                    $parent = $class[1];
+                    $class  = $class[0];
+                } elseif ($class->parent) {
+                    $parent = $class->parent;
+                }
+
+                if ($class->newTableName) {
+                    $moduleName = $class->newTableName;
                 } else {
                     $moduleName = $class->tableName . '_model';
                 }
@@ -375,13 +593,31 @@ class Model extends ArrayObject
 
                 $seqs = [];
 
-                foreach ($attributes as $row) {
-                    //pr($row);
-                    if (true === \array_key_exists($leftKeyName, $row->toArray())) {
-                        //if (true === isset($row[$leftKeyName])) {
-                        $seqs[] = $row[$leftKeyName];
+                if ($parent) {
+                    $parentClass = true === \is_string($parent) ? new $parent : $parent;
+
+                    if ($parentClass->newTableName) {
+                        $parentTableName = $parentClass->newTableName;
                     } else {
-                        throw new \Limepie\Exception($class->tableName . ' table ' . $leftKeyName . ' field not found');
+                        $parentTableName = $parentClass->tableName . '_model';
+                    }
+
+                    foreach ($attributes as $row) {
+                        if (true === \array_key_exists($leftKeyName, $row[$parentTableName]->toArray())) {
+                            //if (true === isset($row[$leftKeyName])) {
+                            $seqs[] = $row[$parentTableName][$leftKeyName];
+                        } else {
+                            throw new \Limepie\Exception($this->tableName . ' table ' . $leftKeyName . ' column not found #1');
+                        }
+                    }
+                } else {
+                    foreach ($attributes as $row) {
+                        if (true === \array_key_exists($leftKeyName, $row->toArray())) {
+                            //if (true === isset($row[$leftKeyName])) {
+                            $seqs[] = $row[$leftKeyName];
+                        } else {
+                            throw new \Limepie\Exception($this->tableName . ' table ' . $leftKeyName . ' column not found #2');
+                        }
                     }
                 }
 
@@ -402,24 +638,64 @@ class Model extends ArrayObject
                     $class->keyName = $rightKeyName;
                     $data           = \call_user_func_array([$class($connect), $functionName], $args);
 
-                    if ($data) {
-                        foreach ($attributes as $attribute) {
-                            $attr = $attribute[$leftKeyName] ?? '';
+                    if ($parent) {
+                        $parentClass = true === \is_string($parent) ? new $parent : $parent;
 
-                            if ($attr && true === isset($data[$attr])) {
-                                $attribute->offsetSet($moduleName, $data[$attr]);
-                            } else {
-                                $attribute->offsetSet($moduleName, []);
+                        if ($parentClass->newTableName) {
+                            $parentTableName = $parentClass->newTableName;
+                        } else {
+                            $parentTableName = $parentClass->tableName . '_model';
+                        }
+
+                        if ($data) {
+                            foreach ($attributes as $attribute) {
+                                $attr = $attribute[$parentTableName][$leftKeyName] ?? false;
+
+                                if ($attr && true === isset($data[$attr])) {
+                                    $attribute[$parentTableName]->offsetSet($moduleName, $data[$attr]);
+                                } else {
+                                    $attribute[$parentTableName]->offsetSet($moduleName, null);
+                                }
+                            }
+                        } else {
+                            foreach ($attributes as $attribute) {
+                                $attribute[$parentTableName]->offsetSet($moduleName, null);
                             }
                         }
                     } else {
-                        foreach ($attributes as $attribute) {
-                            $attribute->offsetSet($moduleName, []);
+                        if ($data) {
+                            foreach ($attributes as $attribute) {
+                                $attr = $attribute[$leftKeyName] ?? false;
+
+                                if ($attr && true === isset($data[$attr])) {
+                                    $attribute->offsetSet($moduleName, $data[$attr]);
+                                } else {
+                                    $attribute->offsetSet($moduleName, null);
+                                }
+                            }
+                        } else {
+                            foreach ($attributes as $attribute) {
+                                $attribute->offsetSet($moduleName, null);
+                            }
                         }
                     }
                 } else {
-                    foreach ($attributes as $attribute) {
-                        $attribute->offsetSet($moduleName, []);
+                    if ($parent) {
+                        $parentClass = true === \is_string($parent) ? new $parent : $parent;
+
+                        if ($parentClass->newTableName) {
+                            $parentTableName = $parentClass->newTableName;
+                        } else {
+                            $parentTableName = $parentClass->tableName . '_model';
+                        }
+
+                        foreach ($attributes as $attribute) {
+                            $attribute[$parentTableName]->offsetSet($moduleName, null);
+                        }
+                    } else {
+                        foreach ($attributes as $attribute) {
+                            $attribute->offsetSet($moduleName, null);
+                        }
                     }
                 }
             }
@@ -427,8 +703,17 @@ class Model extends ArrayObject
 
         if ($this->oneToMany) {
             foreach ($this->oneToMany as $class) {
-                if ($class->aliasTableName) {
-                    $moduleName = $class->aliasTableName;
+                $parent = null;
+
+                if (true === \is_array($class)) {
+                    $parent = $class[1];
+                    $class  = $class[0];
+                } elseif ($class->parent) {
+                    $parent = $class->parent;
+                }
+
+                if ($class->newTableName) {
+                    $moduleName = $class->newTableName;
                 } else {
                     $moduleName = $class->tableName . '_models';
                 }
@@ -450,8 +735,28 @@ class Model extends ArrayObject
 
                 $seqs = [];
 
-                foreach ($attributes as $attribute) {
-                    $seqs[] = $attribute[$leftKeyName];
+                if ($parent) {
+                    $parentClass = true === \is_string($parent) ? new $parent : $parent;
+
+                    if ($parentClass->newTableName) {
+                        $parentTableName = $parentClass->newTableName;
+                    } else {
+                        $parentTableName = $parentClass->tableName . '_model';
+                    }
+
+                    foreach ($attributes as $attribute) {
+                        if (false === isset($attribute[$parentTableName][$leftKeyName])) {
+                            throw new \Limepie\Exception($class->tableName . ' table not found left key: ' . $leftKeyName);
+                        }
+                        $seqs[] = $attribute[$parentTableName][$leftKeyName];
+                    }
+                } else {
+                    foreach ($attributes as $attribute) {
+                        if (false === isset($attribute[$leftKeyName])) {
+                            throw new \Limepie\Exception($class->tableName . ' table not found left key: ' . $leftKeyName);
+                        }
+                        $seqs[] = $attribute[$leftKeyName];
+                    }
                 }
                 $functionName = 'getsBy' . \Limepie\camelize($rightKeyName);
 
@@ -478,50 +783,114 @@ class Model extends ArrayObject
                     }
 
                     if ($group) {
-                        foreach ($attributes as $attribute) {
-                            $attr = $attribute[$leftKeyName] ?? '';
+                        if ($parent) {
+                            $parentClass = true === \is_string($parent) ? new $parent : $parent;
 
-                            if ($attr && true === isset($group[$attr])) {
-                                if ($class->keyName === $remapKey) {
-                                    $attribute->offsetSet($moduleName, new $class($this->getConnect(), $group[$attr]));
-                                } else {
-                                    // ->key로 바꿈
-                                    $new = [];
-
-                                    foreach ($group[$attr] as $key => $value) {
-                                        if (false === \in_array($remapKey, $value->allFields, true)) {
-                                            throw new \Limepie\Exception($remapKey . ' field not found');
-                                        }
-                                        //if (false === isset($value[$remapKey])) {
-                                        if (false === \array_key_exists($remapKey, $value->attributes)) {
-                                            // 키가 존재하지 않을 경우 에러를 낼것인가. 배열을 만들지 않을것인가?
-                                            // 결정 #1
-                                            // 컬럼의 값이 널일경우 매칭을 안시키면 되는데 에러가 나므로 해당 코드를 건너뛸수가 없음.
-                                            // 대상 키가 널이면 새로 만들어질 배열에 포함시키지 않는다.
-                                            // 만약 문제가 생긴다면 모델의 옵션 지정을 통해 에러 또는 건너뜀을 선택하여야 함.
-                                            // 변경 #1
-                                            // 데이터는 문제가 있는 것을 모델에서 회피함으로서 다른 문제가 발생한다.
-                                            // 모델 class에서 처리할수 없는 상황들이 있으므로 데이터를 교정하여야 한다는 결론.
-                                            // 에러 내는것으로 변경함.
-                                            throw new \Limepie\Exception($remapKey . ' field is null, not match');
-                                            // $new[$value[$remapKey]] = $value;
-                                        }
-                                        $new[$value[$remapKey]] = $value;
-                                    }
-                                    $attribute->offsetSet($moduleName, new $class($this->getConnect(), $new));
-                                }
+                            if ($parentClass->newTableName) {
+                                $parentTableName = $parentClass->newTableName;
                             } else {
-                                $attribute->offsetSet($moduleName, []);
+                                $parentTableName = $parentClass->tableName . '_model';
+                            }
+
+                            foreach ($attributes as $attribute) {
+                                $attr = $attribute[$parentTableName][$leftKeyName] ?? '';
+
+                                if ($attr && true === isset($group[$attr])) {
+                                    if ($class->keyName === $remapKey) {
+                                        $attribute[$parentTableName]->offsetSet($moduleName, new $class($this->getConnect(), $group[$attr]));
+                                    } else {
+                                        $new = [];
+
+                                        foreach ($group[$attr] as $key => $value) {
+                                            if (false === \in_array($remapKey, $value->allColumns, true)) {
+                                                throw new \Limepie\Exception($remapKey . ' column not found #3');
+                                            }
+
+                                            if (false === \array_key_exists($remapKey, $value->attributes)) {
+                                                throw new \Limepie\Exception($remapKey . ' column is null, not match');
+                                            }
+
+                                            if ($class->secondKeyName) {
+                                                $new[$value[$remapKey]][$value[$class->secondKeyName]] = $value;
+                                            } else {
+                                                $new[$value[$remapKey]] = $value;
+                                            }
+                                        }
+                                        $attribute[$parentTableName]->offsetSet($moduleName, new $class($this->getConnect(), $new));
+                                    }
+                                } else {
+                                    $attribute[$parentTableName]->offsetSet($moduleName, null);
+                                }
+                            }
+                        } else {
+                            foreach ($attributes as $attribute) {
+                                $attr = $attribute[$leftKeyName] ?? '';
+
+                                if ($attr && true === isset($group[$attr])) {
+                                    if ($class->keyName === $remapKey) {
+                                        $attribute->offsetSet($moduleName, new $class($this->getConnect(), $group[$attr]));
+                                    } else {
+                                        $new = [];
+
+                                        foreach ($group[$attr] as $key => $value) {
+                                            if (false === \in_array($remapKey, $value->allColumns, true)) {
+                                                throw new \Limepie\Exception($remapKey . ' column not found #4');
+                                            }
+
+                                            if (false === \array_key_exists($remapKey, $value->attributes)) {
+                                                throw new \Limepie\Exception($remapKey . ' column is null, not match');
+                                            }
+
+                                            if ($class->secondKeyName) {
+                                                $new[$value[$remapKey]][$value[$class->secondKeyName]] = $value;
+                                            } else {
+                                                $new[$value[$remapKey]] = $value;
+                                            }
+                                        }
+
+                                        $attribute->offsetSet($moduleName, new $class($this->getConnect(), $new));
+                                    }
+                                } else {
+                                    $attribute->offsetSet($moduleName, null);
+                                }
                             }
                         }
                     } else {
-                        foreach ($attributes as $attribute) {
-                            $attribute->offsetSet($moduleName, []);
+                        if ($parent) {
+                            $parentClass = true === \is_string($parent) ? new $parent : $parent;
+
+                            if ($parentClass->newTableName) {
+                                $parentTableName = $parentClass->newTableName;
+                            } else {
+                                $parentTableName = $parentClass->tableName . '_model';
+                            }
+
+                            foreach ($attributes as $attribute) {
+                                $attribute[$parentTableName]->offsetSet($moduleName, null);
+                            }
+                        } else {
+                            foreach ($attributes as $attribute) {
+                                $attribute->offsetSet($moduleName, null);
+                            }
                         }
                     }
                 } else {
-                    foreach ($attributes as $attribute) {
-                        $attribute->offsetSet($moduleName, []);
+                    if ($parent) {
+                        $parentClass = true === \is_string($parent) ? new $parent : $parent;
+
+                        if ($parentClass->newTableName) {
+                            $parentTableName = $parentClass->newTableName;
+                        } else {
+                            $parentTableName = $parentClass->tableName . '_model';
+                        }
+
+                        foreach ($attributes as $attribute) {
+                            $attribute[$parentTableName]->offsetSet($moduleName, null);
+                        }
+                    } else {
+                        foreach ($attributes as $attribute) {
+                            $attribute->offsetSet($moduleName, null);
+                        }
                     }
                 }
             }
@@ -530,127 +899,18 @@ class Model extends ArrayObject
         return $attributes;
     }
 
-    public function getConditionAndBinds($whereKey, $arguments)
+    // getBy, getsBy, getCountBy 구문 뒤의 구문을 분석하여 조건문을 만든다.
+    public function getConditionAndBinds($whereKey, $arguments, $offset = 0)
     {
         $condition = '';
         $binds     = [];
+        $conds     = [];
 
-        //pr($whereKey, $arguments);
-        if (false !== \strpos($whereKey, '_and_')) {
-            $whereKeys = \explode('_and_', $whereKey);
-            $conds     = [];
-            $binds     = [];
-
-            foreach ($whereKeys as $index => $key) {
-                if ($arguments[$index] && true === \is_array($arguments[$index])) {
-                    $_conditions = [];
-
-                    foreach ($arguments[$index] as $index2 => $value2) {
-                        $_conditions[]               = ":{$key}{$index2}";
-                        $binds[':' . $key . $index2] = $value2;
-                    }
-                    $conds[] = "`{$this->tableAliasName}`.`{$key}` IN (" . \implode(', ', $_conditions) . ')';
-                } else {
-                    $key2 = \substr($key, 3);
-
-                    if (0 === \strpos($key, 'gt_')) {
-                        $conds[] = "`{$this->tableAliasName}`." . '`' . $key2 . '`' . ' > :' . $key;
-                    } elseif (0 === \strpos($key, 'lt_')) {
-                        $conds[] = "`{$this->tableAliasName}`." . '`' . $key2 . '`' . ' < :' . $key;
-                    } elseif (0 === \strpos($key, 'ge_')) {
-                        $conds[] = "`{$this->tableAliasName}`." . '`' . $key2 . '`' . ' >= :' . $key;
-                    } elseif (0 === \strpos($key, 'le_')) {
-                        $conds[] = "`{$this->tableAliasName}`." . '`' . $key2 . '`' . ' <= :' . $key;
-                    } elseif (0 === \strpos($key, 'eq_')) {
-                        $conds[] = "`{$this->tableAliasName}`." . '`' . $key2 . '`' . ' = :' . $key;
-                    } elseif (0 === \strpos($key, 'ne_')) {
-                        if (null === $arguments[$index]) {
-                            $conds[] = "`{$this->tableAliasName}`." . '`' . $key2 . '`' . ' IS NOT NULL';
-                        } else {
-                            $conds[] = "`{$this->tableAliasName}`." . '`' . $key2 . '`' . ' != :' . $key;
-                        }
-                    } elseif (0 === \strpos($key, 'lk_')) {
-                        $conds[] = "`{$this->tableAliasName}`." . '`' . $key2 . '`' . ' like concat("%", :' . $key . ', "%")';
-                    } else {
-                        // $this->bindcount++;
-
-                        // $this->conditions[] = [
-                        //     'string' => $key. ' = :'.$key.$this->bindcount ,
-                        //     'bind' => [
-                        //         $key.$this->bindcount => $arguments[$index]
-                        //     ]
-                        // ];
-                        if (null === $arguments[$index]) {
-                            $conds[] = "`{$this->tableAliasName}`." . '`' . $key . '` IS NULL';
-                        } else {
-                            $conds[] = "`{$this->tableAliasName}`." . '`' . $key . '`' . ' = :' . $key;
-                        }
-                    }
-
-                    if (null === $arguments[$index]) {
-                    } else {
-                        $binds[':' . $key] = $arguments[$index];
-                    }
-                }
-            }
-            $condition = \implode(' AND ', $conds);
-
-        //pr($condition);
-        } elseif (true === isset($arguments[0]) || ($arguments && null === $arguments[0])) {
-            $whereValue = $arguments[0];
-
-            if (true === \is_array($whereValue)) {
-                $conditions = [];
-                $binds      = [];
-
-                foreach ($whereValue as $index => $value) {
-                    $conditions[]                    = ":{$whereKey}{$index}";
-                    $binds[':' . $whereKey . $index] = $value;
-                }
-                $condition = "`{$this->tableAliasName}`.`{$whereKey}` IN (" . \implode(', ', $conditions) . ')';
-            } else {
-                $whereKey2 = \substr($whereKey, 3);
-
-                if (0 === \strpos($whereKey, 'gt_')) {
-                    $condition = "`{$this->tableAliasName}`.`{$whereKey2}` > :{$whereKey}";
-                } elseif (0 === \strpos($whereKey, 'lt_')) {
-                    $condition = "`{$this->tableAliasName}`.`{$whereKey2}` < :{$whereKey}";
-                } elseif (0 === \strpos($whereKey, 'ge_')) {
-                    $condition = "`{$this->tableAliasName}`.`{$whereKey2}` >= :{$whereKey}";
-                } elseif (0 === \strpos($whereKey, 'le_')) {
-                    $condition = "`{$this->tableAliasName}`.`{$whereKey2}` <= :{$whereKey}";
-                } elseif (0 === \strpos($whereKey, 'eq_')) {
-                    $condition = "`{$this->tableAliasName}`.`{$whereKey2}` = :{$whereKey}";
-                } elseif (0 === \strpos($whereKey, 'ne_')) {
-                    if (null === $whereValue) {
-                        $condition = "`{$this->tableAliasName}`.`{$whereKey2}` IS NOT NULL";
-                    } else {
-                        $condition = "`{$this->tableAliasName}`.`{$whereKey2}` != :{$whereKey}";
-                    }
-                } elseif (0 === \strpos($whereKey, 'lk_')) {
-                    $condition = "`{$this->tableAliasName}`.`{$whereKey2}` like concat('%',:{$whereKey},'%')";
-                } else {
-                    if (null === $whereValue) {
-                        $condition = "`{$this->tableAliasName}`.`{$whereKey}` IS NULL";
-                    } else {
-                        $condition = "`{$this->tableAliasName}`.`{$whereKey}` = :{$whereKey}";
-                    }
-                }
-
-                if (null === $whereValue) {
-                    $binds = [];
-                } else {
-                    $binds = [
-                        ':' . $whereKey => $whereValue,
-                    ];
-                }
-            }
-        }
-        //pr($this);
-        //\pr(func_get_args());
+        [$conds, $binds] = $this->getConditions($whereKey, $arguments, $offset);
+        $condition       = \trim(\implode(PHP_EOL . '        ', $conds));
 
         if ($condition) {
-            $condition = 'WHERE ' . $condition;
+            $condition = 'WHERE ' . PHP_EOL . '        ' . $condition;
         }
 
         return [$condition, $binds];
@@ -666,37 +926,39 @@ class Model extends ArrayObject
 
     public function and($key, $value = null)
     {
-        if ($key instanceof \Closure) {
-            //\pr($key($this));
+        $this->and[$key] = $value;
+
+        return $this;
+    }
+
+    public function relation($class, $parent = null)
+    {
+        return $this->oneToOne($class, $parent);
+    }
+
+    public function relations($class, $parent = null)
+    {
+        return $this->oneToMany($class, $parent);
+    }
+
+    public function oneToOne($class, $parent = null)
+    {
+        if ($parent) {
+            $this->oneToOne[] = [$class, $parent];
         } else {
-            $this->and[$key] = $value;
+            $this->oneToOne[] = $class;
         }
 
         return $this;
     }
 
-    public function relation($class)
+    public function oneToMany($class, $parent = null)
     {
-        return $this->oneToOne($class);
-    }
-
-    public function relations($class)
-    {
-        return $this->oneToMany($class);
-    }
-
-    public function oneToOne($class)
-    {
-        //pr([new $class]);
-        $this->oneToOne[] = $class;
-
-        return $this;
-    }
-
-    public function oneToMany($class)
-    {
-        //pr([new $class]);
-        $this->oneToMany[] = $class;
+        if ($parent) {
+            $this->oneToMany[] = [$class, $parent];
+        } else {
+            $this->oneToMany[] = $class;
+        }
 
         return $this;
     }
@@ -728,7 +990,7 @@ class Model extends ArrayObject
         return $this->pdo;
     }
 
-    public function setConnect($connect)
+    public function setConnect(\Pdo $connect)
     {
         return $this->pdo = $connect;
     }
@@ -738,21 +1000,7 @@ class Model extends ArrayObject
         if (true === isset($callback) && $callback) {
             return $callback($this);
         }
-
-        //return $attributes;
     }
-
-    // public function rewind()
-    // {
-    //     \reset($this->attributes);
-    // }
-
-    // public function current()
-    // {
-    //     $var = \current($this->attributes);
-
-    //     return $var;
-    // }
 
     public function key($keyName = null)
     {
@@ -760,25 +1008,8 @@ class Model extends ArrayObject
             return $this->keyName($keyName);
         }
 
-        $var = \key($this->attributes);
-
-        return $var;
+        return \key($this->attributes);
     }
-
-    // public function next()
-    // {
-    //     $var = \next($this->attributes);
-
-    //     return $var;
-    // }
-
-    // public function valid()
-    // {
-    //     $key = \key($this->attributes);
-    //     $var = (null !== $key && false !== $key);
-
-    //     return $var;
-    // }
 
     public function save()
     {
@@ -795,30 +1026,50 @@ class Model extends ArrayObject
 
     public function create()
     {
-        $fields = [];
-        $binds  = [];
-        $values = [];
+        $columns = [];
+        $binds   = [];
+        $values  = [];
 
-        foreach ($this->allFields as $field) {
-            if ($this->sequenceName === $field) {
+        foreach ($this->allColumns as $column) {
+            if ($this->sequenceName === $column) {
             } else {
-                if ('created_ts' === $field || 'updated_ts' === $field) {
-                } elseif ('ip' === $field) {
-                    $fields[]            = '`' . $field . '`';
-                    $binds[':' . $field] = \Limepie\getIp();
-                    $values[]            = 'inet6_aton(:' . $field . ')';
-                } elseif (true === \array_key_exists($field, $this->attributes)) {
-                    //if (true === isset($this->attributes[$field])) {
-                    $value = $this->attributes[$field];
+                if ('created_ts' === $column || 'updated_ts' === $column) {
+                } elseif ('ip' === $column) {
+                    $columns[]            = '`' . $column . '`';
+                    $binds[':' . $column] = \Limepie\getIp();
+                    $values[]             = 'inet6_aton(:' . $column . ')';
+                } elseif (
+                    true === isset($this->dataStyles[$column])
+                    && 'point' == $this->dataStyles[$column]
+                    && true === \is_array($this->attributes[$column])
+                    && false === isset($this->functions[$column])
+                ) {
+                    $columns[] = '`' . $column . '`';
+                    $value     = $this->attributes[$column];
 
-                    if (true === isset($this->dataTypes[$field])) {
-                        switch ($this->dataTypes[$field]) {
+                    if (true === \is_null($value)) {
+                        throw new \Limepie\Exception('empty point value');
+                    }
+                    $binds[':' . $column . '1'] = $value[0];
+                    $binds[':' . $column . '2'] = $value[1];
+                    $values[]                   = 'point(:' . $column . '1, :' . $column . '2)';
+                } elseif (true === \array_key_exists($column, $this->attributes)) {
+                    //if (true === isset($this->attributes[$column])) {
+
+                    $value = $this->attributes[$column];
+
+                    if (true === isset($this->dataStyles[$column])) {
+                        switch ($this->dataStyles[$column]) {
                             case 'serialize':
                                 $value = \serialize($value);
 
                                 break;
                             case 'base64':
                                 $value = \base64_encode(\serialize($value));
+
+                                break;
+                            case 'gz':
+                                $value = \gzcompress(\serialize($value), 9);
 
                                 break;
                             case 'json':
@@ -833,32 +1084,28 @@ class Model extends ArrayObject
                         }
                     }
 
-                    // if (true === \is_array($value)) {
-                    //     $fields[] = '`' . $field . '`';
-                    //     $values[] = $value[0];
-
-                    //     foreach ($value[1] as $vKey => $vValue) {
-                    //         $binds[':' . $vKey] = $vValue;
-                    //     }
-                    // } else {
-                    $fields[]            = '`' . $field . '`';
-                    $binds[':' . $field] = $value;
-                    $values[]            = ':' . $field;
-                    // }
+                    if (true === isset($this->functions[$column])) {
+                        $columns[] = '`' . $column . '`';
+                        $binds += $value;
+                        $values[] = \str_replace('?', ':' . $column, $this->functions[$column]);
+                    } else {
+                        $columns[]            = '`' . $column . '`';
+                        $binds[':' . $column] = $value;
+                        $values[]             = ':' . $column;
+                    }
                 }
             }
         }
-        $field  = \implode(', ', $fields);
+        $column = \implode(', ', $columns);
         $values = \implode(', ', $values);
         $sql    = <<<SQL
             INSERT INTO
                 `{$this->tableName}`
-            ({$field})
+            ({$column})
                 VALUES
             ({$values})
         SQL;
 
-        $result     = false;
         $primaryKey = '';
 
         if ($this->sequenceName) {
@@ -882,31 +1129,50 @@ class Model extends ArrayObject
     // TODO: db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 말기
     public function update($checkUpdatedTs = false)
     {
-        $fields = [];
+        $columns = [];
 
         $binds = [
             ':' . $this->primaryKeyName => $this->attributes[$this->primaryKeyName],
         ];
 
-        foreach ($this->allFields as $field) {
-            if ($this->sequenceName === $field) {
+        foreach ($this->allColumns as $column) {
+            if ($this->sequenceName === $column) {
             } else {
-                if ('created_ts' === $field || 'updated_ts' === $field) {
-                } elseif ('ip' === $field) {
-                    $fields[]            = "`{$this->tableName}`." . '`' . $field . '` = inet6_aton(:' . $field . ')';
-                    $binds[':' . $field] = \Limepie\getIp();
-                } elseif (true === \array_key_exists($field, $this->attributes)) {
-                    //if (true === isset($this->attributes[$field])) {
-                    $value = $this->attributes[$field];
+                if ('created_ts' === $column || 'updated_ts' === $column) {
+                } elseif ('ip' === $column) {
+                    $columns[]            = "`{$this->tableName}`." . '`' . $column . '` = inet6_aton(:' . $column . ')';
+                    $binds[':' . $column] = \Limepie\getIp();
+                } elseif (
+                    true === isset($this->dataStyles[$column])
+                    && 'point' == $this->dataStyles[$column]
+                    && true === \is_array($this->attributes[$column])
+                    && false === isset($this->functions[$column])
+                ) {
+                    $value = $this->attributes[$column];
 
-                    if (true === isset($this->dataTypes[$field])) {
-                        switch ($this->dataTypes[$field]) {
+                    if (true === \is_null($value)) {
+                        throw new \Limepie\Exception('empty point value');
+                    }
+
+                    $columns[] = "`{$this->tableName}`." . '`' . $column . '` = point(:' . $column . '1, :' . $column . '2)';
+
+                    $binds[':' . $column . '1'] = $value[0];
+                    $binds[':' . $column . '2'] = $value[1];
+                } elseif (true === \array_key_exists($column, $this->attributes)) {
+                    $value = $this->attributes[$column];
+
+                    if (true === isset($this->dataStyles[$column])) {
+                        switch ($this->dataStyles[$column]) {
                             case 'serialize':
                                 $value = \serialize($value);
 
                                 break;
                             case 'base64':
                                 $value = \base64_encode(\serialize($value));
+
+                                break;
+                            case 'gz':
+                                $value = \gzcompress(\serialize($value), 9);
 
                                 break;
                             case 'json':
@@ -921,26 +1187,23 @@ class Model extends ArrayObject
                         }
                     }
 
-                    // if (true === \is_array($value)) {
-                    //     $fields[] = "`{$this->tableName}`." . '`' . $field . '` = ' . $value[0];
-
-                    //     foreach ($value[1] as $vKey => $vValue) {
-                    //         $binds[':' . $vKey] = $vValue;
-                    //     }
-                    // } else {
-                    $fields[]            = "`{$this->tableName}`." . '`' . $field . '` = :' . $field;
-                    $binds[':' . $field] = $value;
-                    // }
+                    if (true === isset($this->functions[$column])) {
+                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . \str_replace('?', ':' . $column, $this->functions[$column]);
+                        $binds += $value;
+                    } else {
+                        $columns[]            = "`{$this->tableName}`." . '`' . $column . '` = :' . $column;
+                        $binds[':' . $column] = $value;
+                    }
                 }
             }
         }
-        $field = \implode(', ', $fields);
-        $where = $this->primaryKeyName;
-        $sql   = <<<SQL
+        $column = \implode(', ', $columns);
+        $where  = $this->primaryKeyName;
+        $sql    = <<<SQL
             UPDATE
                 `{$this->tableName}`
             SET
-                {$field}
+                {$column}
             WHERE
             `{$where}` = :{$where}
         SQL;
@@ -1000,8 +1263,8 @@ class Model extends ArrayObject
                 $this->primaryKeyName => $this->attributes[$this->primaryKeyName],
             ];
 
-            if ($debug) {
-                \Limepie\pr($sql, $binds);
+            if ($debug || static::$debug) {
+                $this->debug($sql, $binds);
             }
 
             if ($this->getConnect()->set($sql, $binds)) {
@@ -1028,8 +1291,8 @@ class Model extends ArrayObject
                 $object->primaryKeyName => $object->attributes[$object->primaryKeyName],
             ];
 
-            if ($debug) {
-                \Limepie\pr($sql, $binds);
+            if ($debug || static::$debug) {
+                $this->debug($sql, $binds);
             }
 
             if ($this->getConnect()->set($sql, $binds)) {
@@ -1047,23 +1310,63 @@ class Model extends ArrayObject
         return false;
     }
 
-    public function getSelectFields()
+    private function getSelectColumns($prefixString = '')
     {
-        $fields = [];
+        $prefix = '';
 
-        foreach ($this->selectFields as $column => $alias) {
-            if (true === \is_numeric($column)) {
-                if ('ip' === $alias) {
-                    $fields[] = "inet6_ntoa(`{$this->tableAliasName}`." . '`' . $alias . '`) `' . $alias . '`';
+        if ($prefixString) {
+            $prefix = $prefixString . '_';
+        }
+        $columns = [];
+
+        if (false === \in_array($this->primaryKeyName, $this->selectColumns, true)) {
+            \array_unshift($this->selectColumns, $this->primaryKeyName);
+        }
+
+        foreach ($this->selectColumns as $column => $alias) {
+            if (false === \in_array($alias, $this->removeColumns, true)) {
+                if (true === \is_numeric($column)) {
+                    if ('ip' === $alias) {
+                        $columns[] = "inet6_ntoa(`{$this->tableAliasName}`." . '`' . $alias . '`) AS `' . $prefix . $alias . '`';
+                    } elseif (true === isset($this->dataStyles[$alias]) && 'point' == $this->dataStyles[$alias]) {
+                        $columns[] = "ST_AsText(`{$this->tableAliasName}`." . '`' . $alias . '`) AS `' . $prefix . $alias . '`';
+                    } else {
+                        $columns[] = "`{$this->tableAliasName}`." . '`' . $alias . '`' . ($prefix ? ' AS `' . $prefix . $alias . '`' : '');
+                    }
                 } else {
-                    $fields[] = "`{$this->tableAliasName}`." . '`' . $alias . '`';
+                    if (true === \is_array($alias)) {
+                        $aliasString = (true === isset($alias[0]) && $alias[0] ? ' AS `' . ($prefix ? $prefix : '') . $alias[0] . '`' : '');
+                        /*
+                        $targetCategorySeqModels = (new ServiceModuleCategoryItemModel)($slave1)
+                            ->addColumnServiceModuleSeqWithCurrentSeqAliasChildSeqs('super.GetFamilyTree(%s, %s)')
+                            ->getByServiceModuleSeqAndUniqidAndIsClose($properties['service_module_seq'], $categoryUniqid, 0)
+                            ;
+                        */
+                        if (true === isset($alias[1])) {
+                            $addColumns = \explode('_with_', $column);
+                            $values     = [];
+
+                            foreach ($addColumns as $addColumn) {
+                                $values[] = "`{$this->tableAliasName}`." . '`' . $addColumn . '`';
+                            }
+
+                            try {
+                                $columns[] = \vsprintf($alias[1], $values) . $aliasString;
+                            } catch (\Throwable $e) {
+                                throw new \Limepie\Exception($e);
+                            }
+                        } else {
+                            $columns[] = "`{$this->tableAliasName}`." . '`' . $column . '`' . $aliasString;
+                        }
+                    } else {
+                        $aliasString = (true === isset($alias) && $alias ? ' AS `' . ($prefix ? $prefix : '') . $alias . '`' : '');
+                        $columns[]   = $column . $aliasString;
+                    }
                 }
-            } else {
-                $fields[] = $column . ' AS `' . $alias . '`';
             }
         }
 
-        return \implode(', ', $fields);
+        return \implode(PHP_EOL . '        ' . ', ', $columns);
     }
 
     public function getOrderBy($orderBy = null)
@@ -1086,65 +1389,197 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function addColumn($column, $aliasName)
+    public function addColumn($column, $aliasName = null)
     {
-        $this->selectFields[$column] = $aliasName;
+        if (null === $aliasName) {
+            $this->selectColumns[$column] = null;
+        } else {
+            $this->selectColumns[$column] = $aliasName;
+        }
 
         return $this;
     }
 
-    public function columns($columns)
+    public function addColumns(array $columns = [])
     {
-        $this->selectFields = $columns;
+        $this->selectColumns = \array_merge($this->selectColumns, $columns);
 
         return $this;
     }
 
-    public function addColumns($columns)
+    public function removeColumn($column)
     {
-        $this->selectFields += $columns;
+        $this->removeColumns[] = $column;
 
         return $this;
     }
 
-    public function keyName($keyName)
+    public function removeColumns(array $columns = [])
+    {
+        $this->removeColumns = $columns;
+
+        return $this;
+    }
+
+    public function removeAllColumns()
+    {
+        //$this->removeColumns = $this->normalColumns;
+        $this->selectColumns   = $this->fkColumns;
+        $this->selectColumns[] = $this->primaryKeyName;
+
+        return $this;
+    }
+
+    public function getAllColumns()
+    {
+        $this->selectColumns = $this->allColumns;
+
+        return $this;
+    }
+
+    public function keyName($keyName, $secondKeyName = null)
     {
         $this->keyName = $keyName;
 
-        return $this;
-    }
-
-    public function join($model)
-    {
-        $this->joinModel = $model;
+        $this->secondKeyName = $secondKeyName;
 
         return $this;
     }
 
-    public function on($leftKeyName, $rightKeyName)
+    private function buildJoin($name, $arguments)
     {
-        $this->joinOn = [$leftKeyName, $rightKeyName];
+        /*
+            $joinModels = (new SangpumDeal($slave1))
+                ->joinSeqWithSangpumDealSeq(
+                    (new SangpumDealItem)
+                        ->andIsClose(0)
+                        ->addColumnSeqAliasAaaa()
+                        ->addColumnIsCloseAliasBbbb('LENGTH(INSTR(%s, 1))')
+                )
+                ->leftJoinSangpumDealSeqWithSangpumDealSeq(new SangpumDealItemExtend)
+                ->relation(
+                    (new SangpumDeal)->matchEwSangpumDealSeqWithSeq()
+                )
+                ->getsByIsSale(1)
+            ;
+
+
+            $joinModels = (new SangpumDeal($slave1))
+                ->joinSeqWithSangpumDealSeq(
+                    (new SangpumDealItem)
+                        ->andIsClose(0)
+                        ->addColumnSeqAliasAaaa()
+                        ->addColumnIsCloseAliasBbbb('LENGTH(INSTR(%s, 1))')
+                )
+                ->leftJoinSangpumDealSeqWithSangpumDealSeq(new SangpumDealItemExtend)
+                ->relation(
+                    (new SangpumDealItemExpose())
+                        ->matchSeqWithSangpumDealItemSeq(),
+                    SangpumDealItem::class
+                )
+                ->getsByIsSale(1)
+            ;
+
+            $joinModels = (new SangpumDeal($slave1))
+                ->relation(
+                    (new SangpumType)->matchSangpumTypeSeqWithSeq()->aliasType()
+                )
+                ->joinSangpumSeqWithSeq(
+                    $sangpumModel = (new Sangpum())
+                        ->andIsSale(1)
+                        ->aliasSangpum()
+                )
+                ->relation(
+                    (new SangpumType)->matchSangpumTypeSeqWithSeq()->aliasType2()
+                    , $sangpumModel
+                )
+                ->getsByIsSaleAndLtSaleStartDtAndGtSaleEndDt(1, \date('Y-m-d H:i:s'), \date('Y-m-d H:i:s'))
+            ;
+        */
+        if (1 === \preg_match('#(?P<type>left)?(j|J)oin(?P<leftKeyName>.*)With(?P<rightKeyName>.*)#', $name, $m)) {
+            $this->joinModels[] = [
+                'model' => $arguments[0],
+                'left'  => \Limepie\decamelize($m['leftKeyName']),
+                'right' => \Limepie\decamelize($m['rightKeyName']),
+                'type'  => $m['type'] ? true : false,
+            ];
+        } else {
+            throw new \Limepie\Exception('"' . $name . '" syntax error', 1999);
+        }
 
         return $this;
     }
 
     public function alias($tableName)
     {
-        $this->aliasTableName = $tableName;
+        $this->newTableName   = $tableName;
+        $this->tableAliasName = $tableName;
 
         return $this;
     }
 
-    public function debug()
+    public function debug($sql = '', $binds = [])
     {
-        \pr($this->query, $this->binds);
+        if (!$sql) {
+            $sql = $this->query;
+        }
+
+        if (!$binds) {
+            $binds = $this->binds;
+        }
+
+        echo '<br /><table class="model-debug"><tr><td>';
+
+        echo (new \Doctrine\SqlFormatter\SqlFormatter)->format($this->replaceQueryBinds($sql, $binds)); //, $binds);
+
+        $data = $this->getConnect()->gets('EXPLAIN ' . $sql, $binds);
+
+        if ($data && isset($data[0])) {
+            echo '<style>
+            .model-debug thead, .model-debug tbody, .model-debug tfoot, .model-debug tr, .model-debug td, .model-debug th {
+                border:1px solid gray;
+                font-size: 9pt;
+            }
+            .model-debug th {
+                background: gray;
+                color: white;
+                border-color: white;
+            }
+            .model-debug td, .model-debug th {
+                padding:5px;
+            }
+            </style>
+            <table class="model-debug" border=1 cellpadding=1 cellspacing=1>';
+            echo '<tr>';
+
+            foreach ($data[0] as $key => $column) {
+                echo '<th>';
+                echo $key;
+                echo '</th>';
+            }
+            echo '</tr>';
+
+            foreach ($data as $index => $row) {
+                echo '<tr>';
+
+                foreach ($row as $key => $column) {
+                    echo '<td>';
+                    echo $column;
+                    echo '</td>';
+                }
+                echo '</tr>';
+            }
+            echo '</table>';
+        }
+        echo '</td></tr></table><br />';
         //exit;
     }
 
     public function buildGetCount($name, $arguments)
     {
-        $whereKey            = \Limepie\decamelize(\substr($name, 10));
-        [$condition, $binds] = $this->getConditionAndBinds($whereKey, $arguments);
+        //\pr($name, $arguments);
+        //$whereKey            = \Limepie\decamelize(\substr($name, 10));
+        [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, 8);
         $sql                 = <<<SQL
             SELECT
                 COUNT(*)
@@ -1174,186 +1609,360 @@ class Model extends ArrayObject
         return $this;
     }
 
-    // array object의 것으로 교체
-    final public function xxbuildGetField($name, $arguments)
+    public function getJoin($prevModel)
     {
-        // field name
-        $isOrEmpty = false;
-        $isOrNull  = false;
+        $andConditions = [];
+        $join          = '';
+        $selectColumns = '';
+        $index         = -1;
+        $condition     = '';
+        $binds         = [];
 
-        if (false !== \strpos($name, 'OrNull')) {
-            $isOrNull  = true;
-            $fieldName = \Limepie\decamelize(\substr($name, 3, -6));
-        } elseif (false !== \strpos($name, 'OrEmpty')) {
-            $isOrEmpty = true;
-            $fieldName = \Limepie\decamelize(\substr($name, 3, -7));
-        } else {
-            $fieldName = \Limepie\decamelize(\substr($name, 3));
-        }
+        foreach ($this->joinModels as $joinModel) {
+            $class          = $joinModel['model'];
+            $tableName      = $class->tableName;
+            $tableAliasName = $class->tableAliasName;
+            $joinLeft       = $joinModel['left'];
+            $joinRight      = $joinModel['right'];
 
-        if (!$name) {
-            throw new \Limepie\Exception('get ' . $this->tableName . ' "' . $fieldName . '" field not found', 999);
-        }
+            $join .= PHP_EOL . '    ';
 
-        if (true === isset($this->attributes[$fieldName])) {
-            return $this->attributes[$fieldName];
-        } elseif (true === $isOrEmpty) {
-            // 필드 리스트에 없을경우 모델임, 그냥 ''로 리턴하기로 하자
-            // if (false === \in_array($fieldName, $this->allFields, true)) { // model
-            //     return [];
-            // }
-
-            return ''; // column
-        }
-
-        if (false === $isOrNull && false === $isOrEmpty) {
-            // unknown column
-            if (false === \in_array($fieldName, $this->allFields, true)) {
-                // $traces = debug_backtrace();
-                // $msg = '';
-                // foreach($traces as $trace) {
-                //     if(false !== strpos($trace['class'], 'Limepie\Model')) {
-                //         $msg =
-                //     }
-                // }
-
-                throw new \Limepie\Exception('get ' . $this->tableName . ' "' . $fieldName . '" field not found', 1999);
+            if ($joinModel['type']) {
+                $join .= 'LEFT';
+            } else {
+                $join .= 'INNER';
             }
+
+            $join .= ' JOIN'
+                   . PHP_EOL . '        ' . ' `' . $tableName . '` AS `' . $tableAliasName . '`'
+                   . PHP_EOL . '    ON'
+                   . PHP_EOL . '        `' . $prevModel->tableAliasName . '`.`' . $joinLeft . '` = `' . $tableAliasName . '`.`' . $joinRight . '`';
+            $join .= ' ' . \implode(', ', $this->forceIndexes);
+
+            $selectColumns .= PHP_EOL . '        ' . ', ' . $class->getSelectColumns($tableAliasName);
+
+            if ($class->binds) {
+                $binds += $class->binds;
+            }
+
+            if ($class->condition) {
+                $andConditions[] = $class->condition;
+            }
+            $prevModel = $class;
         }
 
-        return null;
+        $condition = \implode(PHP_EOL . ' AND ', $andConditions);
+
+        return [
+            'binds'         => $binds,
+            'condition'     => $condition,
+            'join'          => $join,
+            'selectColumns' => $selectColumns,
+        ];
     }
 
-    private function buildSet($name, $arguments)
-    {
-        $fieldName = \Limepie\decamelize(\substr($name, 3));
-
-        if (false === \in_array($fieldName, $this->allFields, true)) {
-            throw new \Limepie\Exception('set ' . $this->tableName . ' "' . $fieldName . '" field not found');
-        }
-
-        $this->attributes[$fieldName] = $arguments[0];
-
-        return $this;
-    }
-
-    private function buildGets($name, $arguments)
+    public function gets(array | string $sql = null, array $binds = [])
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
-        $selectFields          = $this->getSelectFields();
-        $orderBy               = $this->getOrderBy($arguments[0]['order'] ?? null);
-        $limit                 = $this->getLimit();
-        $condition             = '';
-        $binds                 = [];
-        $join                  = '';
+        $keyName               = $this->keyName;
 
-        if (true === isset($arguments[0]['condition'])) {
-            $condition = '    WHERE ' . $arguments[0]['condition'];
-        } else {
-            if ($this->condition) {
+        if (false === \is_string($sql)) {
+            $args      = $sql;
+            $orderBy   = $this->getOrderBy($args['order'] ?? null);
+            $limit     = $this->getLimit();
+            $condition = '';
+            $binds     = [];
+            $join      = '';
+
+            if (true === isset($args['condition'])) {
+                $condition = 'WHERE ' . $args['condition'];
+            } else {
+                if ($this->condition) {
+                    $condition = ' WHERE ' . $this->condition;
+                    $binds     = $this->binds;
+                }
+            }
+
+            if (true === isset($args['binds'])) {
+                $binds = $args['binds'];
+            }
+
+            if (!$condition && $this->condition) {
                 $condition = '' . $this->condition;
                 $binds     = $this->binds;
             }
+
+            $selectColumns = $this->getSelectColumns();
+
+            if ($this->joinModels) {
+                $joinInfomation = $this->getJoin($this);
+                $join           = $joinInfomation['join'];
+                $selectColumns .= $joinInfomation['selectColumns'];
+                $binds += $joinInfomation['binds'];
+
+                if ($condition) {
+                    $condition .= PHP_EOL . '    AND ' . PHP_EOL . '        ' . $joinInfomation['condition'];
+                } else {
+                    $condition .= ' WHERE ' . PHP_EOL . '    ' . $joinInfomation['condition'];
+                }
+                $keyName = '';
+            }
+            $forceIndex = \implode(', ', $this->forceIndexes);
+
+            $sql = <<<SQL
+                SELECT
+                    {$selectColumns}
+                FROM
+                    `{$this->tableName}` AS `{$this->tableAliasName}`
+                {$forceIndex}
+                {$join}
+                {$condition}
+                {$orderBy}
+                {$limit}
+            SQL;
+
+            $this->condition = $condition;
         }
+        $this->query = $sql;
 
-        if (true === isset($arguments[0]['binds'])) {
-            $binds = $arguments[0]['binds'];
+        //\pr($sql);
+        $this->binds = $binds;
+
+        $data = $this->getConnect()->gets($sql, $binds, false);
+        //\pr($data);
+        if (static::$debug) {
+            $this->debug();
         }
-
-        if (!$condition && $this->condition) {
-            $condition = '' . $this->condition;
-            $binds     = $this->binds;
-        }
-
-        $sql = <<<SQL
-            SELECT
-                {$selectFields}
-            FROM
-                `{$this->tableName}` AS `{$this->tableAliasName}`
-            {$join}
-            {$condition}
-            {$orderBy}
-            {$limit}
-        SQL;
-
-        $this->condition = $condition;
-        $this->query     = $sql;
-        $this->binds     = $binds;
-        $data            = $this->getConnect()->gets($sql, $binds, false);
-
         $class = \get_called_class();
 
         $attributes = [];
 
-        foreach ($data as $index => $row) {
-            if (false === \array_key_exists($this->keyName, $row)) {
-                throw new \Limepie\Exception('gets ' . $this->tableName . ' "' . $this->keyName . '" field not found');
+        foreach ($data as $index => &$row) {
+            foreach ($this->joinModels as $joinModelInfomation) {
+                $joinModel          = $joinModelInfomation['model'];
+                $joinClassAliasName = $joinModel->tableAliasName;
+                $joinClassName      = $joinModel->tableName;
+
+                $tmp = [];
+
+                foreach ($row as $innerFieldName => &$innerFieldValue) {
+                    if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
+                        $tmp[\str_replace($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
+
+                        unset($row[$innerFieldName]);
+                    }
+                }
+
+                unset($innerFieldValue);
+
+                if ($joinModel->newTableName) {
+                    $parentTableName = $joinModel->newTableName;
+                } else {
+                    $parentTableName = $joinModel->tableName . '_model';
+                }
+
+                $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
             }
 
-            $attributes[$row[$this->keyName]] = new $class($this->getConnect(), $row);
+            if ($keyName) {
+                if (false === \array_key_exists($this->keyName, $row)) {
+                    throw new \Limepie\Exception('gets ' . $this->tableName . ' "' . $this->keyName . '" column not found #5');
+                }
+
+                $attributes[$row[$keyName]] = new $class($this->getConnect(), $row);
+            } else {
+                $attributes[] = new $class($this->getConnect(), $row);
+            }
         }
 
         if ($attributes) {
             $attributes       = $this->getRelations($attributes);
             $this->attributes = $attributes;
-
-            return $this;
         }
 
         return $this;
-        return [];
     }
 
-    private function buildGet($name, $arguments)
+    public static function function($bind, $extraCondition, $extraBinds = [])
     {
-        $selectFields = $this->getSelectFields();
-        $condition    = '';
-        $binds        = [];
-        $orderBy      = $this->getOrderBy();
-        // TODO: buildGets와 같이 정리 필요
+        /*
+            $sangjumDomainModels = (new SangjumDomainModel)($slave1)
+                ->getsAllByServiceSeqAndLeLocation(
+                    $serviceSeq
+                    , \Limepie\Model::function(
+                        2000
+                        , 'ST_Distance_Sphere(%s, ST_GeomFromText(:location))'
+                        , [
+                            ':location' => 'POINT(129.1683702240102 35.16102579864174)',
+                        ]
+                    )
+                )
+            ;
+        */
+        return new class($bind, $extraCondition, $extraBinds) {
+            public $extraCondition;
 
-        if (true === isset($arguments[0]['condition'])) { // not use
-            $condition = 'WHERE ' . $arguments[0]['condition'];
-            $binds     = $arguments[0]['binds'];
-        } else {
-            if ($this->condition) {
+            public $bind;
+
+            public $extraBinds = [];
+
+            public function __construct($bind, $extraCondition, $extraBinds = [])
+            {
+                $this->extraCondition = $extraCondition;
+                $this->bind           = $bind;
+                $this->extraBinds     = $extraBinds;
+            }
+        };
+    }
+
+    public function get(string | array $sql = null, array $binds = [])
+    {
+        $this->attributes      = [];
+        $this->primaryKeyValue = '';
+
+        if (true === \is_array($sql) || null === $sql) {
+            $args          = $sql;
+            $selectColumns = $this->getSelectColumns();
+            $condition     = '';
+            $join          = '';
+            $binds         = [];
+            $orderBy       = $this->getOrderBy();
+            // TODO: buildGets와 같이 정리 필요
+
+            if (true === isset($args['condition'])) {
+                $condition = 'WHERE ' . $args['condition'];
+            } else {
+                if ($this->condition) {
+                    $condition = ' WHERE ' . $this->condition;
+                    $binds     = $this->binds;
+                }
+            }
+
+            if (true === isset($args['binds'])) {
+                $binds = $args['binds'];
+            }
+
+            if (!$condition && $this->condition) {
                 $condition = '' . $this->condition;
                 $binds     = $this->binds;
             }
+
+            $selectColumns = $this->getSelectColumns();
+
+            if ($this->joinModels) {
+                $joinInfomation = $this->getJoin($this);
+                $join           = $joinInfomation['join'];
+                $selectColumns .= $joinInfomation['selectColumns'];
+                $binds += $joinInfomation['binds'];
+
+                if ($condition) {
+                    $condition .= PHP_EOL . '    AND ' . PHP_EOL . '        ' . $joinInfomation['condition'];
+                } else {
+                    $condition .= ' WHERE ' . PHP_EOL . '    ' . $joinInfomation['condition'];
+                }
+                $keyName = '';
+            }
+
+            $sql = <<<SQL
+                SELECT
+                    {$selectColumns}
+                FROM
+                    `{$this->tableName}` AS `{$this->tableAliasName}`
+                {$join}
+                {$condition}
+                {$orderBy}
+                LIMIT 1
+            SQL;
+
+            $this->condition = $condition;
         }
 
-        $sql = <<<SQL
-            SELECT
-                {$selectFields}
-            FROM
-                `{$this->tableName}` AS `{$this->tableAliasName}`
-            {$condition}
-            {$orderBy}
-            LIMIT 1
-        SQL;
-
-        $this->condition = $condition;
-        $this->query     = $sql;
-        $this->binds     = $binds;
+        $this->query = $sql;
+        $this->binds = $binds;
 
         $attributes = $this->getConnect()->get($sql, $binds, false);
 
+        if (static::$debug) {
+            $this->debug();
+        }
+
         if ($attributes) {
+            foreach ($this->joinModels as $joinModelInfomation) {
+                $joinModel          = $joinModelInfomation['model'];
+                $joinClassAliasName = $joinModel->tableAliasName;
+                $joinClassName      = $joinModel->tableName;
+
+                $tmp = [];
+
+                foreach ($attributes as $innerFieldName => &$innerFieldValue) {
+                    if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
+                        $tmp[\str_replace($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
+
+                        unset($attributes[$innerFieldName]);
+                    }
+                }
+
+                unset($innerFieldValue);
+
+                if ($joinModel->newTableName) {
+                    $parentTableName = $joinModel->newTableName;
+                } else {
+                    $parentTableName = $joinModel->tableName . '_model';
+                }
+
+                $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
+            }
+
             $this->attributes      = $this->getRelation($attributes);
             $this->primaryKeyValue = $this->attributes[$this->primaryKeyName] ?? null;
 
             return $this;
         }
+
+        return $this->empty();
+    }
+
+    public function forceIndex($indexKey)
+    {
+        $this->forceIndexes[] = ' FORCE INDEX (`' . $indexKey . '`)';
+
+        return $this;
+    }
+
+    private function buildSet($name, $arguments)
+    {
+        $columnName = \Limepie\decamelize(\substr($name, 3));
+
+        if (false === \in_array($columnName, $this->allColumns, true)) {
+            throw new \Limepie\Exception('set ' . $this->tableName . ' "' . $columnName . '" column not found #6');
+        }
+
+        if (true === isset($arguments[1])) {
+            // $model->setLocation('POINT(:x, :y)', [':x' => $geometry[0]['x'], ':y' => $geometry[0]['y']])
+            $this->functions[$columnName]  = $arguments[0];
+            $this->attributes[$columnName] = $arguments[1];
+        } else {
+            $this->attributes[$columnName] = $arguments[0];
+        }
+
+        return $this;
     }
 
     private function buildOrderBy($name, $arguments)
     {
-        // orderByField 형식은 field를 지칭하므로 tableAliasName을 붙이고 ``로 감싸준다.
-        if (1 === \preg_match('#orderBy(?P<field>.*)(?P<how>Asc|Desc)#', $name, $m)) {
-            $this->orderBy = `{$this->tableAliasName}`.'`'.\Limepie\decamelize($m['field']) . '` ' . \strtoupper($m['how']);
-        } elseif (1 === \preg_match('#orderBy(?P<field>.*)#', $name, $m)) {
-            $this->orderBy = `{$this->tableAliasName}`.'`'.\Limepie\decamelize($m['field']) . '` ASC';
+        if (1 === \preg_match('#orderBy(?P<column>.*)(?P<how>Asc|Desc)$#U', $name, $m)) {
+            if (true === isset($arguments[0])) {
+                $this->orderBy = \sprintf($arguments[0], "`{$this->tableAliasName}`." . '`' . \Limepie\decamelize($m['column']) . '` ') . \strtoupper($m['how']);
+            } else {
+                $this->orderBy = "`{$this->tableAliasName}`." . '`' . \Limepie\decamelize($m['column']) . '` ' . \strtoupper($m['how']);
+            }
+        } elseif (1 === \preg_match('#orderBy(?P<column>.*)#', $name, $m)) {
+            if (true === isset($arguments[0])) {
+                $this->orderBy = \sprintf($arguments[0], "`{$this->tableAliasName}`." . '`' . \Limepie\decamelize($m['column']) . '` ') . 'ASC';
+            } else {
+                $this->orderBy = "`{$this->tableAliasName}`." . '`' . \Limepie\decamelize($m['column']) . '` ASC';
+            }
         } else {
             throw new \Limepie\Exception('"' . $name . '" syntax error', 1999);
         }
@@ -1363,126 +1972,237 @@ class Model extends ArrayObject
 
     private function buildWhere($name, $arguments)
     {
-        $whereKey = \Limepie\decamelize(\substr($name, 7));
+        //$whereKey = \Limepie\decamelize(\substr($name, 7));
 
-        [$this->condition, $this->binds] = $this->getConditionAndBinds($whereKey, $arguments);
+        [$this->condition, $this->binds] = $this->getConditionAndBinds($name, $arguments, 5);
 
         return $this;
     }
 
-    private function buildAnd($name, $arguments)
+    private function buildAnd($name, $arguments, $offset = 3)
     {
-        $key = \Limepie\decamelize(\substr($name, 3));
+        $operator = \substr($name, $offset);
 
-        $this->and[$key] = $arguments[0];
-
-        $this->bindcount++;
-
-        $this->conditions[] = [
-            'string' => 'and',
-        ];
-
-        $whereKey = \substr($key, 3);
-
-        if (0 === \strpos($key, 'gt_')) {
-            $this->bindcount++;
-
-            $this->conditions[] = [
-                'string' => $whereKey . ' > :' . $whereKey . $this->bindcount,
-                'bind'   => [
-                    $whereKey . $this->bindcount => $arguments[0],
-                ],
-            ];
-        } elseif (0 === \strpos($key, 'lt_')) {
-            $this->bindcount++;
-
-            $this->conditions[] = [
-                'string' => $whereKey . ' < :' . $whereKey . $this->bindcount,
-                'bind'   => [
-                    $whereKey . $this->bindcount => $arguments[0],
-                ],
-            ];
-        } elseif (0 === \strpos($key, 'ge_')) {
-            $this->bindcount++;
-
-            $this->conditions[] = [
-                'string' => $whereKey . ' >= :' . $whereKey . $this->bindcount,
-                'bind'   => [
-                    $whereKey . $this->bindcount => $arguments[0],
-                ],
-            ];
-        } elseif (0 === \strpos($whereKey, 'le_')) {
-            $this->bindcount++;
-
-            $this->conditions[] = [
-                'string' => $whereKey . ' <= :' . $whereKey . $this->bindcount,
-                'bind'   => [
-                    $whereKey . $this->bindcount => $arguments[0],
-                ],
-            ];
-        } elseif (0 === \strpos($whereKey, 'eq_')) {
-            $this->bindcount++;
-
-            $this->conditions[] = [
-                'string' => $whereKey . ' = :' . $whereKey . $this->bindcount,
-                'bind'   => [
-                    $whereKey . $this->bindcount => $arguments[0],
-                ],
-            ];
-        } elseif (0 === \strpos($whereKey, 'ne_')) {
-            $this->bindcount++;
-
-            if (null === $arguments[0]) {
-                $this->conditions[] = [
-                    'string' => $whereKey . ' IS NOT NULL',
-                ];
-            } else {
-                $this->conditions[] = [
-                    'string' => $whereKey . ' != :' . $whereKey . $this->bindcount,
-                    'bind'   => [
-                        $whereKey . $this->bindcount => $arguments[0],
-                    ],
-                ];
-            }
-        } elseif (0 === \strpos($whereKey, 'lk_')) {
-            $this->bindcount++;
-
-            $this->conditions[] = [
-                'string' => $whereKey . ' like concat("%", :' . $whereKey . $this->bindcount . ', "%")',
-                'bind'   => [
-                    $whereKey . $this->bindcount => $arguments[0],
-                ],
-            ];
+        if (true === \in_array($operator, [')', '('], true) && false === isset($arguments[0])) {
+            $this->condition .= ' AND ' . $operator;
         } else {
-            $this->bindcount++;
+            [$conds, $binds] = $this->getConditions($name, $arguments, $offset);
+            $condition       = \trim(\implode(PHP_EOL . '        ', $conds));
 
-            if (null === $arguments[0]) {
-                $this->conditions[] = [
-                    'string' => $key . ' IS NULL',
-                ];
-            } else {
-                $this->conditions[] = [
-                    'string' => $key . ' = :' . $key . $this->bindcount,
-                    'bind'   => [
-                        $key . $this->bindcount => $arguments[0],
-                    ],
-                ];
+            if ($condition) {
+                $condition = ' AND ' . PHP_EOL . '        ' . $condition;
+                $this->condition .= $condition;
+            }
+
+            if ($binds) {
+                $this->binds += $binds;
             }
         }
 
         return $this;
     }
 
+    private function buildCondition($name, $arguments, $offset = 9)
+    {
+        /*
+            $joinModels->{'getsByServiceSeqAnd((IsSaleAndLtSaleStartDtAndGtSaleEndDt)Or(IsSale))'}(
+            $joinModels->{'conditionServiceSeqAnd((IsSaleAndLtSaleStartDtAndGtSaleEndDt)Or(IsSale))'}(
+                $serviceSeq,
+                1,
+                \date('Y-m-d H:i:s'),
+                \date('Y-m-d H:i:s'),
+                2
+            )
+            $joinModels
+                ->conditionServiceSeq($serviceSeq)
+                ->{'and('}()
+                ->{'condition(IsSaleAndLtSaleStartDtAndGtSaleEndDt)'}(1, \date('Y-m-d H:i:s'), \date('Y-m-d H:i:s'))
+                ->{'or(IsSale)'}(2)
+                ->{'condition)'}()
+            ->gets()
+            ;
+        */
+        $operator = \substr($name, $offset);
+
+        if (true === \in_array($operator, [')', '('], true) && false === isset($arguments[0])) {
+            $this->condition .= $operator;
+        } else {
+            [$conds, $binds] = $this->getConditions($name, $arguments, $offset);
+
+            $this->condition .= \implode(' ', $conds);
+            $this->binds += $binds;
+        }
+
+        return $this;
+    }
+
+    private function buildOr($name, $arguments, $offset = 2)
+    {
+        $operator = \substr($name, $offset);
+
+        if (true === \in_array($operator, [')', '('], true) && false === isset($arguments[0])) {
+            $this->condition .= ($this->condition ? ' OR ' : '') . $operator;
+        } else {
+            [$conds, $binds] = $this->getConditions($name, $arguments, $offset);
+            $condition       = \trim(\implode(PHP_EOL . '        ', $conds));
+
+            if ($condition) {
+                $condition = ($this->condition ? ' OR ' : '') . PHP_EOL . '        ' . $condition;
+                $this->condition .= $condition;
+            }
+
+            if ($binds) {
+                $this->binds += $binds;
+            }
+        }
+
+        return $this;
+    }
+
+    private function splitKey($name, $offset)
+    {
+        $whereKey = \trim(\Limepie\decamelize(\substr($name, $offset)), '_ ');
+
+        if ($whereKey) {
+            $matches = \preg_split('#([^_]+])?(_and_|_or_)([^_]+])?#U', $whereKey, flags: \PREG_SPLIT_OFFSET_CAPTURE);
+
+            $splitKeys = [];
+            $prevMatch = [];
+            $offset    = 0;
+
+            foreach ($matches as $i => $match) {
+                if ($prevMatch) {
+                    $splitKeys[] = [
+                        \str_repeat('(', \substr_count($prevMatch[0], '(_')), // open
+                        \trim($prevMatch[0], '()_'), // key
+                        \str_repeat(')', \substr_count($prevMatch[0], '_)')), // close
+                        \strtoupper(\trim(\str_replace($prevMatch[0], '', \substr($whereKey, $offset, $match[1] - $offset)), '_')), // 기호
+                    ];
+                    $offset = $match[1];
+                }
+                $prevMatch = $match;
+            }
+            $splitKeys[] = [
+                \str_repeat('(', \substr_count($prevMatch[0], '(_')), // open
+                \trim($prevMatch[0], '()_'), // key
+                \str_repeat(')', \substr_count($prevMatch[0], '_)')), // close
+                \strtoupper(\trim(\str_replace($prevMatch[0], '', \substr($whereKey, $offset, $match[1] - $offset)), '_')), // 기호
+            ];
+
+            return $splitKeys;
+        }
+
+        return [];
+    }
+
+    // where, and, or등의 추가 구문을 붙이지 않고 처리
+    private function getConditions($name, $arguments, $offset = 0)
+    {
+        $splitKeys = $this->splitKey($name, $offset);
+        $binds     = [];
+        $conds     = [];
+
+        foreach ($splitKeys as $index => $splitKey) {
+            ++$this->bindcount;
+
+            [$open, $key, $close, $operator] = $splitKey;
+
+            $bindKeyname = $this->tableAliasName . '_' . $key . '_' . $this->bindcount;
+
+            if (0 === \strpos($key, 'between_')) {
+                $fixedKey = \substr($key, 8);
+
+                $queryString = "`{$this->tableAliasName}`." . '`' . $fixedKey . '`' . ' BETWEEN :' . $bindKeyname . '_a AND :' . $bindKeyname . '_b';
+
+                $binds[':' . $bindKeyname . '_a'] = $arguments[$index][0];
+                $binds[':' . $bindKeyname . '_b'] = $arguments[$index][1];
+            } elseif ($arguments[$index] && true === \is_array($arguments[$index])) {
+                $bindkeys = [];
+
+                foreach ($arguments[$index] as $bindindex => $bindvalue) {
+                    $bindkey         = ':' . $bindKeyname . '_' . $bindindex;
+                    $bindkeys[]      = $bindkey;
+                    $binds[$bindkey] = $bindvalue;
+                }
+                $queryString = "`{$this->tableAliasName}`.`{$key}` IN (" . \implode(', ', $bindkeys) . ')';
+            } else {
+                $fixedKey   = \substr($key, 3);
+                $whereValue = $arguments[$index];
+
+                if (true === \is_object($whereValue)) {
+                    $leftCondition = \sprintf(
+                        $whereValue->extraCondition,
+                        "`{$this->tableAliasName}`." . '`' . $fixedKey . '`'
+                    );
+
+                    // null 인경우 mysql에서 is null, is not null 사용하므로 bind 안함
+                    if (null === $whereValue->bind) {
+                    } else {
+                        $binds[':' . $bindKeyname] = $whereValue->bind;
+                    }
+
+                    if (true === \is_array($whereValue->extraBinds) && $whereValue->extraBinds) {
+                        $binds += $whereValue->extraBinds;
+                    }
+                } else {
+                    $leftCondition = "`{$this->tableAliasName}`." . '`' . $fixedKey . '`';
+
+                    // null 인경우 mysql에서 is null, is not null 사용하므로 bind 안함
+                    if (null === $whereValue) {
+                    } else {
+                        $binds[':' . $bindKeyname] = $whereValue;
+                    }
+                }
+
+                if (0 === \strpos($key, 'gt_')) {
+                    $queryString = $leftCondition . ' > :' . $bindKeyname;
+                } elseif (0 === \strpos($key, 'lt_')) {
+                    $queryString = $leftCondition . ' < :' . $bindKeyname;
+                } elseif (0 === \strpos($key, 'ge_')) {
+                    $queryString = $leftCondition . ' >= :' . $bindKeyname;
+                } elseif (0 === \strpos($key, 'le_')) {
+                    $queryString = $leftCondition . ' <= :' . $bindKeyname;
+                } elseif (0 === \strpos($key, 'eq_')) {
+                    $queryString = $leftCondition . ' = :' . $bindKeyname;
+                } elseif (0 === \strpos($key, 'ne_')) {
+                    if (null === $arguments[$index]) {
+                        $queryString = $leftCondition . ' IS NOT NULL';
+                    } else {
+                        $queryString = $leftCondition . ' != :' . $bindKeyname;
+                    }
+                } elseif (0 === \strpos($key, 'lk_')) {
+                    $queryString = $leftCondition . ' like concat("%", :' . $bindKeyname . ', "%")';
+                } else {
+                    if (null === $arguments[$index]) {
+                        $queryString = "`{$this->tableAliasName}`." . '`' . $key . '` IS NULL';
+                    } else {
+                        $queryString = "`{$this->tableAliasName}`." . '`' . $key . '`' . ' = :' . $bindKeyname;
+                    }
+                }
+            }
+
+            if ($queryString) {
+                $conds[] = $open . $queryString . $close;
+            }
+
+            if ($operator) {
+                $conds[] = $operator;
+            }
+        }
+
+        return [$conds, $binds];
+    }
+
     private function buildGe($name, $arguments)
     {
         $key = \Limepie\decamelize(\substr($name, 2));
 
-        $this->bindcount++;
+        ++$this->bindcount;
 
         $this->conditions[] = [
-            'string' => $key . ' >= :' . $key . $this->bindcount,
+            'string' => $key . ' >= :' . $key . '_' . $this->bindcount,
             'bind'   => [
-                $key . $this->bindcount => $arguments[0],
+                $key . '_' . $this->bindcount => $arguments[0],
             ],
         ];
 
@@ -1493,12 +2213,12 @@ class Model extends ArrayObject
     {
         $key = \Limepie\decamelize(\substr($name, 2));
 
-        $this->bindcount++;
+        ++$this->bindcount;
 
         $this->conditions[] = [
-            'string' => $key . ' <= :' . $key . $this->bindcount,
+            'string' => $key . ' <= :' . $key . '_' . $this->bindcount,
             'bind'   => [
-                $key . $this->bindcount => $arguments[0],
+                $key . '_' . $this->bindcount => $arguments[0],
             ],
         ];
 
@@ -1509,7 +2229,7 @@ class Model extends ArrayObject
     {
         $key = \Limepie\decamelize(\substr($name, 2));
 
-        $this->bindcount++;
+        ++$this->bindcount;
 
         if (null === $arguments[0]) {
             $this->conditions[] = [
@@ -1519,9 +2239,9 @@ class Model extends ArrayObject
             ];
         } else {
             $this->conditions[] = [
-                'string' => $key . ' != :' . $key . $this->bindcount,
+                'string' => $key . ' != :' . $key . '_' . $this->bindcount,
                 'bind'   => [
-                    $key . $this->bindcount => $arguments[0],
+                    $key . '_' . $this->bindcount => $arguments[0],
                 ],
             ];
         }
@@ -1533,35 +2253,94 @@ class Model extends ArrayObject
     {
         $key = \Limepie\decamelize(\substr($name, 2));
 
-        $this->bindcount++;
+        ++$this->bindcount;
 
         $this->conditions[] = [
-            'string' => $key . ' like concat("%", :' . $key . $this->bindcount, ', "%")',
+            'string' => $key . ' like concat("%", :' . $key . '_' . $this->bindcount, ', "%")',
             'bind'   => [
-                $key . $this->bindcount => $arguments[0],
+                $key . '_' . $this->bindcount => $arguments[0],
             ],
         ];
 
         return $this;
     }
 
-    private function buildKey($name, $arguments)
+    private function buildBetween($name, $arguments)
     {
-        $this->keyName = \Limepie\decamelize(\substr($name, 3));
+        $key = \Limepie\decamelize(\substr($name, 7));
+
+        ++$this->bindcount;
+
+        $a = $key . '_' . $this->bindcount . '_a';
+        $b = $key . '_' . $this->bindcount . '_b';
+
+        $this->conditions[] = [
+            'string' => $key . ' BETWEEN :' . $a . ' AND :' . $b,
+            'bind'   => [
+                $a => $arguments[0][0],
+                $b => $arguments[0][1],
+            ],
+        ];
+
+        return $this;
+    }
+
+    private function buildKeyName($name, $arguments)
+    {
+        if (1 === \preg_match('#keyName(?P<leftKeyName>.*)(With(?P<rightKeyName>.*))?$#U', $name, $m)) {
+            $this->keyName = \Limepie\decamelize($m['leftKeyName']);
+
+            if (true === isset($m['rightKeyName'])) {
+                $this->secondKeyName = \Limepie\decamelize($m['rightKeyName']);
+            }
+        } else {
+            $this->keyName = \Limepie\decamelize(\substr($name, 7));
+        }
 
         return $this;
     }
 
     private function buildAlias($name, $arguments)
     {
-        $this->aliasTableName = \Limepie\decamelize(\substr($name, 5));
+        $this->newTableName = \Limepie\decamelize(\substr($name, 5));
+        //$this->tableAliasName = \Limepie\decamelize(\substr($name, 5));
+
+        return $this;
+    }
+
+    public function buildAddColumn($name, $arguments = [])
+    {
+        $aliasName = null;
+
+        if (1 === \preg_match('#addColumn(?P<leftKeyName>.*)(Alias(?P<rightKeyName>.*))?$#U', $name, $m)) {
+            $columnName = \Limepie\decamelize($m['leftKeyName']);
+
+            if (true === isset($m['rightKeyName'])) {
+                $aliasName = \Limepie\decamelize($m['rightKeyName']);
+            }
+        } else {
+            $columnName = \Limepie\decamelize(\substr($name, 8));
+        }
+
+        if (isset($arguments[0])) {
+            $this->addColumn($columnName, [$aliasName, $arguments[0]]);
+        } else {
+            $this->addColumn($columnName, [$aliasName]);
+        }
+
+        return $this;
+    }
+
+    public function move($parent)
+    {
+        $this->parent = $parent;
 
         return $this;
     }
 
     private function buildMatch($name, $arguments)
     {
-        if (1 === \preg_match('#match(?P<leftKeyName>.*)With(?P<rightKeyName>.*)#', $name, $m)) {
+        if (1 === \preg_match('#match(All)?(?P<leftKeyName>.*)With(?P<rightKeyName>.*)$#U', $name, $m)) {
             $this->leftKeyName  = \Limepie\decamelize($m['leftKeyName']);
             $this->rightKeyName = \Limepie\decamelize($m['rightKeyName']);
         } else {
@@ -1571,19 +2350,42 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildGetBy($name, $arguments)
+    private function buildGetBy($name, $arguments, $offset = 5)
     {
-        $this->attributes    = [];
-        $whereKey            = \Limepie\decamelize(\substr($name, 5));
-        [$condition, $binds] = $this->getConditionAndBinds($whereKey, $arguments);
-        $selectFields        = $this->getSelectFields();
-        $orderBy             = $this->getOrderBy();
-        $limit               = $this->getLimit();
-        $sql                 = <<<SQL
+        $this->attributes = [];
+
+        $condition           = '';
+        $binds               = [];
+        [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
+
+        $condition .= $this->condition;
+        $binds += $this->binds;
+
+        $selectColumns = $this->getSelectColumns();
+        $orderBy       = $this->getOrderBy();
+        $limit         = $this->getLimit();
+        $join          = '';
+
+        if ($this->joinModels) {
+            $joinInfomation = $this->getJoin($this);
+            $join           = $joinInfomation['join'];
+            $selectColumns .= $joinInfomation['selectColumns'];
+            $binds += $joinInfomation['binds'];
+
+            if ($condition) {
+                $condition .= PHP_EOL . '    AND ' . PHP_EOL . '        ' . $joinInfomation['condition'];
+            } else {
+                $condition .= ' WHERE ' . PHP_EOL . '    ' . $joinInfomation['condition'];
+            }
+            $keyName = '';
+        }
+
+        $sql = <<<SQL
             SELECT
-                {$selectFields}
+                {$selectColumns}
             FROM
                 `{$this->tableName}` AS `{$this->tableAliasName}`
+            {$join}
             {$condition}
             {$orderBy}
             {$limit}
@@ -1599,6 +2401,10 @@ class Model extends ArrayObject
             throw new \Limepie\Exception('lost connection');
         }
 
+        if (static::$debug) {
+            $this->debug();
+        }
+
         if ($attributes) {
             $attributes            = $this->buildDataType($attributes);
             $this->attributes      = $this->getRelation($attributes);
@@ -1607,57 +2413,48 @@ class Model extends ArrayObject
             return $this;
         }
 
-
-        return $this;
-        return [];
+        return $this->empty();
     }
 
-    private function buildGetsBy($name, $arguments)
+    private function buildGetsBy($name, $arguments, $offset = 6)
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
-        $whereKey              = \Limepie\decamelize(\substr($name, 6));
-        [$condition, $binds]   = $this->getConditionAndBinds($whereKey, $arguments);
-        $selectFields          = $this->getSelectFields();
-        $orderBy               = $this->getOrderBy();
-        $limit                 = $this->getLimit();
-        $join                  = '';
+        //$whereKey              = \Limepie\decamelize(\substr($name, $offset));
+        [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
 
-        if ($this->joinModel) {
-            $join = 'INNER JOIN ' . $this->joinModel->tableName . ' ON ' . $this->tableName . '.' . $this->joinModel->joinOn[0] . ' = ' . $this->joinModel->tableName . '.' . $this->joinModel->joinOn[1];
+        $condition .= $this->condition;
+        $binds += $this->binds;
 
-            $selectFields = [];
+        $selectColumns = $this->getSelectColumns();
+        $orderBy       = $this->getOrderBy();
+        $limit         = $this->getLimit();
+        $join          = '';
+        $forceIndex    = \implode(', ', $this->forceIndexes);
+        $keyName       = $this->keyName;
 
-            if (true) { // join하는 테이블의 필드 우선
-                foreach ($this->joinModel->selectFields as $field) {
-                    $selectFields[] = $this->joinModel->tableName . '.' . $field;
-                }
+        $selectColumns = $this->getSelectColumns();
 
-                foreach ($this->selectFields as $field) {
-                    if (false === \in_array($field, $this->joinModel->selectFields, true)) {
-                        $selectFields[] = $this->tableName . '.' . $field;
-                    }
-                }
+        if ($this->joinModels) {
+            $joinInfomation = $this->getJoin($this);
+            $join           = $joinInfomation['join'];
+            $selectColumns .= $joinInfomation['selectColumns'];
+            $binds += $joinInfomation['binds'];
+
+            if ($condition) {
+                $condition .= PHP_EOL . '    AND ' . PHP_EOL . '        ' . $joinInfomation['condition'];
             } else {
-                foreach ($this->selectFields as $field) {
-                    $selectFields[] = $this->tableName . '.' . $field;
-                }
-
-                foreach ($this->joinModel->selectFields as $field) {
-                    if (false === \in_array($field, $this->selectFields, true)) {
-                        $selectFields[] = $this->joinModel->tableName . '.' . $field;
-                    }
-                }
+                $condition .= ' WHERE ' . PHP_EOL . '    ' . $joinInfomation['condition'];
             }
-
-            $selectFields = \implode(',', $selectFields);
+            $keyName = '';
         }
 
         $sql = <<<SQL
             SELECT
-                {$selectFields}
+                {$selectColumns}
             FROM
                 `{$this->tableName}` AS `{$this->tableAliasName}`
+            {$forceIndex}
             {$join}
             {$condition}
             {$orderBy}
@@ -1668,17 +2465,54 @@ class Model extends ArrayObject
         $this->query     = $sql;
         $this->binds     = $binds;
 
-        $data       = $this->getConnect()->gets($sql, $binds, false);
+        $data = $this->getConnect()->gets($sql, $binds, false);
+
+        if (static::$debug) {
+            $this->debug();
+        }
+
         $attributes = [];
 
         $class = \get_called_class();
 
-        foreach ($data as $index => $row) {
-            if (false === \array_key_exists($this->keyName, $row)) {
-                throw new \Limepie\Exception('gets by ' . $this->tableName . ' "' . $this->keyName . '" field not found');
+        foreach ($data as $index => &$row) {
+            foreach ($this->joinModels as $joinModelInfomation) {
+                $joinModel          = $joinModelInfomation['model'];
+                $joinClassAliasName = $joinModel->tableAliasName;
+                $joinClassName      = $joinModel->tableName;
+
+                $tmp = [];
+
+                foreach ($row as $innerFieldName => &$innerFieldValue) {
+                    if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
+                        $tmp[\str_replace($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
+
+                        unset($row[$innerFieldName]);
+                    }
+                }
+
+                unset($innerFieldValue);
+
+                if ($joinModel->newTableName) {
+                    $parentTableName = $joinModel->newTableName;
+                } else {
+                    $parentTableName = $joinModel->tableName . '_model';
+                }
+
+                $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
             }
-            $attributes[$row[$this->keyName]] = new $class($this->getConnect(), $row);
+
+            if ($keyName) {
+                if (false === \array_key_exists($this->keyName, $row)) {
+                    throw new \Limepie\Exception('gets by ' . $this->tableName . ' "' . $this->keyName . '" column not found #7');
+                }
+
+                $attributes[$row[$keyName]] = new $class($this->getConnect(), $row);
+            } else {
+                $attributes[] = new $class($this->getConnect(), $row);
+            }
         }
+        unset($row);
 
         if ($attributes) {
             $this->attributes = $this->getRelations($attributes);
@@ -1686,9 +2520,7 @@ class Model extends ArrayObject
             return $this;
         }
 
-
-        return $this;
-        return [];
+        return $this->empty();
     }
 
     private function iteratorToDelete($attributes)
@@ -1710,5 +2542,71 @@ class Model extends ArrayObject
         }
 
         return true;
+    }
+
+    /**
+     * Return a query with the binds replaced.
+     */
+    public function replaceQueryBinds(string $query, array $binds) : string
+    {
+        return \preg_replace_callback(
+            '/\?|((?<!:):([a-z][a-z0-9_]+))/i',
+            static function ($matches) use ($binds) {
+                $value = null;
+
+                if (true === isset($binds[':' . $matches[2]])) {
+                    $value = $binds[':' . $matches[2]];
+                } else {
+                    $value = $binds[$matches[2]];
+                }
+
+                if (true === \is_numeric($value)) {
+                    return $value;
+                }
+
+                return static::escapeFunction($value);
+            },
+            $query
+        );
+    }
+
+    /**
+     * Escape binds of a SQL query.
+     *
+     * @param mixed $parameter
+     */
+    private static function escapeFunction($parameter) : string
+    {
+        $result = $parameter;
+
+        switch (true) {
+            // Check if result is non-unicode string using PCRE_UTF8 modifier
+            case \is_string($result) && !\preg_match('//u', $result):
+                $result = '0x' . \strtoupper(\bin2hex($result));
+
+                break;
+            case \is_string($result):
+                $result = "'" . \addslashes($result) . "'";
+
+                break;
+            case null === $result:
+                $result = 'NULL';
+
+                break;
+            case \is_bool($result):
+                $result = $result ? '1' : '0';
+
+                break;
+
+            default:
+                $result = (string) $result;
+        }
+
+        return $result;
+    }
+
+    private function empty()
+    {
+        return null;
     }
 }

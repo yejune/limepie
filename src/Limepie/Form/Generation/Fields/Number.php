@@ -22,7 +22,12 @@ class Number extends \Limepie\Form\Generation\Fields
         }
 
         $style = '';
-
+        if(true === isset($property['readonly']) && $property['readonly']) {
+            if(false === isset($property['element_style'])) {
+                $property['element_style'] = '';
+            }
+            $property['element_style'] .= ' pointer-events: none;';
+        }
         if (isset($property['element_style']) && $property['element_style']) {
             $style = ' style="' . $property['element_style'] . '"';
         }

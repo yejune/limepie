@@ -14,11 +14,11 @@ class Exception extends \Exception
 
     public function __construct($e, int $code = 0)
     {
-        if (true === \is_object($e) && $e instanceof \Throwable) {
+        if ($e instanceof \Throwable) {
             $this->setMessage($e->getMessage());
             $code = $code ?: $e->getCode();
 
-            if (true === \strpos($e->getFile(), '/limepie/src/')) {
+            if (false !== \strpos($e->getFile(), '/limepie/src/')) {
                 $trace = $this->getLastTrace();
             } else {
                 $trace = [
@@ -27,7 +27,12 @@ class Exception extends \Exception
                 ];
             }
         } elseif (true === \is_string($e)) {
+            //\pr($e);
             $this->setMessage($e);
+
+            if (false !== \strpos($this->getFile(), '/limepie/src/')) {
+                $trace = $this->getLastTrace();
+            }
             $trace = $this->getLastTrace();
         } else {
             throw new \Exception('exception error');
@@ -50,7 +55,7 @@ class Exception extends \Exception
 
     public function __toString()
     {
-        return $this->getMessage() . ' in ' . $this->getFile() . ' on line ' . $this->getLine();
+        return $this->getMessage(); // . ' in ' . $this->getFile() . ' on line ' . $this->line;
     }
 
     public function getLastTrace()
@@ -90,7 +95,7 @@ class Exception extends \Exception
         return $this->displayMessage ?: $this->getMessage();
     }
 
-    public function setLine(int $line)
+    protected function setLine(int $line)
     {
         $this->line = $line;
 

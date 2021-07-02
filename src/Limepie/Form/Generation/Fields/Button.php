@@ -7,11 +7,11 @@ class Button extends \Limepie\Form\Generation\Fields
     public static function write($key, $property, $value)
     {
         $value = \htmlspecialchars((string) $value);
-
         if (0 === \strlen($value) && true === isset($property['default'])) {
             $value = \htmlspecialchars((string) $property['default']);
         }
         $default = $property['default'] ?? '';
+        $id = \str_replace(['[', ']'], ['_', ''], $key);
 
         $readonly = '';
 
@@ -20,15 +20,31 @@ class Button extends \Limepie\Form\Generation\Fields
         }
         $onclick = '';
         if (isset($property['onclick']) && $property['onclick']) {
-            $onclick = ' onclick="'.$property['onclick'].'"';
+            $onclick = $property['onclick'];
         }
         $class = '';
         if (isset($property['element_class']) && $property['element_class']) {
             $class = ' '.$property['element_class'];
         }
 
+
+        $init_script = '';
+        if (isset($property['init_script']) && $property['init_script']) {
+            $init_script = $property['init_script'];
+        }
+
+
         $html = <<<EOT
-        <input type="button" class="btn{$class}" name="{$key}" value="{$property['text']}" data-default="{$default}"${readonly}${onclick} />
+        <script>
+        $(function() {
+            {$init_script}
+            $("#btn{$id}").on('click', function() {
+                {$onclick}
+            });
+        });
+        </script>
+        <input type="hidden" class="form-control" readonly="readonly" name="{$key}" value="{$value}" data-default="{$default}" />
+        <input type="button" class="btn{$class}" name="btn{$key}" id="btn{$id}" value="{$property['text']}" ${readonly}/>
 
 EOT;
 

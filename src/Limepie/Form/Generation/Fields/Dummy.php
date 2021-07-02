@@ -20,11 +20,17 @@ class Dummy extends \Limepie\Form\Generation\Fields
             $elementClass = ' ' . $property['element_class'];
         }
 
+        $elementStyle = '';
+
+        if (isset($property['element_style']) && $property['element_style']) {
+            $elementStyle = ' ' . $property['element_style'];
+        }
+
         if ($value) {
-            $value = \nl2br($value);
+            $value = \nl2br((string)$value);
         }
         $html = <<<EOT
-        <div class="{$elementClass}">{$value}</div>
+        <div class="{$elementClass}" style="{$elementStyle}">{$value}</div>
 
 EOT;
 

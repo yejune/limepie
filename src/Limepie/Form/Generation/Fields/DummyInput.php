@@ -2,7 +2,7 @@
 
 namespace Limepie\Form\Generation\Fields;
 
-class Text extends \Limepie\Form\Generation\Fields
+class DummyInput extends \Limepie\Form\Generation\Fields
 {
     public static function write($key, $property, $value)
     {
@@ -16,11 +16,12 @@ class Text extends \Limepie\Form\Generation\Fields
         }
         $default  = $property['default'] ?? '';
         $default  = \is_array($default) ? '' : $default;
-        $readonly = '';
+        // $readonly = '';
 
-        if (isset($property['readonly']) && $property['readonly']) {
-            $readonly = ' readonly="readonly"';
-        }
+        // if (isset($property['readonly']) && $property['readonly']) {
+        //     $readonly = ' readonly="readonly"';
+        // }
+        $readonly = ' readonly="readonly"';
 
         $style = '';
         if(true === isset($property['readonly']) && $property['readonly']) {

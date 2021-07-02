@@ -730,7 +730,7 @@ class OriginalModel implements \Iterator, \ArrayAccess, \Countable
                         //if($trace['function'] == '__call') continue;
 
                         if (false === \in_array($offset, $this->allFields, true)) {
-                            $message = $offset . ' not found';
+                            $message = $offset . ' not found2.';
                             $code    = '234';
                         } else {
                             $message = $offset . ' is null';

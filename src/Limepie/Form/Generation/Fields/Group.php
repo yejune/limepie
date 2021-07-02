@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 
 namespace Limepie\Form\Generation\Fields;
+//https://stackoverflow.com/questions/36551105/applying-containment-to-jquery-ui-sortable-table-prevents-moving-tall-rows-to-th
 
 class Group extends \Limepie\Form\Generation\Fields
 {
@@ -12,9 +13,9 @@ class Group extends \Limepie\Form\Generation\Fields
 
         foreach ($specs['properties'] ?? [] as $propertyKey => $propertyValue) {
             if (false === isset($propertyValue['type'])) {
-                throw new \Exception('group ' . ($prevKey ? '"' . $prevKey . '" ' : '') . '"' . $propertyKey . '" type not found');
+                throw new \Limepie\Exception('group ' . ($prevKey ? '"' . $prevKey . '" ' : '') . '"' . $propertyKey . '" type not found');
             }
-            $method   = __NAMESPACE__ . '\\' . \ucfirst($propertyValue['type']);
+            $method   = __NAMESPACE__ . '\\' . \Limepie\camelize($propertyValue['type']);
             $elements = '';
 
             $fixPropertyKey = $propertyKey;
@@ -56,7 +57,7 @@ class Group extends \Limepie\Form\Generation\Fields
                 }
             }
 
-            $isCollapse = true === isset($propertyValue['collapse']) ? true : false;
+            $isSortableButton = true === isset($propertyValue['sortable_button']) ? true : false;
             $index      = 0;
 
             if (true === static::isValue($aData)) {
@@ -66,29 +67,38 @@ class Group extends \Limepie\Form\Generation\Fields
                         $method::write($propertyName, $propertyValue, $aData),
                         $index,
                         $isMultiple,
-                        $isCollapse,
+                        $isSortableButton,
                         static::isValue($aData),
-                        $parentId
+                        $parentId,
+                        $propertyValue['multiple_button_onclick'] ?? ''
                     );
                 } else {
                     foreach ($aData as $aKey => $aValue) {
                         if ('only' === $propertyValue['multiple']) {
-                        } else {
-                            $index++;
-                        }
-                        // 배열 키는 바꾸면 안됨. 파일업로드 변경 여부 판별때문에
-                        if (17 === \strlen((string) $aKey)) {
                             $parentId = $aKey;
                         } else {
-                            $parentId = static::getUniqueId();
+                            ++$index;
+
+                            // 배열 키는 바꾸면 안됨. 파일업로드 변경 여부 판별때문에
+                            if (17 === \strlen((string) $aKey)) {
+                                $parentId = $aKey;
+                            } else {
+                                if ('multichoice' === $propertyValue['type']) {
+                                    $parentId = '';
+                                } else {
+                                    $parentId = static::getUniqueId();
+                                }
+                            }
                         }
+
                         $elements .= static::addElement(
                             $method::write($propertyName . '[' . $parentId . ']', $propertyValue, $aData[$aKey]),
                             $index,
                             $isMultiple,
-                            $isCollapse,
+                            $isSortableButton,
                             static::isValue($aData[$aKey]),
-                            $parentId
+                            $parentId,
+                            $propertyValue['multiple_button_onclick'] ?? ''
                         );
                     }
                 }
@@ -105,9 +115,10 @@ class Group extends \Limepie\Form\Generation\Fields
                         $method::write($propertyName, $propertyValue, $aData),
                         $index,
                         $isMultiple,
-                        $isCollapse,
+                        $isSortableButton,
                         static::isValue($aData),
-                        $parentId
+                        $parentId,
+                        $propertyValue['multiple_button_onclick'] ?? ''
                     );
                 } else {
                     if (true === isset($propertyValue['default'])) {
@@ -122,26 +133,29 @@ class Group extends \Limepie\Form\Generation\Fields
 
                     foreach ($aData as $aKey => $aValue) {
                         if ('only' === $propertyValue['multiple']) {
-                        } else {
-                            $index++;
-                        }
-                        // 배열 키는 바꾸면 안됨. 파일업로드 변경 여부 판별때문에
-                        if (17 === \strlen((string) $aKey)) {
                             $parentId = $aKey;
                         } else {
-                            if ('multichoice' === $propertyValue['type']) {
-                                $parentId = '';
+                            ++$index;
+
+                            // 배열 키는 바꾸면 안됨. 파일업로드 변경 여부 판별때문에
+                            if (17 === \strlen((string) $aKey)) {
+                                $parentId = $aKey;
                             } else {
-                                $parentId = static::getUniqueId();
+                                if ('multichoice' === $propertyValue['type']) {
+                                    $parentId = '';
+                                } else {
+                                    $parentId = static::getUniqueId();
+                                }
                             }
                         }
                         $elements .= static::addElement(
                             $method::write($propertyName . '[' . $parentId . ']', $propertyValue, $aData[$aKey]),
                             $index,
                             $isMultiple,
-                            $isCollapse,
+                            $isSortableButton,
                             static::isValue($aData[$aKey]),
-                            $parentId
+                            $parentId,
+                            $propertyValue['multiple_button_onclick'] ?? ''
                         );
                     }
                     /*
@@ -151,7 +165,7 @@ class Group extends \Limepie\Form\Generation\Fields
                             $method::write($propertyName . '[' . $parentId . ']', $propertyValue, $aData),
                             $index,
                             $isMultiple,
-                            $isCollapse,
+                            $isSortableButton,
                             static::isValue($aData),
                             $parentId
                         );
@@ -256,7 +270,7 @@ class Group extends \Limepie\Form\Generation\Fields
             $addStyle = '';
 
             if (true === isset($propertyValue['style'])) {
-                $addStyle = ' ' . $propertyValue['style'];
+                $addStyle = ' ' . $propertyValue['style'] . ' ';
             } else {
                 $addStyle = ' ';
             }
@@ -270,8 +284,14 @@ class Group extends \Limepie\Form\Generation\Fields
                 if (true === isset($data[$propertyValue['display_target']])) {
                     $targetValue = $data[$propertyValue['display_target']];
 
+                    if (true === \is_object($targetValue)) {
+                        if (true === \property_exists($targetValue, 'value')) {
+                            $targetValue = $targetValue->value;
+                        }
+                    }
+
                     if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
-                        $addStyle = $propertyValue['display_target_condition'][$targetValue];
+                        $addStyle .= $propertyValue['display_target_condition'][$targetValue];
                     }
                 } elseif (true === isset($specs['properties'][$propertyValue['display_target']])) {
                     $targetSpec = $specs['properties'][$propertyValue['display_target']];
@@ -279,8 +299,69 @@ class Group extends \Limepie\Form\Generation\Fields
                     if (true === isset($targetSpec['default'])) {
                         $targetValue = $targetSpec['default'];
 
+                        if (true === \is_object($targetValue)) {
+                            if (true === \property_exists($targetValue, 'value')) {
+                                $targetValue = $targetValue->value;
+                            }
+                        }
+
                         if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
-                            $addStyle = $propertyValue['display_target_condition'][$targetValue];
+                            $addStyle .= $propertyValue['display_target_condition'][$targetValue];
+                        }
+                    }
+                } else {
+                    if (false !== \strpos($propertyValue['display_target'], '.')) {
+                        $tmpids = \explode('.', $propertyValue['display_target']);
+                        //\pr($tmpids, $data);
+                        $targetValue = &$data;
+                        $targetSpec  = &$specs;
+
+                        foreach ($tmpids as $tmpid) {
+                            //\pr($targetValue, $tmpids, $tmpid);
+
+                            if (true === isset($targetValue[$tmpid])) {
+                                $targetValue = &$targetValue[$tmpid];
+                            }
+
+                            if (true === isset($targetSpec['properties'][$tmpid])) {
+                                $targetSpec = &$targetSpec['properties'][$tmpid];
+                            }
+                        }
+
+                        //\pr($propertyKey, $tmpids, $targetValue, $targetSpec);
+
+                        // if (true === \is_object($targetValue)) {
+                        //     if (true === \property_exists($targetValue, 'value')) {
+                        //         $targetValue = $targetValue->value;
+                        //     }
+                        // }
+
+                        // if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
+                        //     $addStyle .= $propertyValue['display_target_condition'][$targetValue];
+                        // }
+
+                        if ($targetValue) {
+                            if (true === \is_object($targetValue)) {
+                                if (true === \property_exists($targetValue, 'value')) {
+                                    $targetValue = $targetValue->value;
+                                }
+                            }
+
+                            if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
+                                $addStyle .= $propertyValue['display_target_condition'][$targetValue];
+                            }
+                        } elseif (true === isset($targetSpec['default'])) {
+                            $targetValue = $targetSpec['default'];
+
+                            if (true === \is_object($targetValue)) {
+                                if (true === \property_exists($targetValue, 'value')) {
+                                    $targetValue = $targetValue->value;
+                                }
+                            }
+
+                            if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
+                                $addStyle .= $propertyValue['display_target_condition'][$targetValue];
+                            }
                         }
                     }
                 }
@@ -394,7 +475,7 @@ class Group extends \Limepie\Form\Generation\Fields
                     $title     .= '</div>';
                     $titleHtml .= $title;
                 } else {
-                    $description = \preg_replace("#\*(.*)\n#", '<span class="bold">*$1</span>' . \PHP_EOL, $description);
+                    $description = \preg_replace("#\\*(.*)\n#", '<span class="bold">*$1</span>' . \PHP_EOL, $description);
                     $titleHtml .= '<p class="description">' . \nl2br($description) . '</p>';
                 }
             }
@@ -403,14 +484,14 @@ class Group extends \Limepie\Form\Generation\Fields
                 // {$titleHtml}
 
                 $innerhtml .= <<<EOT
-                <div class="x-hidden">
+                <div class="x-hidden" name="{$dotKey}.layer">
                     {$elements}
                 </div>
 EOT;
             } elseif ('dummy' === $propertyValue['type'] && '' === $aData) {
                 // {$titleHtml}
 
-                $innerhtml .= <<<EOT
+                $innerhtml .= <<<'EOT'
 EOT;
             } elseif ('checkbox' === $propertyValue['type']) {
                 $d = '';
@@ -443,13 +524,35 @@ EOT;
                 </div>
 EOT;
 
+
+                $sortableOnchange = '';
+                if (true === isset($propertyValue['sortable_onchange'])) {
+                    $sortableOnchange = $propertyValue['sortable_onchange'];
+                }
+
                 if ($sortableClass) {
                     $script .= <<<EOD
 <script>
 $(function() {
 $(".{$sortableClass}").sortable({
-opacity: 0.5,
-axis: 'y'
+    //opacity: 0.5,
+    axis: 'y',
+    containment: 'parent',
+    helper: function(e, row) {
+        row.children().each(function() {
+            $(this).width($(this).width());
+        });
+        return row;
+    },
+    start: function (e, ui) {
+        var sort = $(this).sortable('instance');
+        ui.placeholder.height(ui.helper.height());
+        sort.containment[3] += ui.helper.height()- sort.offset.click.top;;
+        sort.containment[1] -= sort.offset.click.top;
+    },
+    update: function() {
+        {$sortableOnchange}
+    }
 });
 });
 </script>
@@ -486,7 +589,7 @@ EOT;
         $innerhtml = '';
 
         foreach ($specs['properties'] as $propertyKey => $propertyValue) {
-            $method   = __NAMESPACE__ . '\\' . \ucfirst($propertyValue['type']);
+            $method   = __NAMESPACE__ . '\\' . \Limepie\camelize($propertyValue['type']);
             $elements = '';
             $index    = 0;
 
@@ -515,7 +618,7 @@ EOT;
                     );
                 } else {
                     foreach ($aData as $aKey => $aValue) {
-                        $index++;
+                        ++$index;
 
                         //if (false === isset($parentId)) {
                         $parentId = $aKey;
@@ -533,7 +636,7 @@ EOT;
                         $index
                     );
                 } else {
-                    $index++;
+                    ++$index;
 
                     if (false === isset($parentId)) {
                         $parentId = static::getUniqueId();
@@ -547,7 +650,7 @@ EOT;
             }
 
             $language     = $propertyValue['label'][static::getLanguage()] ?? $prevKey;
-            $multipleHtml = true === isset($propertyValue['multiple']) ? static::getMultipleHtml($parentId) : '';
+            //$multipleHtml = true === isset($propertyValue['multiple']) ? static::getMultipleHtml($parentId) : '';
             $titleHtml    = '<label>' . $language . '</label>';
 
             if ('hidden' === $propertyValue['type']) {

@@ -48,8 +48,12 @@ class Generation
 
     public function write(array $spec, array | \Limepie\ArrayObject $data = []) : string
     {
-        $method = __NAMESPACE__ . '\\Generation\\Fields\\' . \ucfirst($spec['type']);
+        $method = __NAMESPACE__ . '\\Generation\\Fields\\' . \Limepie\camelize($spec['type']);
         $html   = '';
+
+        if ($data instanceof \Limepie\ArrayObject) {
+            $data = $data->toArray();
+        }
 
         Generation\Fields::$allData    = $data;
         Generation\Fields::$conditions = $spec['conditions'] ?? [];
@@ -96,8 +100,25 @@ class Generation
         $stepper = '';
 
         if (true === isset($spec['stepper'])) {
-            if (true === \is_array($spec['stepper']) && true === isset($spec['stepper'][0]['label'])) {
+            if (true === \is_array($spec['stepper'])) {
+                $i = 0;
+                $c = \count($spec['stepper']);
+
                 foreach (\array_reverse($spec['stepper']) as $step) {
+                    ++$i;
+
+                    if ($i == $c) {
+                        $l = true;
+                    } else {
+                        $l = false;
+                    }
+                    //$active = $step['active'] ?? 0;
+                    if (1 == $i) {
+                        $active = 1;
+                    } else {
+                        $active = 0;
+                    }
+
                     if (true === isset($step['label'])) {
                         if (true === \is_array($step['label'])) {
                             if (true === isset($step['label'][\Limepie\get_language()])) {
@@ -108,11 +129,13 @@ class Generation
                         } else {
                             $label2 = $step['label'];
                         }
-                        if(true === isset($step['href'])) {
-                            $label2 = '<a href="'.$step['href'].'">' . $label2 . '</a>';
+
+                        if (true === isset($step['href'])) {
+                            $label2 = '<a href="' . $step['href'] . '">' . $label2 . '</a>';
                         }
-                        $active = $step['active'] ?? 0;
                         $stepper .= '<li ' . ($active ? 'class="active"' : '') . '><span>' . $label2 . '</span></li>';
+                    } else {
+                        $stepper .= '<li ' . ($active ? 'class="active"' : '') . '><span>' . $step . '</span></li>';
                     }
                 }
             } else {
@@ -125,8 +148,9 @@ class Generation
                 } else {
                     $label2 = $spec['stepper'];
                 }
-                if(true === isset($spec['href'])) {
-                    $label2 = '<a href="'.$spec['href'].'">' . $label2 . '</a>';
+
+                if (true === isset($spec['href'])) {
+                    $label2 = '<a href="' . $spec['href'] . '">' . $label2 . '</a>';
                 }
                 $stepper .= '<li class="active"><span>' . $label2 . '</span></li>';
             }
@@ -134,12 +158,12 @@ class Generation
 
         $html = '';
 
-        if ($stepper) {
-            $html .= '<div class="stepper"><ul>' . $stepper . '</ul></div>';
-        }
-
+        // if ($stepper) {
+        //     $html .= '<div class="stepper"><ul>' . $stepper . '</ul></div>';
+        // }
 
         $title = '';
+
         if (true === isset($spec['title'])) {
             if (true === \is_array($spec['title'])) {
                 if (true === isset($spec['title'][\Limepie\get_language()])) {
@@ -157,7 +181,6 @@ class Generation
         if ($label) {
             $html .= '<label class="form-label">' . $label . '</label>';
         }
-
 
         $description = '';
 
@@ -179,15 +202,14 @@ class Generation
             $html .= '<hr />';
         }
 
-
         $elements = $method::write($spec['key'] ?? '', $spec, $data);
 
         $innerhtml = <<<EOT
-<div>
-{$html}
-{$elements}
-</div>
-EOT;
+        <div>
+        {$html}
+        {$elements}
+        </div>
+        EOT;
 
         $innerhtml .= '<hr /> <div class="clearfix">';
 
@@ -203,7 +225,7 @@ EOT;
             $count = \count($spec['buttons']);
 
             foreach ($spec['buttons'] ?? [] as $key => $button) {
-                $i++;
+                ++$i;
                 $value       = '';
                 $class       = '';
                 $text        = '';
@@ -291,7 +313,7 @@ EOT;
 
     public function read(array $spec, array $data = []) : string
     {
-        $method = __NAMESPACE__ . '\\Generation\\Fields\\' . \ucfirst($spec['type']);
+        $method = __NAMESPACE__ . '\\Generation\\Fields\\' . \Limepie\camelize($spec['type']);
 
         if (true === isset($spec['label'][\Limepie\get_language()])) {
             $title = $spec['label'][\Limepie\get_language()];
@@ -303,13 +325,11 @@ EOT;
 
         $elements = $method::read($spec['key'] ?? '', $spec, $data);
 
-        $innerhtml = <<<EOT
+        return <<<EOT
 <div>
 <label>{$title}</label>
 {$elements}
 </div>
 EOT;
-
-        return $innerhtml;
     }
 }
