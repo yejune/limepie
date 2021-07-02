@@ -448,7 +448,7 @@ class Model extends ArrayObject
                 //\pr($class->condition, $functionName);
                 //pr([$class($connect), $functionName], var_dump($args));
                 $data = \call_user_func_array([$class($connect), $functionName], $args);
-\pr($data);
+
                 if ($parent) {
                     $parentClass = true === \is_string($parent) ? new $parent : $parent;
 
