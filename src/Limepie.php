@@ -1111,7 +1111,7 @@ function array_extract(
                 $tmp = $value;
 
                 foreach ($index as $k1) {
-                    $tmp = $tmp[$k1];
+                    $tmp = $tmp[$k1] ?? null;
                 }
                 $i1 = $tmp;
             } else {
@@ -1125,11 +1125,11 @@ function array_extract(
             $tmp = $value;
 
             foreach ($key as $k1) {
-                $tmp = $tmp[$k1];
+                $tmp = $tmp[$k1] ?? null;
             }
             $return[$i1] = $tmp;
         } else {
-            $return[$i1] = $value[$key];
+            $return[$i1] = $value[$key] ?? null;
         }
     }
 
