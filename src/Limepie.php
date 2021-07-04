@@ -1101,8 +1101,7 @@ function array_extract(
     array | object | null $arrays = [],
     array | string $key = [],
     $index = null
-)
-{
+) {
     $return = [];
 
     foreach ($arrays ?? [] as $i => $value) {
@@ -1811,7 +1810,8 @@ function add_slash($string)
     return \implode('/', $test) . '/' . $b;
 }
 
-function get_tree(array $data = []) : array{
+function get_tree(array $data = []) : array
+{
     $permalink = new \Limepie\Menu('', '');
 
     foreach ($data as $row) {
@@ -1849,4 +1849,13 @@ function get_tree_item(array $data = []) : array
     }
 
     return $items;
+}
+
+function get_parent_controller_namespace($namespace = null)
+{
+    if (null === $namespace) {
+        return null;
+    }
+
+    return '\\' . \implode('\\', \array_slice(\explode('\\', $namespace), 0, -1)) . '\\Controller';
 }
