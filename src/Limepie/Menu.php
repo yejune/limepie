@@ -128,8 +128,11 @@ class Menu
         while (1) {
             if (true === isset($this->menu[$active]) && $this->start < $this->menu[$active]['parent']) {
                 $tmp    = $this->menu[$active];
-                $parent = $this->menu[$tmp['parent']];
-                \array_push($parents, $tmp['parent']);
+
+                if (true === isset($this->menu[$tmp['parent']])) {
+                    $parent = $this->menu[$tmp['parent']];
+                    \array_push($parents, $tmp['parent']);
+                }
                 $active = $parent['seq'] ?? 0;
             } else {
                 break;
@@ -147,8 +150,11 @@ class Menu
         while (1) {
             if (true === isset($this->menu[$active]) && $this->start < $this->menu[$active]['parent']) {
                 $tmp    = $this->menu[$active];
-                $parent = $this->menu[$tmp['parent']];
-                \array_unshift($location, $tmp);
+
+                if (true === isset($this->menu[$tmp['parent']])) {
+                    $parent = $this->menu[$tmp['parent']];
+                    \array_unshift($location, $tmp);
+                }
                 $active = $parent['seq'] ?? 0;
             } else {
                 break;
