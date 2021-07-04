@@ -14,6 +14,8 @@ class Application
 
     public $defaultProperties = [];
 
+    public $defaultStore = [];
+
     public $className = '';
 
     public $namespaceName = '';
@@ -109,6 +111,11 @@ class Application
         return $this->defaultProperties;
     }
 
+    public function getDefaultStore() : array
+    {
+        return $this->defaultStore;
+    }
+
     public function getNamespaceName() : string
     {
         return $this->namespaceName;
@@ -132,6 +139,11 @@ class Application
     public function getProperties() : array
     {
         return $this->properties;
+    }
+
+    public function getstore() : array
+    {
+        return $this->store;
     }
 
     public function getPrevious() : array
@@ -162,6 +174,7 @@ class Application
         $actionName     = $this->getDefaultActionName();
         $path           = $this->getDefaultPath();
         $properties     = $this->getDefaultProperties();
+        $store     = $this->getDefaultStore();
 
         if (true === \is_array($arguments)) {
             if (true === isset($arguments['namespace'])) {
@@ -182,6 +195,10 @@ class Application
 
             if (true === isset($arguments['properties'])) {
                 $properties = $arguments['properties'];
+            }
+
+            if (true === isset($arguments['store'])) {
+                $store = $arguments['store'];
             }
         } else {
             if (!$arguments) {
@@ -216,6 +233,7 @@ class Application
         $this->controllerName = $controllerName;
         $this->path           = $path;
         $this->properties     = $properties;
+        $this->store         = $store;
 
         $classFile = \str_replace('\\', '/', \strtr($this->className, ['\\App\\' => __BASE_DIR__ . '/app/'])) . '.' . $this->extension;
 

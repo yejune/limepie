@@ -249,6 +249,16 @@ class Request
         throw new Exception('"application" service provider not found', 20007);
     }
 
+    // alias application getStore
+    public function getApplicationStore()
+    {
+        if (true === Di::has('application')) {
+            return Di::get('application')->getStore();
+        }
+        // ERRORCODE: 20007, service provider not found
+        throw new Exception('"application" service provider not found', 20007);
+    }
+
     // alias application getNamespace
     public function getApplicationNamespaceName()
     {
