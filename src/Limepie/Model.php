@@ -2109,6 +2109,10 @@ class Model extends ArrayObject
 
             $bindKeyname = $this->tableAliasName . '_' . $key . '_' . $this->bindcount;
 
+            if(false === isset($arguments[$index])) {
+                throw new \Limepie\Exception($key.': numbers of columns of arguments do not match');
+            }
+
             if (0 === \strpos($key, 'between_')) {
                 $fixedKey = \substr($key, 8);
 
