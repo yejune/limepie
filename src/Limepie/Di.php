@@ -23,6 +23,9 @@ class Di
         if (0 === \strpos($name, 'get')) {
             return Di::instance()->getBuild($name, $arguments);
         }
+        if (0 === \strpos($name, 'set')) {
+            return Di::instance()->setBuild($name, $arguments);
+        }
 
         throw new \Limepie\Exception('static method not found: '.$name);
     }
@@ -165,6 +168,12 @@ class Di
 
         // ERRORCODE: 10004, service provider not found
         throw new Exception('"' . $key . '" service provider not found', 10004);
+    }
+
+    public function setBuild($name, $arguments)
+    {
+        $fieldName = \Limepie\decamelize(\substr($name, 3));
+        $this->setProperty($name, $arguments[0]);
     }
 
     public function getBuild($name, $arguments)
