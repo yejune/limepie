@@ -304,7 +304,7 @@ class Generation
                 //$innerhtml .= ' ';
             }
         } else {
-            $innerhtml .= '<input type="submit" value="저장" class="btn btn-sm btn-soft-primary" />';
+            $innerhtml .= '<input type="submit" value="저장" class="btn btn-primary" />';
         }
         $innerhtml .= '</div>';
 

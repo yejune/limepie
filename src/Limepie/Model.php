@@ -70,6 +70,8 @@ class Model extends ArrayObject
 
     public $forceIndexes = [];
 
+    public $deleteLock = false;
+
     public static $debug = false;
 
     public static function newInstance(\Pdo $pdo = null, $attributes = []) : self
@@ -448,6 +450,9 @@ class Model extends ArrayObject
                 //\pr($class->condition, $functionName);
                 //pr([$class($connect), $functionName], var_dump($args));
                 $data = \call_user_func_array([$class($connect), $functionName], $args);
+                if($data) {
+                    $data->deleteLock = $class->deleteLock;
+                }
 
                 if ($parent) {
                     $parentClass = true === \is_string($parent) ? new $parent : $parent;
@@ -533,6 +538,9 @@ class Model extends ArrayObject
 
                 $data = \call_user_func_array([$class($connect), $functionName], $args);
 
+                if ($data) {
+                    $data->deleteLock = $class->deleteLock;
+                }
                 if ($parent) {
                     $parentClass = true === \is_string($parent) ? new $parent : $parent;
 
@@ -569,7 +577,8 @@ class Model extends ArrayObject
                 if (true === \is_array($class)) {
                     $parent = $class[1];
                     $class  = $class[0];
-                } elseif ($class->parent) {
+                } elseif (true === property_exists($class, 'parent')) {
+                    // elseif($class->parent) {
                     $parent = $class->parent;
                 }
 
@@ -652,6 +661,10 @@ class Model extends ArrayObject
                                 $attr = $attribute[$parentTableName][$leftKeyName] ?? false;
 
                                 if ($attr && true === isset($data[$attr])) {
+
+                                    if ($data[$attr]) {
+                                        $data[$attr]->deleteLock = $class->deleteLock;
+                                    }
                                     $attribute[$parentTableName]->offsetSet($moduleName, $data[$attr]);
                                 } else {
                                     $attribute[$parentTableName]->offsetSet($moduleName, null);
@@ -668,6 +681,10 @@ class Model extends ArrayObject
                                 $attr = $attribute[$leftKeyName] ?? false;
 
                                 if ($attr && true === isset($data[$attr])) {
+
+                                    if ($data[$attr]) {
+                                        $data[$attr]->deleteLock = $class->deleteLock;
+                                    }
                                     $attribute->offsetSet($moduleName, $data[$attr]);
                                 } else {
                                     $attribute->offsetSet($moduleName, null);
@@ -797,7 +814,8 @@ class Model extends ArrayObject
 
                                 if ($attr && true === isset($group[$attr])) {
                                     if ($class->keyName === $remapKey) {
-                                        $attribute[$parentTableName]->offsetSet($moduleName, new $class($this->getConnect(), $group[$attr]));
+                                        $attribute[$parentTableName]->offsetSet($moduleName, $tmp = new $class($this->getConnect(), $group[$attr]));
+                                        $tmp->deleteLock = $class->deleteLock;
                                     } else {
                                         $new = [];
 
@@ -816,7 +834,8 @@ class Model extends ArrayObject
                                                 $new[$value[$remapKey]] = $value;
                                             }
                                         }
-                                        $attribute[$parentTableName]->offsetSet($moduleName, new $class($this->getConnect(), $new));
+                                        $attribute[$parentTableName]->offsetSet($moduleName, $tmp = new $class($this->getConnect(), $new));
+                                        $tmp->deleteLock = $class->deleteLock;
                                     }
                                 } else {
                                     $attribute[$parentTableName]->offsetSet($moduleName, null);
@@ -848,7 +867,8 @@ class Model extends ArrayObject
                                             }
                                         }
 
-                                        $attribute->offsetSet($moduleName, new $class($this->getConnect(), $new));
+                                        $attribute->offsetSet($moduleName, $tmp = new $class($this->getConnect(), $new));
+                                        $tmp->deleteLock = $class->deleteLock;
                                     }
                                 } else {
                                     $attribute->offsetSet($moduleName, null);
@@ -924,12 +944,6 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function and($key, $value = null)
-    {
-        $this->and[$key] = $value;
-
-        return $this;
-    }
 
     public function relation($class, $parent = null)
     {
@@ -1227,6 +1241,32 @@ class Model extends ArrayObject
         }
 
         return $this->doDelete();
+    }
+
+    private function iteratorToDelete($attributes)
+    {
+        foreach ($attributes as $key => $attribute) {
+            if ($attribute instanceof self) {
+
+                if (false === $attribute->getDeleteLock()) {
+                    $attribute($this->getConnect())->objectToDelete();
+                }
+            } else {
+                if (true === \is_array($attribute)) {
+                    if (0 < \count($attribute)) {
+                        foreach ($attribute as $k2 => $v2) {
+                            if ($v2 instanceof self) {
+                                if (false === $v2->getDeleteLock()) {
+                                    $v2($this->getConnect())->objectToDelete();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return true;
     }
 
     public function objectToDelete()
@@ -1979,6 +2019,13 @@ class Model extends ArrayObject
         return $this;
     }
 
+    public function and($key, $value = null)
+    {
+        // $this->and[$key] = $value;
+
+        return $this->buildAnd($key, [$value], 0);
+    }
+
     private function buildAnd($name, $arguments, $offset = 3)
     {
         $operator = \substr($name, $offset);
@@ -2109,7 +2156,11 @@ class Model extends ArrayObject
 
             $bindKeyname = $this->tableAliasName . '_' . $key . '_' . $this->bindcount;
 
-            if(false === isset($arguments[$index])) {
+            if(true === is_object($arguments)) {
+                throw new \Limepie\Exception($key.' argument error');
+            }
+
+            if (false === \array_key_exists($index, $arguments)) {
                 throw new \Limepie\Exception($key.': numbers of columns of arguments do not match');
             }
 
@@ -2130,23 +2181,29 @@ class Model extends ArrayObject
                 }
                 $queryString = "`{$this->tableAliasName}`.`{$key}` IN (" . \implode(', ', $bindkeys) . ')';
             } else {
-                $fixedKey   = \substr($key, 3);
+                $fixedKey   = \substr($key, $offset);
                 $whereValue = $arguments[$index];
 
                 if (true === \is_object($whereValue)) {
-                    $leftCondition = \sprintf(
-                        $whereValue->extraCondition,
-                        "`{$this->tableAliasName}`." . '`' . $fixedKey . '`'
-                    );
 
-                    // null 인경우 mysql에서 is null, is not null 사용하므로 bind 안함
-                    if (null === $whereValue->bind) {
+                    if (\property_exists($whereValue, 'extraCondition')) {
+                        $leftCondition = \sprintf(
+                            $whereValue->extraCondition,
+                            "`{$this->tableAliasName}`." . '`' . $fixedKey . '`'
+                        );
+
+                        // null 인경우 mysql에서 is null, is not null 사용하므로 bind 안함
+                        if (null === $whereValue->bind) {
+                        } else {
+                            $binds[':' . $bindKeyname] = $whereValue->bind;
+                        }
+
+                        if (true === \is_array($whereValue->extraBinds) && $whereValue->extraBinds) {
+                            $binds += $whereValue->extraBinds;
+                        }
                     } else {
-                        $binds[':' . $bindKeyname] = $whereValue->bind;
-                    }
 
-                    if (true === \is_array($whereValue->extraBinds) && $whereValue->extraBinds) {
-                        $binds += $whereValue->extraBinds;
+                        throw new \Limepie\Exception($key.' argument error');
                     }
                 } else {
                     $leftCondition = "`{$this->tableAliasName}`." . '`' . $fixedKey . '`';
@@ -2527,26 +2584,6 @@ class Model extends ArrayObject
         return $this->empty();
     }
 
-    private function iteratorToDelete($attributes)
-    {
-        foreach ($attributes as $key => $attribute) {
-            if ($attribute instanceof self) {
-                $attribute($this->getConnect())->objectToDelete();
-            } else {
-                if (true === \is_array($attribute)) {
-                    if (0 < \count($attribute)) {
-                        foreach ($attribute as $k2 => $v2) {
-                            if ($v2 instanceof self) {
-                                $v2($this->getConnect())->objectToDelete();
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return true;
-    }
 
     /**
      * Return a query with the binds replaced.
@@ -2612,5 +2649,16 @@ class Model extends ArrayObject
     private function empty()
     {
         return null;
+    }
+
+    public function deleteLock($flag = true) {
+        $this->deleteLock = $flag;
+
+        return $this;
+    }
+
+    public function getDeleteLock()
+    {
+        return $this->deleteLock;
     }
 }

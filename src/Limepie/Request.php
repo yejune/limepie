@@ -66,6 +66,7 @@ class Request
         $this->uri      = $this->getRequestUri();
 
         $this->url      = $this->getUrl();
+
         $this->urlParts = \parse_url($this->url);
         $this->host = $this->urlParts['host'];
 

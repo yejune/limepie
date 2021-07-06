@@ -14,6 +14,8 @@ class Exception extends \Exception
 
     public function __construct($e, int $code = 0)
     {
+        // \pr(\debug_backtrace(limit: 1)[0]);
+
         if ($e instanceof \Throwable) {
             $this->setMessage($e->getMessage());
             $code = $code ?: $e->getCode();
@@ -27,13 +29,12 @@ class Exception extends \Exception
                 ];
             }
         } elseif (true === \is_string($e)) {
-            //\pr($e);
             $this->setMessage($e);
 
             if (false !== \strpos($this->getFile(), '/limepie/src/')) {
                 $trace = $this->getLastTrace();
             }
-            $trace = $this->getLastTrace();
+            // $trace = $this->getLastTrace();
         } else {
             throw new \Exception('exception error');
         }
@@ -95,7 +96,7 @@ class Exception extends \Exception
         return $this->displayMessage ?: $this->getMessage();
     }
 
-    protected function setLine(int $line)
+    public function setLine(int $line)
     {
         $this->line = $line;
 

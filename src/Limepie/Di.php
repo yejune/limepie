@@ -23,11 +23,12 @@ class Di
         if (0 === \strpos($name, 'get')) {
             return Di::instance()->getBuild($name, $arguments);
         }
+
         if (0 === \strpos($name, 'set')) {
             return Di::instance()->setBuild($name, $arguments);
         }
 
-        throw new \Limepie\Exception('static method not found: '.$name);
+        throw new \Limepie\Exception('static method not found: ' . $name);
     }
 
     /**
@@ -93,6 +94,10 @@ class Di
             $value             = $value();
             $value->isInstance = true;
             Di::instance()->setProperty($key, $value);
+        }
+
+        if (true === \is_array($value)) {
+            return new \Limepie\ArrayObject($value);
         }
 
         return $value;
@@ -173,43 +178,30 @@ class Di
     public function setBuild($name, $arguments)
     {
         $fieldName = \Limepie\decamelize(\substr($name, 3));
-        $this->setProperty($name, $arguments[0]);
+        $this->setProperty($fieldName, $arguments[0]);
     }
 
     public function getBuild($name, $arguments)
     {
-        // field name
-        $isOrEmpty = false;
-        $isOrNull  = false;
+        $fieldName = \Limepie\decamelize(\substr($name, 3));
 
-        if (false !== \strpos($name, 'OrNull') || (true === isset($arguments[0]) && false === $arguments[0])) {
-            $isOrNull  = true;
-            $fieldName = \Limepie\decamelize(\substr($name, 3, -6));
-        } elseif (false !== \strpos($name, 'OrEmpty')) {
-            $isOrEmpty = true;
-            $fieldName = \Limepie\decamelize(\substr($name, 3, -7));
-        } else {
-            $fieldName = \Limepie\decamelize(\substr($name, 3));
+        $default = null;
+        if (true === \array_key_exists(0, $arguments)) {
+            $default = $arguments[0];
         }
-
         if ($this->hasProperty($fieldName)) {
-            return $this->runProperty($fieldName);
+            return $this->runProperty($fieldName) ?? $default;
         }
         $fieldName = \str_replace('_', '-', $fieldName);
 
         if ($this->hasProperty($fieldName)) {
-            return $this->runProperty($fieldName);
+            return $this->runProperty($fieldName) ?? $default;
         }
 
-        if (true === $isOrEmpty) {
-            return ''; // column
+        if (true === \array_key_exists(0, $arguments)) {
+            return $arguments[0];
         }
 
-        if (false === $isOrNull && false === $isOrEmpty) {
-            // unknown column
-            throw new \Limepie\Exception('"' . $fieldName . '" service provider not found', 1999);
-        }
-
-        return null;
+        throw new \Limepie\Exception('"' . $fieldName . '" service provider not found', 1999);
     }
 }
