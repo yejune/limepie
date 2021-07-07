@@ -450,7 +450,8 @@ class Model extends ArrayObject
                 //\pr($class->condition, $functionName);
                 //pr([$class($connect), $functionName], var_dump($args));
                 $data = \call_user_func_array([$class($connect), $functionName], $args);
-                if($data) {
+
+                if ($data) {
                     $data->deleteLock = $class->deleteLock;
                 }
 
@@ -541,6 +542,7 @@ class Model extends ArrayObject
                 if ($data) {
                     $data->deleteLock = $class->deleteLock;
                 }
+
                 if ($parent) {
                     $parentClass = true === \is_string($parent) ? new $parent : $parent;
 
@@ -577,7 +579,7 @@ class Model extends ArrayObject
                 if (true === \is_array($class)) {
                     $parent = $class[1];
                     $class  = $class[0];
-                } elseif (true === property_exists($class, 'parent')) {
+                } elseif (true === \property_exists($class, 'parent')) {
                     // elseif($class->parent) {
                     $parent = $class->parent;
                 }
@@ -661,7 +663,6 @@ class Model extends ArrayObject
                                 $attr = $attribute[$parentTableName][$leftKeyName] ?? false;
 
                                 if ($attr && true === isset($data[$attr])) {
-
                                     if ($data[$attr]) {
                                         $data[$attr]->deleteLock = $class->deleteLock;
                                     }
@@ -681,7 +682,6 @@ class Model extends ArrayObject
                                 $attr = $attribute[$leftKeyName] ?? false;
 
                                 if ($attr && true === isset($data[$attr])) {
-
                                     if ($data[$attr]) {
                                         $data[$attr]->deleteLock = $class->deleteLock;
                                     }
@@ -943,7 +943,6 @@ class Model extends ArrayObject
 
         return $this;
     }
-
 
     public function relation($class, $parent = null)
     {
@@ -1247,7 +1246,6 @@ class Model extends ArrayObject
     {
         foreach ($attributes as $key => $attribute) {
             if ($attribute instanceof self) {
-
                 if (false === $attribute->getDeleteLock()) {
                     $attribute($this->getConnect())->objectToDelete();
                 }
@@ -1374,7 +1372,26 @@ class Model extends ArrayObject
                         $columns[] = "`{$this->tableAliasName}`." . '`' . $alias . '`' . ($prefix ? ' AS `' . $prefix . $alias . '`' : '');
                     }
                 } else {
-                    if (true === \is_array($alias)) {
+                    if (true === \is_object($alias)) {
+                        $aliasString = $alias->aliasName ? ' AS `' . ($prefix ? $prefix : '') . $alias->aliasName . '`' : '';
+
+                        if ($alias->format) {
+                            $addColumns = \explode('_with_', $alias->columnName);
+                            $values     = [];
+
+                            foreach ($addColumns as $addColumn) {
+                                $values[] = "`{$this->tableAliasName}`." . '`' . $addColumn . '`';
+                            }
+
+                            try {
+                                $columns[] = \vsprintf($alias->format, $values) . $aliasString;
+                            } catch (\Throwable $e) {
+                                throw new \Limepie\Exception($e);
+                            }
+                        } else {
+                            $columns[] = "`{$this->tableAliasName}`." . '`' . $alias->columnName . '`' . $aliasString;
+                        }
+                    } elseif (true === \is_array($alias)) {
                         $aliasString = (true === isset($alias[0]) && $alias[0] ? ' AS `' . ($prefix ? $prefix : '') . $alias[0] . '`' : '');
                         /*
                         $targetCategorySeqModels = (new ServiceModuleCategoryItemModel)($slave1)
@@ -1425,17 +1442,6 @@ class Model extends ArrayObject
     public function orderBy($orderBy)
     {
         $this->orderBy = $orderBy;
-
-        return $this;
-    }
-
-    public function addColumn($column, $aliasName = null)
-    {
-        if (null === $aliasName) {
-            $this->selectColumns[$column] = null;
-        } else {
-            $this->selectColumns[$column] = $aliasName;
-        }
 
         return $this;
     }
@@ -2156,12 +2162,12 @@ class Model extends ArrayObject
 
             $bindKeyname = $this->tableAliasName . '_' . $key . '_' . $this->bindcount;
 
-            if(true === is_object($arguments)) {
-                throw new \Limepie\Exception($key.' argument error');
+            if (true === \is_object($arguments)) {
+                throw new \Limepie\Exception($key . ' argument error');
             }
 
             if (false === \array_key_exists($index, $arguments)) {
-                throw new \Limepie\Exception($key.': numbers of columns of arguments do not match');
+                throw new \Limepie\Exception($key . ': numbers of columns of arguments do not match');
             }
 
             if (0 === \strpos($key, 'between_')) {
@@ -2185,7 +2191,6 @@ class Model extends ArrayObject
                 $whereValue = $arguments[$index];
 
                 if (true === \is_object($whereValue)) {
-
                     if (\property_exists($whereValue, 'extraCondition')) {
                         $leftCondition = \sprintf(
                             $whereValue->extraCondition,
@@ -2202,8 +2207,7 @@ class Model extends ArrayObject
                             $binds += $whereValue->extraBinds;
                         }
                     } else {
-
-                        throw new \Limepie\Exception($key.' argument error');
+                        throw new \Limepie\Exception($key . ' argument error');
                     }
                 } else {
                     $leftCondition = "`{$this->tableAliasName}`." . '`' . $fixedKey . '`';
@@ -2369,6 +2373,30 @@ class Model extends ArrayObject
         return $this;
     }
 
+    public function addColumn($columnName, $aliasName = null, $format = null)
+    {
+        if (null === $aliasName) {
+            $this->selectColumns[$columnName] = null;
+        } else {
+            $this->selectColumns[$aliasName] = new class($columnName, $aliasName, $format) {
+                public $columnName;
+
+                public $aliasName;
+
+                public $format;
+
+                public function __construct($columnName, $aliasName = null, $format = null)
+                {
+                    $this->columnName = $columnName;
+                    $this->aliasName  = $aliasName;
+                    $this->format     = $format;
+                }
+            };
+        }
+
+        return $this;
+    }
+
     public function buildAddColumn($name, $arguments = [])
     {
         $aliasName = null;
@@ -2383,10 +2411,14 @@ class Model extends ArrayObject
             $columnName = \Limepie\decamelize(\substr($name, 8));
         }
 
-        if (isset($arguments[0])) {
-            $this->addColumn($columnName, [$aliasName, $arguments[0]]);
+        if ($aliasName) {
+            if (true === isset($arguments[0])) {
+                $this->addColumn($columnName, $aliasName, $arguments[0]);
+            } else {
+                $this->addColumn($columnName, $aliasName);
+            }
         } else {
-            $this->addColumn($columnName, [$aliasName]);
+            $this->addColumn($columnName);
         }
 
         return $this;
@@ -2494,8 +2526,6 @@ class Model extends ArrayObject
         $forceIndex    = \implode(', ', $this->forceIndexes);
         $keyName       = $this->keyName;
 
-        $selectColumns = $this->getSelectColumns();
-
         if ($this->joinModels) {
             $joinInfomation = $this->getJoin($this);
             $join           = $joinInfomation['join'];
@@ -2584,7 +2614,6 @@ class Model extends ArrayObject
         return $this->empty();
     }
 
-
     /**
      * Return a query with the binds replaced.
      */
@@ -2651,7 +2680,8 @@ class Model extends ArrayObject
         return null;
     }
 
-    public function deleteLock($flag = true) {
+    public function deleteLock($flag = true)
+    {
         $this->deleteLock = $flag;
 
         return $this;
