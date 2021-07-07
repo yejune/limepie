@@ -183,6 +183,27 @@ class Pagination
             'isCurrent' => false,
         ];
     }
+
+
+    public static function getList($countModel, $listModel = null, $recordsPerPage = 10, $pagesPerBlock = 9)
+    {
+        if(!$listModel) {
+            $listModel = $countModel;
+        }
+        $totalCount  = $countModel->getCount();
+        $urlPattern  = '?page={=page}';
+        $currentPage = $_GET['page'] ?? 1;
+        $totalPages  = (0 === $recordsPerPage ? 0 : (int) \ceil($totalCount / $recordsPerPage));
+
+        if ($totalPages && $currentPage > $totalPages) {
+            $currentPage = $totalPages;
+        }
+        $offset     = ($currentPage - 1) * $recordsPerPage;
+        $pagination = \Limepie\Pagination::getHtml($totalCount, $currentPage, $recordsPerPage, $pagesPerBlock, $urlPattern);
+        $listModels = $listModel->limit($offset, $recordsPerPage)->gets();
+
+        return [$listModels, $pagination, $totalCount, $totalPages];
+    }
 }
 
 /*
