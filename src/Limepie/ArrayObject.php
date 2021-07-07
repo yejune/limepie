@@ -30,7 +30,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return $this->attributes;
     }
 
-    public function __call($name, $arguments)
+    public function __call(string $name, array $arguments = [])
     {
         if (0 === \strpos($name, 'get')) { // get field
             return $this->buildGetColumn($name, $arguments);
@@ -149,7 +149,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return \current($this->attributes);
     }
 
-    public function key($keyName = null)
+    public function key(?string $keyName = null)
     {
         return \key($this->attributes);
     }

@@ -74,12 +74,12 @@ class Model extends ArrayObject
 
     public static $debug = false;
 
-    public static function newInstance(\Pdo $pdo = null, $attributes = []) : self
+    public static function newInstance(\Pdo $pdo = null, array $attributes = []) : self
     {
         return new self($pdo, $attributes);
     }
 
-    public function __construct(\Pdo $pdo = null, $attributes = [])
+    public function __construct(\Pdo $pdo = null, array $attributes = [])
     {
         if ($pdo) {
             $this->setConnect($pdo);
@@ -100,7 +100,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function __call($name, $arguments)
+    public function __call(string $name, array $arguments = [])
     {
         // if ('gets' === $name) {
         //     return $this->buildGets($name, $arguments);
@@ -259,7 +259,7 @@ class Model extends ArrayObject
         return $this->attributes[$offset];
     }
 
-    public function setAttribute($column, $attribute)
+    public function setAttribute(string $column, array $attribute = [])
     {
         $this->attributes[$column] = $attribute;
     }
@@ -385,7 +385,7 @@ class Model extends ArrayObject
         }
     }
 
-    public function getRelation($attributes)
+    public function getRelation(array $attributes = [])
     {
         if ($this->oneToOne) {
             foreach ($this->oneToOne as $class) {
@@ -570,7 +570,7 @@ class Model extends ArrayObject
         return $attributes;
     }
 
-    public function getRelations($attributes)
+    public function getRelations(array $attributes = [])
     {
         if ($this->oneToOne) {
             foreach ($this->oneToOne as $class) {
@@ -920,7 +920,7 @@ class Model extends ArrayObject
     }
 
     // getBy, getsBy, getCountBy 구문 뒤의 구문을 분석하여 조건문을 만든다.
-    public function getConditionAndBinds($whereKey, $arguments, $offset = 0)
+    public function getConditionAndBinds(string $whereKey, array $arguments = [], int $offset = 0) : array
     {
         $condition = '';
         $binds     = [];
@@ -936,7 +936,7 @@ class Model extends ArrayObject
         return [$condition, $binds];
     }
 
-    public function match($leftKeyName, $rightKeyName) : Model
+    public function match(string $leftKeyName, string $rightKeyName) : Model
     {
         $this->leftKeyName  = $leftKeyName;
         $this->rightKeyName = $rightKeyName;
@@ -976,7 +976,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function limit($offset, $limit)
+    public function limit(int $offset, int $limit)
     {
         $this->offset = $offset;
         $this->limit  = $limit;
@@ -1015,7 +1015,7 @@ class Model extends ArrayObject
         }
     }
 
-    public function key($keyName = null)
+    public function key(?string $keyName = null)
     {
         if ($keyName) {
             return $this->keyName($keyName);
@@ -1233,7 +1233,7 @@ class Model extends ArrayObject
         return false;
     }
 
-    public function delete($recursive = false)
+    public function delete(bool $recursive = false)
     {
         if ($recursive) {
             return $this->objectToDelete();
@@ -1242,7 +1242,7 @@ class Model extends ArrayObject
         return $this->doDelete();
     }
 
-    private function iteratorToDelete($attributes)
+    private function iteratorToDelete(array $attributes)
     {
         foreach ($attributes as $key => $attribute) {
             if ($attribute instanceof self) {
@@ -1267,7 +1267,7 @@ class Model extends ArrayObject
         return true;
     }
 
-    public function objectToDelete()
+    public function objectToDelete() : bool
     {
         if (true === isset($this->attributes[$this->primaryKeyName])) {
             $this->iteratorToDelete($this->attributes);
@@ -1286,7 +1286,7 @@ class Model extends ArrayObject
         return true;
     }
 
-    public function doDelete($debug = false)
+    public function doDelete(bool $debug = false) : self | bool
     {
         if (true === isset($this->attributes[$this->primaryKeyName])) {
             $sql = <<<SQL
@@ -1348,7 +1348,7 @@ class Model extends ArrayObject
         return false;
     }
 
-    private function getSelectColumns($prefixString = '')
+    private function getSelectColumns(string $prefixString = '') : string
     {
         $prefix = '';
 
@@ -1426,7 +1426,7 @@ class Model extends ArrayObject
         return \implode(PHP_EOL . '        ' . ', ', $columns);
     }
 
-    public function getOrderBy($orderBy = null)
+    public function getOrderBy(?string $orderBy = null)
     {
         $sql = '';
 
@@ -1439,35 +1439,35 @@ class Model extends ArrayObject
         return $sql;
     }
 
-    public function orderBy($orderBy)
+    public function orderBy(string $orderBy) : self
     {
         $this->orderBy = $orderBy;
 
         return $this;
     }
 
-    public function addColumns(array $columns = [])
+    public function addColumns(array $columns) : self
     {
         $this->selectColumns = \array_merge($this->selectColumns, $columns);
 
         return $this;
     }
 
-    public function removeColumn($column)
+    public function removeColumn($column) : self
     {
         $this->removeColumns[] = $column;
 
         return $this;
     }
 
-    public function removeColumns(array $columns = [])
+    public function removeColumns(array $columns) : self
     {
         $this->removeColumns = $columns;
 
         return $this;
     }
 
-    public function removeAllColumns()
+    public function removeAllColumns() : self
     {
         //$this->removeColumns = $this->normalColumns;
         $this->selectColumns   = $this->fkColumns;
@@ -1476,14 +1476,14 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function getAllColumns()
+    public function getAllColumns() : self
     {
         $this->selectColumns = $this->allColumns;
 
         return $this;
     }
 
-    public function keyName($keyName, $secondKeyName = null)
+    public function keyName(string $keyName, ?string $secondKeyName = null) : self
     {
         $this->keyName = $keyName;
 
@@ -1492,7 +1492,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildJoin($name, $arguments)
+    private function buildJoin(string $name, array $arguments) : self
     {
         /*
             $joinModels = (new SangpumDeal($slave1))
@@ -1556,7 +1556,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function alias($tableName)
+    public function alias(string $tableName) : self
     {
         $this->newTableName   = $tableName;
         $this->tableAliasName = $tableName;
@@ -1564,7 +1564,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function debug($sql = '', $binds = [])
+    public function debug(string $sql = '', array $binds = []) : void
     {
         if (!$sql) {
             $sql = $this->query;
@@ -1621,7 +1621,7 @@ class Model extends ArrayObject
         //exit;
     }
 
-    public function buildGetCount($name, $arguments)
+    public function buildGetCount(string $name, array $arguments) : int
     {
         //\pr($name, $arguments);
         //$whereKey            = \Limepie\decamelize(\substr($name, 10));
@@ -1641,21 +1641,21 @@ class Model extends ArrayObject
         return $this->getConnect()->get1($sql, $binds);
     }
 
-    public function open()
+    public function open() : self
     {
         $this->conditions[] = ['string' => '('];
 
         return $this;
     }
 
-    public function close()
+    public function close() : self
     {
         $this->conditions[] = ['string' => ')'];
 
         return $this;
     }
 
-    public function getJoin($prevModel)
+    public function getJoin(\Limepie\Model $prevModel) : array
     {
         $andConditions = [];
         $join          = '';
@@ -1707,7 +1707,7 @@ class Model extends ArrayObject
         ];
     }
 
-    public function gets(array | string $sql = null, array $binds = [])
+    public function gets(array | string | null $sql = null, array $binds = []) : ?self
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -1862,7 +1862,7 @@ class Model extends ArrayObject
         };
     }
 
-    public function get(string | array $sql = null, array $binds = [])
+    public function get(string | array | null $sql = null, array $binds = []) : ?self
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -1969,14 +1969,14 @@ class Model extends ArrayObject
         return $this->empty();
     }
 
-    public function forceIndex($indexKey)
+    public function forceIndex(string $indexKey) : self
     {
         $this->forceIndexes[] = ' FORCE INDEX (`' . $indexKey . '`)';
 
         return $this;
     }
 
-    private function buildSet($name, $arguments)
+    private function buildSet(string $name, array $arguments) : self
     {
         $columnName = \Limepie\decamelize(\substr($name, 3));
 
@@ -1995,7 +1995,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildOrderBy($name, $arguments)
+    private function buildOrderBy(string $name, array $arguments) : self
     {
         if (1 === \preg_match('#orderBy(?P<column>.*)(?P<how>Asc|Desc)$#U', $name, $m)) {
             if (true === isset($arguments[0])) {
@@ -2016,7 +2016,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildWhere($name, $arguments)
+    private function buildWhere(string $name, array $arguments)
     {
         //$whereKey = \Limepie\decamelize(\substr($name, 7));
 
@@ -2025,14 +2025,14 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function and($key, $value = null)
+    public function and(string $key, $value = null) : self
     {
         // $this->and[$key] = $value;
 
         return $this->buildAnd($key, [$value], 0);
     }
 
-    private function buildAnd($name, $arguments, $offset = 3)
+    private function buildAnd(string $name, array $arguments, int $offset = 3) : self
     {
         $operator = \substr($name, $offset);
 
@@ -2054,27 +2054,26 @@ class Model extends ArrayObject
 
         return $this;
     }
-
-    private function buildCondition($name, $arguments, $offset = 9)
+    /**
+        $joinModels->{'getsByServiceSeqAnd((IsSaleAndLtSaleStartDtAndGtSaleEndDt)Or(IsSale))'}(
+        $joinModels->{'conditionServiceSeqAnd((IsSaleAndLtSaleStartDtAndGtSaleEndDt)Or(IsSale))'}(
+            $serviceSeq,
+            1,
+            \date('Y-m-d H:i:s'),
+            \date('Y-m-d H:i:s'),
+            2
+        )
+        $joinModels
+            ->conditionServiceSeq($serviceSeq)
+            ->{'and('}()
+            ->{'condition(IsSaleAndLtSaleStartDtAndGtSaleEndDt)'}(1, \date('Y-m-d H:i:s'), \date('Y-m-d H:i:s'))
+            ->{'or(IsSale)'}(2)
+            ->{'condition)'}()
+        ->gets()
+        ;
+    */
+    private function buildCondition(string $name, array $arguments = [], int $offset = 9) : self
     {
-        /*
-            $joinModels->{'getsByServiceSeqAnd((IsSaleAndLtSaleStartDtAndGtSaleEndDt)Or(IsSale))'}(
-            $joinModels->{'conditionServiceSeqAnd((IsSaleAndLtSaleStartDtAndGtSaleEndDt)Or(IsSale))'}(
-                $serviceSeq,
-                1,
-                \date('Y-m-d H:i:s'),
-                \date('Y-m-d H:i:s'),
-                2
-            )
-            $joinModels
-                ->conditionServiceSeq($serviceSeq)
-                ->{'and('}()
-                ->{'condition(IsSaleAndLtSaleStartDtAndGtSaleEndDt)'}(1, \date('Y-m-d H:i:s'), \date('Y-m-d H:i:s'))
-                ->{'or(IsSale)'}(2)
-                ->{'condition)'}()
-            ->gets()
-            ;
-        */
         $operator = \substr($name, $offset);
 
         if (true === \in_array($operator, [')', '('], true) && false === isset($arguments[0])) {
@@ -2089,7 +2088,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildOr($name, $arguments, $offset = 2)
+    private function buildOr(string $name, array $arguments = [], int $offset = 2) : self
     {
         $operator = \substr($name, $offset);
 
@@ -2112,7 +2111,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function splitKey($name, $offset)
+    private function splitKey(string $name, int $offset = 0) : array
     {
         $whereKey = \trim(\Limepie\decamelize(\substr($name, $offset)), '_ ');
 
@@ -2149,7 +2148,7 @@ class Model extends ArrayObject
     }
 
     // where, and, or등의 추가 구문을 붙이지 않고 처리
-    private function getConditions($name, $arguments, $offset = 0)
+    private function getConditions(string $name, array $arguments, int $offset = 0) : array
     {
         $splitKeys = $this->splitKey($name, $offset);
         $binds     = [];
@@ -2258,7 +2257,7 @@ class Model extends ArrayObject
         return [$conds, $binds];
     }
 
-    private function buildGe($name, $arguments)
+    private function buildGe(string $name, array $arguments) : self
     {
         $key = \Limepie\decamelize(\substr($name, 2));
 
@@ -2274,7 +2273,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildLe($name, $arguments)
+    private function buildLe(string $name, array $arguments) : self
     {
         $key = \Limepie\decamelize(\substr($name, 2));
 
@@ -2290,7 +2289,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildNe($name, $arguments)
+    private function buildNe(string $name, array $arguments) : self
     {
         $key = \Limepie\decamelize(\substr($name, 2));
 
@@ -2314,7 +2313,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildLk($name, $arguments)
+    private function buildLk(string $name, array $arguments) : self
     {
         $key = \Limepie\decamelize(\substr($name, 2));
 
@@ -2330,7 +2329,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildBetween($name, $arguments)
+    private function buildBetween(string $name, array $arguments) : self
     {
         $key = \Limepie\decamelize(\substr($name, 7));
 
@@ -2350,7 +2349,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildKeyName($name, $arguments)
+    private function buildKeyName(string $name, array $arguments) : self
     {
         if (1 === \preg_match('#keyName(?P<leftKeyName>.*)(With(?P<rightKeyName>.*))?$#U', $name, $m)) {
             $this->keyName = \Limepie\decamelize($m['leftKeyName']);
@@ -2365,7 +2364,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildAlias($name, $arguments)
+    private function buildAlias(string $name, array $arguments) : self
     {
         $this->newTableName = \Limepie\decamelize(\substr($name, 5));
         //$this->tableAliasName = \Limepie\decamelize(\substr($name, 5));
@@ -2373,7 +2372,12 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function addColumn($columnName, $aliasName = null, $format = null)
+    /**
+     * @example
+     *     $userModels = (new UserModel)($slave1)
+     *         ->addColumn('seq', 'cash', '(SELECT COALESCE(SUM(amount), 0) FROM point WHERE to_user_seq = %s AND status = 1 AND expired_ts > now())')
+     */
+    public function addColumn(string $columnName, ?string $aliasName = null, ?string $format = null)
     {
         if (null === $aliasName) {
             $this->selectColumns[$columnName] = null;
@@ -2385,7 +2389,7 @@ class Model extends ArrayObject
 
                 public $format;
 
-                public function __construct($columnName, $aliasName = null, $format = null)
+                public function __construct(string $columnName, ?string $aliasName = null, ?string $format = null)
                 {
                     $this->columnName = $columnName;
                     $this->aliasName  = $aliasName;
@@ -2397,7 +2401,12 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function buildAddColumn($name, $arguments = [])
+    /**
+     * @example
+     *     $userModels = (new UserModel)($slave1)
+     *         ->addColumnSeqAliasTotalPoint('(SELECT COALESCE(SUM(amount), 0) FROM point WHERE to_user_seq = %s AND expired_ts > now())')
+     */
+    public function buildAddColumn(string $name, array $arguments = []) : self
     {
         $aliasName = null;
 
@@ -2424,14 +2433,14 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function move($parent)
+    public function move($parent) : self
     {
         $this->parent = $parent;
 
         return $this;
     }
 
-    private function buildMatch($name, $arguments)
+    private function buildMatch(string $name, $arguments) : self
     {
         if (1 === \preg_match('#match(All)?(?P<leftKeyName>.*)With(?P<rightKeyName>.*)$#U', $name, $m)) {
             $this->leftKeyName  = \Limepie\decamelize($m['leftKeyName']);
@@ -2443,7 +2452,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildGetBy($name, $arguments, $offset = 5)
+    private function buildGetBy(string $name, array $arguments, int $offset = 5) : self | null
     {
         $this->attributes = [];
 
@@ -2509,7 +2518,7 @@ class Model extends ArrayObject
         return $this->empty();
     }
 
-    private function buildGetsBy($name, $arguments, $offset = 6)
+    private function buildGetsBy(string $name, array $arguments, int $offset = 6) : self | null
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -2680,7 +2689,7 @@ class Model extends ArrayObject
         return null;
     }
 
-    public function deleteLock($flag = true)
+    public function deleteLock($flag = true) : self
     {
         $this->deleteLock = $flag;
 
