@@ -164,7 +164,7 @@ class Model extends ArrayObject
         }
 
         if (0 === \strpos($name, 'getCount')) {
-            return $this->buildGetCount($name, $arguments, 6);
+            return $this->buildGetCount($name, $arguments, 8);
         }
 
         if (0 === \strpos($name, 'getsAllBy')) {
@@ -2167,6 +2167,7 @@ class Model extends ArrayObject
             }
 
             if (false === \array_key_exists($index, $arguments)) {
+                \pr($name, $arguments, $offset);
                 throw new \Limepie\Exception($key . ': numbers of columns of arguments do not match');
             }
 
