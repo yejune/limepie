@@ -108,19 +108,19 @@ class Model extends ArrayObject
         //     return $this->buildGet($name, $arguments);
         // } else
         if (0 === \strpos($name, 'orderBy')) {
-            return $this->buildOrderBy($name, $arguments);
+            return $this->buildOrderBy($name, $arguments, 7);
         }
 
         if (0 === \strpos($name, 'condition')) {
-            return $this->buildCondition($name, $arguments);
+            return $this->buildCondition($name, $arguments, 9);
         }
 
         if (0 === \strpos($name, 'where')) {
-            return $this->buildWhere($name, $arguments);
+            return $this->buildWhere($name, $arguments, 5);
         }
 
         if (0 === \strpos($name, 'and')) {
-            return $this->buildAnd($name, $arguments);
+            return $this->buildAnd($name, $arguments, 3);
         }
 
         if (0 === \strpos($name, 'or')) {
@@ -160,11 +160,11 @@ class Model extends ArrayObject
         }
 
         if (0 === \strpos($name, 'getBy')) {
-            return $this->buildGetBy($name, $arguments);
+            return $this->buildGetBy($name, $arguments, 5);
         }
 
         if (0 === \strpos($name, 'getCount')) {
-            return $this->buildGetCount($name, $arguments);
+            return $this->buildGetCount($name, $arguments, 6);
         }
 
         if (0 === \strpos($name, 'getsAllBy')) {
@@ -174,7 +174,7 @@ class Model extends ArrayObject
         }
 
         if (0 === \strpos($name, 'getsBy')) {
-            return $this->buildGetsBy($name, $arguments);
+            return $this->buildGetsBy($name, $arguments, 6);
         }
 
         if (0 === \strpos($name, 'addColumn')) {
@@ -1621,11 +1621,11 @@ class Model extends ArrayObject
         //exit;
     }
 
-    public function buildGetCount(string $name, array $arguments) : int
+    public function buildGetCount(string $name, array $arguments, int $offset) : int
     {
         //\pr($name, $arguments);
         //$whereKey            = \Limepie\decamelize(\substr($name, 10));
-        [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, 8);
+        [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
         $sql                 = <<<SQL
             SELECT
                 COUNT(*)
@@ -1655,7 +1655,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function getJoin(\Limepie\Model $prevModel) : array
+    public function getJoin(Model $prevModel) : array
     {
         $andConditions = [];
         $join          = '';
@@ -2016,11 +2016,11 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildWhere(string $name, array $arguments)
+    private function buildWhere(string $name, array $arguments, int $offset = 5)
     {
         //$whereKey = \Limepie\decamelize(\substr($name, 7));
 
-        [$this->condition, $this->binds] = $this->getConditionAndBinds($name, $arguments, 5);
+        [$this->condition, $this->binds] = $this->getConditionAndBinds($name, $arguments, $offset);
 
         return $this;
     }
@@ -2054,24 +2054,25 @@ class Model extends ArrayObject
 
         return $this;
     }
+
     /**
-        $joinModels->{'getsByServiceSeqAnd((IsSaleAndLtSaleStartDtAndGtSaleEndDt)Or(IsSale))'}(
-        $joinModels->{'conditionServiceSeqAnd((IsSaleAndLtSaleStartDtAndGtSaleEndDt)Or(IsSale))'}(
-            $serviceSeq,
-            1,
-            \date('Y-m-d H:i:s'),
-            \date('Y-m-d H:i:s'),
-            2
-        )
-        $joinModels
-            ->conditionServiceSeq($serviceSeq)
-            ->{'and('}()
-            ->{'condition(IsSaleAndLtSaleStartDtAndGtSaleEndDt)'}(1, \date('Y-m-d H:i:s'), \date('Y-m-d H:i:s'))
-            ->{'or(IsSale)'}(2)
-            ->{'condition)'}()
-        ->gets()
-        ;
-    */
+     * $joinModels->{'getsByServiceSeqAnd((IsSaleAndLtSaleStartDtAndGtSaleEndDt)Or(IsSale))'}(
+     * $joinModels->{'conditionServiceSeqAnd((IsSaleAndLtSaleStartDtAndGtSaleEndDt)Or(IsSale))'}(
+     * $serviceSeq,
+     * 1,
+     * \date('Y-m-d H:i:s'),
+     * \date('Y-m-d H:i:s'),
+     * 2
+     * )
+     * $joinModels
+     * ->conditionServiceSeq($serviceSeq)
+     * ->{'and('}()
+     * ->{'condition(IsSaleAndLtSaleStartDtAndGtSaleEndDt)'}(1, \date('Y-m-d H:i:s'), \date('Y-m-d H:i:s'))
+     * ->{'or(IsSale)'}(2)
+     * ->{'condition)'}()
+     * ->gets()
+     * ;.
+     */
     private function buildCondition(string $name, array $arguments = [], int $offset = 9) : self
     {
         $operator = \substr($name, $offset);
@@ -2186,7 +2187,7 @@ class Model extends ArrayObject
                 }
                 $queryString = "`{$this->tableAliasName}`.`{$key}` IN (" . \implode(', ', $bindkeys) . ')';
             } else {
-                $fixedKey   = \substr($key, $offset);
+                $fixedKey = \substr($key, 3);
                 $whereValue = $arguments[$index];
 
                 if (true === \is_object($whereValue)) {
@@ -2452,7 +2453,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildGetBy(string $name, array $arguments, int $offset = 5) : self | null
+    private function buildGetBy(string $name, array $arguments, int $offset) : self | null
     {
         $this->attributes = [];
 
@@ -2518,7 +2519,7 @@ class Model extends ArrayObject
         return $this->empty();
     }
 
-    private function buildGetsBy(string $name, array $arguments, int $offset = 6) : self | null
+    private function buildGetsBy(string $name, array $arguments, int $offset) : self | null
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
