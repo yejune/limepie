@@ -54,7 +54,11 @@ class Request
             $this->locale = $this->locales[$this->language];
         }
 
-        $this->requestUri = $this->getServer('REQUEST_URI');
+        if (true === \Limepie\is_cli()) {
+            $this->requestUri = \implode('/', \array_map('rawurlencode', \array_slice($this->getServer('argv'), 2)));
+        } else {
+            $this->requestUri = $this->getServer('REQUEST_URI');
+        }
         $this->reload();
     }
 
@@ -63,19 +67,24 @@ class Request
         if ($requestUri) {
             $this->requestUri = $requestUri;
         }
-        $this->uri      = $this->getRequestUri();
+        $this->uri = $this->getRequestUri();
 
-        $this->url      = $this->getUrl();
+        $this->url = $this->getUrl();
 
         $this->urlParts = \parse_url($this->url);
-        $this->host = $this->urlParts['host'];
+        $this->host     = $this->urlParts['host'];
 
         $tmp         = \explode('?', $this->uri, 2);
         $this->path  = $tmp[0] ?? '';
         $this->query = $tmp[1] ?? '';
 
         if ($this->path) {
-            $this->segments = \explode('/', \trim($this->path, '/'));
+            if (true === \Limepie\is_cli()) {
+                $this->segments = \array_map('rawurldecode', \explode('/', \trim($this->path, '/')));
+            } else {
+                $this->segments = \explode('/', \trim($this->path, '/'));
+            }
+
             for ($i = 0, $j = \count($this->segments); $i < $j; $i += 2) {
                 $this->parameters[$this->segments[$i]] = $this->segments[$i + 1] ?? '';
             }
@@ -108,7 +117,7 @@ class Request
      */
     public function getScheme() : string
     {
-        if(true === isset($_ENV['is_swoole']) && 1 === (int)$_ENV['is_swoole']) {
+        if (true === isset($_ENV['is_swoole']) && 1 === (int) $_ENV['is_swoole']) {
             $this->scheme = 'https';
         }
 
@@ -499,7 +508,7 @@ class Request
         return $this->getServer('REQUEST_URI');
     }
 
-    public function getServer($key) : ?string
+    public function getServer($key) : string | array | null
     {
         return $_SERVER[$key] ?? null;
     }
@@ -621,6 +630,7 @@ class Request
                                 $message = 'Malformed UTF-8 characters';
 
                             break;
+
                             default:
                                 $message = 'Invalid JSON syntax';
                         }
