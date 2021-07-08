@@ -182,7 +182,13 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
     public function unset($offset)
     {
-        unset($this->attributes[$offset]);
+        $keys = \func_get_args();
+        foreach($keys as $key) {
+            if(false === isset($this->attributes[$key])) {
+                throw new \Limepie\Exception($key.': unset key not found');
+            }
+            unset($this->attributes[$key]);
+        }
     }
 
     public function offsetExists($offset)
@@ -192,7 +198,13 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
     public function offsetUnset($offset)
     {
-        unset($this->attributes[$offset]);
+        $keys = \func_get_args();
+        foreach($keys as $key) {
+            if(false === isset($this->attributes[$key])) {
+                throw new \Limepie\Exception($key.': unset key not found');
+            }
+            unset($this->attributes[$key]);
+        }
     }
 
     public function offsetGet($offset)
