@@ -1612,10 +1612,12 @@ class Model extends ArrayObject
     {
         [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
 
-        if ($condition) {
-            $condition .= $this->condition;
-        } else {
-            $condition = ' WHERE ' . $condition . $this->condition;
+        if ($this->condition) {
+            if ($condition) {
+                $condition .= $this->condition;
+            } else {
+                $condition = ' WHERE ' . $condition . $this->condition;
+            }
         }
         $binds += $this->binds;
 
