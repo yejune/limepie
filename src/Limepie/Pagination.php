@@ -73,7 +73,7 @@ class Pagination
         }
 
         if ($this->totalPages <= $this->pagesPerBlock) {
-            for ($i = 1; $i <= $this->totalPages; $i++) {
+            for ($i = 1; $i <= $this->totalPages; ++$i) {
                 $pages[] = $this->createPage($i, $i === $this->currentPage);
             }
         } else {
@@ -94,7 +94,8 @@ class Pagination
             if ($endPage >= $this->totalPages) {
                 $endPage = $this->totalPages;
             }
-            for ($i = $startPage; $i <= $endPage; $i++) {
+
+            for ($i = $startPage; $i <= $endPage; ++$i) {
                 $pages[] = $this->createPage($i, $i === $this->currentPage);
             }
 
@@ -163,7 +164,7 @@ class Pagination
             return null;
         }
 
-        return \str_replace('{=page}', (string)$pageNum, $this->urlPattern);
+        return \str_replace('{=page}', (string) $pageNum, $this->urlPattern);
     }
 
     private function createPage($pageNum, $isCurrent = false)
@@ -184,12 +185,12 @@ class Pagination
         ];
     }
 
-
     public static function getList($countModel, $listModel = null, $recordsPerPage = 10, $pagesPerBlock = 9)
     {
-        if(!$listModel) {
-            $listModel = $countModel;
+        if (!$listModel) {
+            $listModel = clone $countModel;
         }
+
         $totalCount  = $countModel->getCount();
         $urlPattern  = '?page={=page}';
         $currentPage = $_GET['page'] ?? 1;

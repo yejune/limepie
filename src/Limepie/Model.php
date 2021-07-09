@@ -102,11 +102,6 @@ class Model extends ArrayObject
 
     public function __call(string $name, array $arguments = [])
     {
-        // if ('gets' === $name) {
-        //     return $this->buildGets($name, $arguments);
-        // } elseif ('get' === $name) {
-        //     return $this->buildGet($name, $arguments);
-        // } else
         if (0 === \strpos($name, 'orderBy')) {
             return $this->buildOrderBy($name, $arguments, 7);
         }
@@ -447,8 +442,6 @@ class Model extends ArrayObject
 
                 $class->keyName = $rightKeyName;
 
-                //\pr($class->condition, $functionName);
-                //pr([$class($connect), $functionName], var_dump($args));
                 $data = \call_user_func_array([$class($connect), $functionName], $args);
 
                 if ($data) {
@@ -580,7 +573,6 @@ class Model extends ArrayObject
                     $parent = $class[1];
                     $class  = $class[0];
                 } elseif (true === \property_exists($class, 'parent')) {
-                    // elseif($class->parent) {
                     $parent = $class->parent;
                 }
 
@@ -615,7 +607,6 @@ class Model extends ArrayObject
 
                     foreach ($attributes as $row) {
                         if (true === \array_key_exists($leftKeyName, $row[$parentTableName]->toArray())) {
-                            //if (true === isset($row[$leftKeyName])) {
                             $seqs[] = $row[$parentTableName][$leftKeyName];
                         } else {
                             throw new \Limepie\Exception($this->tableName . ' table ' . $leftKeyName . ' column not found #1');
@@ -624,7 +615,6 @@ class Model extends ArrayObject
                 } else {
                     foreach ($attributes as $row) {
                         if (true === \array_key_exists($leftKeyName, $row->toArray())) {
-                            //if (true === isset($row[$leftKeyName])) {
                             $seqs[] = $row[$leftKeyName];
                         } else {
                             throw new \Limepie\Exception($this->tableName . ' table ' . $leftKeyName . ' column not found #2');
@@ -1067,8 +1057,6 @@ class Model extends ArrayObject
                     $binds[':' . $column . '2'] = $value[1];
                     $values[]                   = 'point(:' . $column . '1, :' . $column . '2)';
                 } elseif (true === \array_key_exists($column, $this->attributes)) {
-                    //if (true === isset($this->attributes[$column])) {
-
                     $value = $this->attributes[$column];
 
                     if (true === isset($this->dataStyles[$column])) {
@@ -1242,7 +1230,7 @@ class Model extends ArrayObject
         return $this->doDelete();
     }
 
-    private function iteratorToDelete(array $attributes)
+    private function iteratorToDelete(array | self $attributes)
     {
         foreach ($attributes as $key => $attribute) {
             if ($attribute instanceof self) {
@@ -1469,7 +1457,6 @@ class Model extends ArrayObject
 
     public function removeAllColumns() : self
     {
-        //$this->removeColumns = $this->normalColumns;
         $this->selectColumns   = $this->fkColumns;
         $this->selectColumns[] = $this->primaryKeyName;
 
@@ -1623,10 +1610,16 @@ class Model extends ArrayObject
 
     public function buildGetCount(string $name, array $arguments, int $offset) : int
     {
-        //\pr($name, $arguments);
-        //$whereKey            = \Limepie\decamelize(\substr($name, 10));
         [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
-        $sql                 = <<<SQL
+
+        if ($condition) {
+            $condition .= $this->condition;
+        } else {
+            $condition = ' WHERE ' . $condition . $this->condition;
+        }
+        $binds += $this->binds;
+
+        $sql = <<<SQL
             SELECT
                 COUNT(*)
             FROM
@@ -1637,6 +1630,10 @@ class Model extends ArrayObject
         $this->condition = $condition;
         $this->query     = $sql;
         $this->binds     = $binds;
+
+        if (static::$debug) {
+            $this->debug();
+        }
 
         return $this->getConnect()->get1($sql, $binds);
     }
@@ -1767,16 +1764,13 @@ class Model extends ArrayObject
                 {$orderBy}
                 {$limit}
             SQL;
-
             $this->condition = $condition;
         }
         $this->query = $sql;
-
-        //\pr($sql);
         $this->binds = $binds;
 
         $data = $this->getConnect()->gets($sql, $binds, false);
-        //\pr($data);
+
         if (static::$debug) {
             $this->debug();
         }
@@ -2018,8 +2012,6 @@ class Model extends ArrayObject
 
     private function buildWhere(string $name, array $arguments, int $offset = 5)
     {
-        //$whereKey = \Limepie\decamelize(\substr($name, 7));
-
         [$this->condition, $this->binds] = $this->getConditionAndBinds($name, $arguments, $offset);
 
         return $this;
@@ -2027,8 +2019,6 @@ class Model extends ArrayObject
 
     public function and(string $key, $value = null) : self
     {
-        // $this->and[$key] = $value;
-
         return $this->buildAnd($key, [$value], 0);
     }
 
@@ -2167,7 +2157,7 @@ class Model extends ArrayObject
             }
 
             if (false === \array_key_exists($index, $arguments)) {
-                \pr($name, $arguments, $offset);
+                // \pr($name, $arguments, $offset);
                 throw new \Limepie\Exception($key . ': numbers of columns of arguments do not match');
             }
 
@@ -2181,6 +2171,10 @@ class Model extends ArrayObject
             } elseif ($arguments[$index] && true === \is_array($arguments[$index])) {
                 $bindkeys = [];
 
+                if (false === \in_array($key, $this->allColumns, true)) {
+                    throw new \Limepie\Exception($this->tableName . ' table: ' . $key . ' field match error');
+                }
+
                 foreach ($arguments[$index] as $bindindex => $bindvalue) {
                     $bindkey         = ':' . $bindKeyname . '_' . $bindindex;
                     $bindkeys[]      = $bindkey;
@@ -2188,7 +2182,7 @@ class Model extends ArrayObject
                 }
                 $queryString = "`{$this->tableAliasName}`.`{$key}` IN (" . \implode(', ', $bindkeys) . ')';
             } else {
-                $fixedKey = \substr($key, 3);
+                $fixedKey   = \substr($key, 3);
                 $whereValue = $arguments[$index];
 
                 if (true === \is_object($whereValue)) {
@@ -2524,7 +2518,7 @@ class Model extends ArrayObject
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
-        //$whereKey              = \Limepie\decamelize(\substr($name, $offset));
+
         [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
 
         $condition .= $this->condition;
@@ -2638,7 +2632,7 @@ class Model extends ArrayObject
                 if (true === isset($binds[':' . $matches[2]])) {
                     $value = $binds[':' . $matches[2]];
                 } else {
-                    $value = $binds[$matches[2]];
+                    $value = $binds[$matches[2]] ?? null;
                 }
 
                 if (true === \is_numeric($value)) {
