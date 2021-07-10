@@ -2238,7 +2238,12 @@ class Model extends ArrayObject
                     if (null === $arguments[$index]) {
                         $queryString = "`{$this->tableAliasName}`." . '`' . $key . '` IS NULL';
                     } else {
-                        $queryString = "`{$this->tableAliasName}`." . '`' . $key . '`' . ' = :' . $bindKeyname;
+                        if($key == 'ip') {
+                            $queryString = "`{$this->tableAliasName}`." . '`' . $key . '`' . ' = inet6_aton(:' . $bindKeyname.')';
+
+                        } else {
+                            $queryString = "`{$this->tableAliasName}`." . '`' . $key . '`' . ' = :' . $bindKeyname;
+                        }
                     }
                 }
             }
