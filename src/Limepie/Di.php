@@ -61,7 +61,7 @@ class Di
 
     public function hasProperty(string $key) : bool
     {
-        return true === isset($this->properties[$key]);
+        return \array_key_exists($key, $this->properties);
     }
 
     public function setProperty(string $key, $value) : void
@@ -186,9 +186,11 @@ class Di
         $fieldName = \Limepie\decamelize(\substr($name, 3));
 
         $default = null;
+
         if (true === \array_key_exists(0, $arguments)) {
             $default = $arguments[0];
         }
+
         if ($this->hasProperty($fieldName)) {
             return $this->runProperty($fieldName) ?? $default;
         }
