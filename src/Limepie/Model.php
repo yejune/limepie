@@ -2238,9 +2238,8 @@ class Model extends ArrayObject
                     if (null === $arguments[$index]) {
                         $queryString = "`{$this->tableAliasName}`." . '`' . $key . '` IS NULL';
                     } else {
-                        if($key == 'ip') {
-                            $queryString = "`{$this->tableAliasName}`." . '`' . $key . '`' . ' = inet6_aton(:' . $bindKeyname.')';
-
+                        if ('ip' == $key) {
+                            $queryString = "`{$this->tableAliasName}`." . '`' . $key . '`' . ' = inet6_aton(:' . $bindKeyname . ')';
                         } else {
                             $queryString = "`{$this->tableAliasName}`." . '`' . $key . '`' . ' = :' . $bindKeyname;
                         }
@@ -2511,7 +2510,34 @@ class Model extends ArrayObject
         }
 
         if ($attributes) {
-            $attributes            = $this->buildDataType($attributes);
+            $attributes = $this->buildDataType($attributes);
+
+            foreach ($this->joinModels as $joinModelInfomation) {
+                $joinModel          = $joinModelInfomation['model'];
+                $joinClassAliasName = $joinModel->tableAliasName;
+                $joinClassName      = $joinModel->tableName;
+
+                $tmp = [];
+
+                foreach ($attributes as $innerFieldName => &$innerFieldValue) {
+                    if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
+                        $tmp[\str_replace($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
+
+                        unset($attributes[$innerFieldName]);
+                    }
+                }
+
+                unset($innerFieldValue);
+
+                if ($joinModel->newTableName) {
+                    $parentTableName = $joinModel->newTableName;
+                } else {
+                    $parentTableName = $joinModel->tableName . '_model';
+                }
+
+                $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
+            }
+
             $this->attributes      = $this->getRelation($attributes);
             $this->primaryKeyValue = $this->attributes[$this->primaryKeyName] ?? null;
 
