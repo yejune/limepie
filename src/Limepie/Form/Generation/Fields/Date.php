@@ -6,12 +6,15 @@ class Date extends \Limepie\Form\Generation\Fields
 {
     public static function write($key, $property, $value)
     {
-        $value = \htmlspecialchars((string) $value);
-
-        if (0 === \strlen($value) && true === isset($property['default'])) {
-            $value = \htmlspecialchars((string) $property['default']);
+        if ($value) {
+            $value = \date('Y-m-d', \strtotime($value));
         }
+
         $default = $property['default'] ?? '';
+
+        if(!$value) {
+            $value = \date('Y-m-d', \strtotime($default));
+        }
 
         $readonly = '';
 

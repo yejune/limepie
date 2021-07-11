@@ -6,18 +6,15 @@ class Datetime extends \Limepie\Form\Generation\Fields
 {
     public static function write($key, $property, $value)
     {
-        $value = \htmlspecialchars((string) $value);
-
-        if (0 === \strlen($value) && true === isset($property['default'])) {
-            $value = \htmlspecialchars((string) $property['default']);
-        }
-
-        // datetime-local format
         if ($value) {
             $value = \date('Y-m-d\TH:i:s', \strtotime($value));
         }
 
         $default = $property['default'] ?? '';
+
+        if(!$value) {
+            $value = \date('Y-m-d\TH:i:s', \strtotime($default));
+        }
 
         $readonly = '';
 
