@@ -1039,7 +1039,7 @@ class Model extends ArrayObject
                 if ('created_ts' === $column || 'updated_ts' === $column) {
                 } elseif ('ip' === $column) {
                     $columns[]            = '`' . $column . '`';
-                    $binds[':' . $column] = \Limepie\getIp();
+                    $binds[':' . $column] = $this->attributes[$column] ?? \Limepie\getIp();
                     $values[]             = 'inet6_aton(:' . $column . ')';
                 } elseif (
                     true === isset($this->dataStyles[$column])
@@ -1142,7 +1142,7 @@ class Model extends ArrayObject
                 if ('created_ts' === $column || 'updated_ts' === $column) {
                 } elseif ('ip' === $column) {
                     $columns[]            = "`{$this->tableName}`." . '`' . $column . '` = inet6_aton(:' . $column . ')';
-                    $binds[':' . $column] = \Limepie\getIp();
+                    $binds[':' . $column] = $this->attributes[$column] ?? \Limepie\getIp();
                 } elseif (
                     true === isset($this->dataStyles[$column])
                     && 'point' == $this->dataStyles[$column]
