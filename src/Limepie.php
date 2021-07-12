@@ -216,28 +216,28 @@ function print_x($args)
  *
  * @param mixed $in
  */
-function html_encode(array $in) : string
+function array_to_html(array $in) : string
 {
     if (0 < \count($in)) {
-        $t = '<table border=1 cellspacing="0" cellpadding="0">';
+        $t = '<div class="table-responsive"><table  class="table table-sm table-bordered table-gray-bordered"><tbody>';
 
         foreach ($in as $key => $value) {
-            if (true === \is_assoc($in)) {
+            if (true === \Limepie\is_assoc($in)) {
                 if (true === \is_array($value)) {
-                    $t .= '<tr><td>' . $key . '</td><td>' . \Limepie\html_encode($value) . '</td></tr>';
+                    $t .= '<tr class="bg-soft-primary"><th>' . $key . '</th><td>' . \Limepie\array_to_html($value) . '</td></tr>';
                 } else {
-                    $t .= '<tr><td>' . $key . '</td><td>' . $value . '</td></tr>';
+                    $t .= '<tr class="bg-soft-primary"><th>' . $key . '</th><td>' . $value . '</td></tr>';
                 }
             } else {
                 if (true === \is_array($value)) {
-                    $t .= '<tr><td>' . \Limepie\html_encode($value) . '</td></tr>';
+                    $t .= '<tr class="bg-soft-primary"><td>' . \Limepie\array_to_html($value) . '</td></tr>';
                 } else {
-                    $t .= '<tr><td>' . $value . '</td></tr>';
+                    $t .= '<tr class="bg-soft-primary"><td>' . $value . '</td></tr>';
                 }
             }
         }
 
-        return $t . '</table>';
+        return $t . '</tbody></table></div>';
     }
 
     return '';
@@ -1867,9 +1867,10 @@ function file_get_compressed($url)
 function get_exception_message(Throwable $e, $file = null, $line = null)
 {
     $add = '';
-    if($file) {
-        $add    = ' throw ' . $file . ($line ? ' on line ' . $line : '');
+
+    if ($file) {
+        $add = ' throw ' . $file . ($line ? ' on line ' . $line : '');
     }
 
-    return $e->getMessage() . ' in file ' . $e->getFile() . ' on line ' . $e->getLine().$add;
+    return $e->getMessage() . ' in file ' . $e->getFile() . ' on line ' . $e->getLine() . $add;
 }
