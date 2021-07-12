@@ -1735,7 +1735,7 @@ function array_change_key_case_recursive(array $arr, int $case = \CASE_LOWER)
     }, \array_change_key_case($arr, $case));
 }
 
-function date_period($start, $end, $is_after_today = false)
+function date_period($start, $end, $after_today = false, $include_end_date = true)
 {
     if ($start instanceof \DateTime) {
         $first = $start;
@@ -1749,7 +1749,7 @@ function date_period($start, $end, $is_after_today = false)
         $last = new \DateTime($end);
     }
 
-    if (true === $is_after_today) {
+    if (true === $after_today) {
         $today = new \DateTime();
 
         if ($first < $today) {
@@ -1757,38 +1757,16 @@ function date_period($start, $end, $is_after_today = false)
         }
     }
 
-    return new \DatePeriod(
-        $first->setTime(0, 0),
-        new \DateInterval('P1D'),
-        $last->setTime(0, 0)//->modify('+1 day') // include end date
-    );
-}
-function date_period2($start, $end, $is_after_today = false)
-{
-    if ($start instanceof \DateTime) {
-        $first = $start;
+    if ($include_end_date) {
+        $enddate = (clone $last)->setTime(0, 0)->modify('+1 day'); // include end date
     } else {
-        $first = new \DateTime($start);
-    }
-
-    if ($end instanceof \DateTime) {
-        $last = $end;
-    } else {
-        $last = new \DateTime($end);
-    }
-
-    if (true === $is_after_today) {
-        $today = new \DateTime();
-
-        if ($first < $today) {
-            $first = $today;
-        }
+        $enddate = $last->setTime(0, 0);
     }
 
     return new \DatePeriod(
         $first->setTime(0, 0),
         new \DateInterval('P1D'),
-        $last->setTime(0, 0)->modify('+1 day') // include end date
+        $enddate
     );
 }
 
