@@ -2,6 +2,8 @@
 
 namespace Limepie;
 
+use Throwable;
+
 function _($string)
 {
     return \dgettext('system', $string);
@@ -1860,4 +1862,14 @@ function file_get_compressed($url)
     }
 
     return $content;
+}
+
+function get_exception_message(Throwable $e, $file = null, $line = null)
+{
+    $add = '';
+    if($file) {
+        $add    = ' throw ' . $file . ($line ? ' on line ' . $line : '');
+    }
+
+    return $e->getMessage() . ' in file ' . $e->getFile() . ' on line ' . $e->getLine().$add;
 }
