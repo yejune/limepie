@@ -254,4 +254,26 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
         return $d;
     }
+
+    // $dateModels->usort(function($a, $b) {
+    //     return (new \Datetime($a->getDate()))->format('Y-m-d') <=> (new \Datetime($b->getDate()))->format('Y-m-d');
+    // });
+    public function usort(callable $compareFunc): self
+    {
+        if (usort($this->attributes, $compareFunc) !== true) {
+            throw new \Limepie\Exception('usort() failed');
+        }
+        return $this;
+    }
+
+    public function first()
+    {
+       return $this->attributes[\array_key_first($this->attributes)];
+
+    }
+
+    public function last()
+    {
+        return $this->attributes[\array_key_last($this->attributes)];
+    }
 }
