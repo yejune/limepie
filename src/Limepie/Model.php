@@ -1579,7 +1579,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function print(?string $sql = null, ?array $binds = null, string $timer) : void
+    public function print(?string $sql = null, ?array $binds = null, ?string $timer = null) : void
     {
         if (!$sql) {
             $sql = $this->query;
