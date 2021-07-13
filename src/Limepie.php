@@ -1874,3 +1874,27 @@ function get_exception_message(Throwable $e, $file = null, $line = null)
 
     return $e->getMessage() . ' in file ' . $e->getFile() . ' on line ' . $e->getLine() . $add;
 }
+
+function classname_to_filepath(string $className, array $maps = [])
+{
+    $pos = \strpos($className, '\\');
+
+    if ($pos) {
+        $target = \substr($className, 0, $pos) . '\\';
+        $file   = $className;
+
+        foreach ($maps as $key => $alias) {
+            if (0 === \strpos($key, $target)) {
+                $file = \preg_replace('#^' . \preg_quote($key) . '#', $alias, $file);
+
+                return \str_replace('\\', '/', $file) . (false === \strpos($file, '.php') ? '.php' : '');
+            }
+        }
+    } else {
+        foreach ($maps as $key => $alias) {
+            if (0 === \strpos($key, $className)) {
+                return $alias;
+            }
+        }
+    }
+}
