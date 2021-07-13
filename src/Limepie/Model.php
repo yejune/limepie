@@ -28,7 +28,7 @@ class Model extends ArrayObject
 
     public $attributes = [];
 
-    public $functions = [];
+    public $rawAttributes = [];
 
     public $selectColumns = ['*'];
 
@@ -174,6 +174,10 @@ class Model extends ArrayObject
 
         if (0 === \strpos($name, 'addColumn')) {
             return $this->buildAddColumn($name, $arguments);
+        }
+
+        if (0 === \strpos($name, 'setRaw')) {
+            return $this->buildSetRaw($name, $arguments);
         }
 
         if (0 === \strpos($name, 'set')) {
@@ -1045,7 +1049,7 @@ class Model extends ArrayObject
                     true === isset($this->dataStyles[$column])
                     && 'point' == $this->dataStyles[$column]
                     && true === \is_array($this->attributes[$column])
-                    && false === isset($this->functions[$column])
+                    && false === isset($this->rawAttributes[$column])
                 ) {
                     $columns[] = '`' . $column . '`';
                     $value     = $this->attributes[$column];
@@ -1055,7 +1059,8 @@ class Model extends ArrayObject
                     }
                     $binds[':' . $column . '1'] = $value[0];
                     $binds[':' . $column . '2'] = $value[1];
-                    $values[]                   = 'point(:' . $column . '1, :' . $column . '2)';
+
+                    $values[] = 'point(:' . $column . '1, :' . $column . '2)';
                 } elseif (true === \array_key_exists($column, $this->attributes)) {
                     $value = $this->attributes[$column];
 
@@ -1085,10 +1090,17 @@ class Model extends ArrayObject
                         }
                     }
 
-                    if (true === isset($this->functions[$column])) {
-                        $columns[] = '`' . $column . '`';
-                        $binds += $value;
-                        $values[] = \str_replace('?', ':' . $column, $this->functions[$column]);
+                    if (true === isset($this->rawAttributes[$column])) {
+                        $columns[] = "`{$this->tableName}`." . '`' . $column . '`';
+                        $values[]  = \str_replace('?', ':' . $column, $this->rawAttributes[$column]);
+
+                        if (null === $value) {
+                        } elseif (true === \is_array($value)) {
+                            $binds += $value;
+                        } else {
+                            throw new \Limepie\Exception($column . ' raw bind error');
+                        }
+                        $values[] = \str_replace('?', ':' . $column, $this->rawAttributes[$column]);
                     } else {
                         $columns[]            = '`' . $column . '`';
                         $binds[':' . $column] = $value;
@@ -1147,7 +1159,7 @@ class Model extends ArrayObject
                     true === isset($this->dataStyles[$column])
                     && 'point' == $this->dataStyles[$column]
                     && true === \is_array($this->attributes[$column])
-                    && false === isset($this->functions[$column])
+                    && false === isset($this->rawAttributes[$column])
                 ) {
                     $value = $this->attributes[$column];
 
@@ -1188,9 +1200,15 @@ class Model extends ArrayObject
                         }
                     }
 
-                    if (true === isset($this->functions[$column])) {
-                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . \str_replace('?', ':' . $column, $this->functions[$column]);
-                        $binds += $value;
+                    if (true === isset($this->rawAttributes[$column])) {
+                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . \str_replace('?', ':' . $column, $this->rawAttributes[$column]);
+
+                        if (null === $value) {
+                        } elseif (true === \is_array($value)) {
+                            $binds += $value;
+                        } else {
+                            throw new \Limepie\Exception($column . ' raw bind error');
+                        }
                     } else {
                         $columns[]            = "`{$this->tableName}`." . '`' . $column . '` = :' . $column;
                         $binds[':' . $column] = $value;
@@ -1361,6 +1379,7 @@ class Model extends ArrayObject
                     }
                 } else {
                     if (true === \is_object($alias)) {
+                        (object) $alias;
                         $aliasString = $alias->aliasName ? ' AS `' . ($prefix ? $prefix : '') . $alias->aliasName . '`' : '';
 
                         if ($alias->format) {
@@ -1562,7 +1581,6 @@ class Model extends ArrayObject
         }
 
         echo '<br /><table class="model-debug"><tr><td>';
-
         echo (new \Doctrine\SqlFormatter\SqlFormatter)->format($this->replaceQueryBinds($sql, $binds)); //, $binds);
 
         $data = $this->getConnect()->gets('EXPLAIN ' . $sql, $binds);
@@ -1980,13 +1998,22 @@ class Model extends ArrayObject
             throw new \Limepie\Exception('set ' . $this->tableName . ' "' . $columnName . '" column not found #6');
         }
 
-        if (true === isset($arguments[1])) {
-            // $model->setLocation('POINT(:x, :y)', [':x' => $geometry[0]['x'], ':y' => $geometry[0]['y']])
-            $this->functions[$columnName]  = $arguments[0];
-            $this->attributes[$columnName] = $arguments[1];
-        } else {
-            $this->attributes[$columnName] = $arguments[0];
+        $this->attributes[$columnName] = $arguments[0];
+
+        return $this;
+    }
+
+    // $model->setRawLocation('POINT(:x, :y)', [':x' => $geometry[0]['x'], ':y' => $geometry[0]['y']])
+    private function buildSetRaw(string $name, array $arguments) : self
+    {
+        $columnName = \Limepie\decamelize(\substr($name, 6));
+
+        if (false === \in_array($columnName, $this->allColumns, true)) {
+            throw new \Limepie\Exception('set ' . $this->tableName . ' "' . $columnName . '" column not found #6');
         }
+
+        $this->rawAttributes[$columnName] = $arguments[0];
+        $this->attributes[$columnName]    = $arguments[1] ?? null;
 
         return $this;
     }
