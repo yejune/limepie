@@ -1292,7 +1292,7 @@ class Model extends ArrayObject
         return true;
     }
 
-    public function doDelete(bool $debug = false) : self | bool
+    public function doDelete() : self | bool
     {
         if (true === isset($this->attributes[$this->primaryKeyName])) {
             $sql = <<<SQL
@@ -1307,11 +1307,14 @@ class Model extends ArrayObject
                 $this->primaryKeyName => $this->attributes[$this->primaryKeyName],
             ];
 
-            if ($debug || static::$debug) {
-                $this->debug($sql, $binds);
-            }
 
+            if (static::$debug) {
+                \Limepie\Timer::start();
+            }
             if ($this->getConnect()->set($sql, $binds)) {
+                if (static::$debug) {
+                    $this->debug($sql, $binds, timer: \Limepie\Timer::stop());
+                }
                 $this->primaryKeyValue = '';
                 $this->attributes      = [];
 
@@ -1335,11 +1338,14 @@ class Model extends ArrayObject
                 $object->primaryKeyName => $object->attributes[$object->primaryKeyName],
             ];
 
-            if ($debug || static::$debug) {
-                $this->debug($sql, $binds);
+            if (static::$debug) {
+                \Limepie\Timer::start();
             }
 
             if ($this->getConnect()->set($sql, $binds)) {
+                if (static::$debug) {
+                    $this->debug($sql, $binds, timer: \Limepie\Timer::stop());
+                }
                 $object->primaryKeyValue = '';
                 $object->attributes      = [];
                 unset($ojbect);
@@ -1570,7 +1576,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function debug(string $sql = '', array $binds = []) : void
+    public function debug(?string $sql = null, ?array $binds = null, string $timer) : void
     {
         if (!$sql) {
             $sql = $this->query;
@@ -1580,7 +1586,21 @@ class Model extends ArrayObject
             $binds = $this->binds;
         }
 
-        echo '<br /><table class="model-debug"><tr><td>';
+        echo '<br /><table class="model-debug">';
+
+        foreach (\debug_backtrace() as $trace) {
+            if (true === isset($trace['file'])) {
+                if (false === \strpos($trace['file'], 'yejune/limepie/src/Limepie')) {
+                    $filename = $trace['file'];
+                    $line     = $trace['line'];
+
+                    echo '<tr><th>file ' . $filename . ' on line ' . $line . ' (' . $timer . ')</th></tr>';
+
+                    break;
+                }
+            }
+        }
+        echo '<tr><td>';
         echo (new \Doctrine\SqlFormatter\SqlFormatter)->format($this->replaceQueryBinds($sql, $binds)); //, $binds);
 
         $data = $this->getConnect()->gets('EXPLAIN ' . $sql, $binds);
@@ -1652,10 +1672,16 @@ class Model extends ArrayObject
         $this->binds     = $binds;
 
         if (static::$debug) {
-            $this->debug();
+            \Limepie\Timer::start();
         }
 
-        return $this->getConnect()->get1($sql, $binds);
+        $data = $this->getConnect()->get1($sql, $binds);
+
+        if (static::$debug) {
+            $this->debug(null, null, timer: \Limepie\Timer::stop());
+        }
+
+        return $data;
     }
 
     public function open() : self
@@ -1789,10 +1815,13 @@ class Model extends ArrayObject
         $this->query = $sql;
         $this->binds = $binds;
 
+        if (static::$debug) {
+            \Limepie\Timer::start();
+        }
         $data = $this->getConnect()->gets($sql, $binds, false);
 
         if (static::$debug) {
-            $this->debug();
+            $this->debug(null, null, timer: \Limepie\Timer::stop());
         }
         $class = \get_called_class();
 
@@ -1941,10 +1970,14 @@ class Model extends ArrayObject
         $this->query = $sql;
         $this->binds = $binds;
 
+        if (static::$debug) {
+            \Limepie\Timer::start();
+        }
+
         $attributes = $this->getConnect()->get($sql, $binds, false);
 
         if (static::$debug) {
-            $this->debug();
+            $this->debug(null, null, timer: \Limepie\Timer::stop());
         }
 
         if ($attributes) {
@@ -2527,14 +2560,18 @@ class Model extends ArrayObject
         $this->binds     = $binds;
 
         if ($this->getConnect() instanceof \Pdo) {
+            if (static::$debug) {
+                \Limepie\Timer::start();
+            }
             $attributes = $this->getConnect()->get($sql, $binds, false);
+            if (static::$debug) {
+                $this->debug(null, null, timer: \Limepie\Timer::stop());
+            }
         } else {
             throw new \Limepie\Exception('lost connection');
         }
 
-        if (static::$debug) {
-            $this->debug();
-        }
+
 
         if ($attributes) {
             $attributes = $this->buildDataType($attributes);
@@ -2621,10 +2658,13 @@ class Model extends ArrayObject
         $this->query     = $sql;
         $this->binds     = $binds;
 
+        if (static::$debug) {
+            \Limepie\Timer::start();
+        }
         $data = $this->getConnect()->gets($sql, $binds, false);
 
         if (static::$debug) {
-            $this->debug();
+            $this->debug(null, null, timer: \Limepie\Timer::stop());
         }
 
         $attributes = [];
