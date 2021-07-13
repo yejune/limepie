@@ -1307,10 +1307,10 @@ class Model extends ArrayObject
                 $this->primaryKeyName => $this->attributes[$this->primaryKeyName],
             ];
 
-
             if (static::$debug) {
                 \Limepie\Timer::start();
             }
+
             if ($this->getConnect()->set($sql, $binds)) {
                 if (static::$debug) {
                     $this->debug($sql, $binds, timer: \Limepie\Timer::stop());
@@ -1378,7 +1378,10 @@ class Model extends ArrayObject
                 if (true === \is_numeric($column)) {
                     if ('ip' === $alias) {
                         $columns[] = "inet6_ntoa(`{$this->tableAliasName}`." . '`' . $alias . '`) AS `' . $prefix . $alias . '`';
-                    } elseif (true === isset($this->dataStyles[$alias]) && 'point' == $this->dataStyles[$alias]) {
+                    } elseif (
+                        true === isset($this->dataStyles[$alias])
+                        && 'point' == $this->dataStyles[$alias]
+                    ) {
                         $columns[] = "ST_AsText(`{$this->tableAliasName}`." . '`' . $alias . '`) AS `' . $prefix . $alias . '`';
                     } else {
                         $columns[] = "`{$this->tableAliasName}`." . '`' . $alias . '`' . ($prefix ? ' AS `' . $prefix . $alias . '`' : '');
@@ -1430,7 +1433,7 @@ class Model extends ArrayObject
                         }
                     } else {
                         $aliasString = (true === isset($alias) && $alias ? ' AS `' . ($prefix ? $prefix : '') . $alias . '`' : '');
-                        $columns[]   = $column . $aliasString;
+                        $columns[]   = "`{$this->tableAliasName}`." . '`' . $column . '`' . $aliasString;
                     }
                 }
             }
@@ -2564,14 +2567,13 @@ class Model extends ArrayObject
                 \Limepie\Timer::start();
             }
             $attributes = $this->getConnect()->get($sql, $binds, false);
+
             if (static::$debug) {
                 $this->debug(null, null, timer: \Limepie\Timer::stop());
             }
         } else {
             throw new \Limepie\Exception('lost connection');
         }
-
-
 
         if ($attributes) {
             $attributes = $this->buildDataType($attributes);
