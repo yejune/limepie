@@ -178,7 +178,20 @@ class Di
     public function setBuild($name, $arguments)
     {
         $fieldName = \Limepie\decamelize(\substr($name, 3));
-        $this->setProperty($fieldName, $arguments[0]);
+
+        if (true === isset($arguments[1]) && true === $arguments[1]) {
+            if (Di::instance()->hasProperty($fieldName)) {
+                $tmp   = Di::instance()->getProperty($fieldName);
+                $tmp[] = $arguments[0];
+            } else {
+                $tmp = [
+                    $arguments[0],
+                ];
+            }
+            $this->setProperty($fieldName, $tmp);
+        } else {
+            $this->setProperty($fieldName, $arguments[0]);
+        }
     }
 
     public function getBuild($name, $arguments)
