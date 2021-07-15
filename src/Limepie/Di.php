@@ -28,6 +28,10 @@ class Di
             return Di::instance()->setBuild($name, $arguments);
         }
 
+        if (0 === \strpos($name, 'push')) {
+            return Di::instance()->pushBuild($name, $arguments);
+        }
+
         throw new \Limepie\Exception('static method not found: ' . $name);
     }
 
@@ -178,20 +182,22 @@ class Di
     public function setBuild($name, $arguments)
     {
         $fieldName = \Limepie\decamelize(\substr($name, 3));
+        $this->setProperty($fieldName, $arguments[0]);
+    }
 
-        if (true === isset($arguments[1]) && true === $arguments[1]) {
-            if (Di::instance()->hasProperty($fieldName)) {
-                $tmp   = Di::instance()->getProperty($fieldName);
-                $tmp[] = $arguments[0];
-            } else {
-                $tmp = [
-                    $arguments[0],
-                ];
-            }
-            $this->setProperty($fieldName, $tmp);
+    public function pushBuild($name, $arguments)
+    {
+        $fieldName = \Limepie\decamelize(\substr($name, 4));
+
+        if (Di::instance()->hasProperty($fieldName)) {
+            $stack   = Di::instance()->getProperty($fieldName);
+            $stack[] = $arguments[0];
         } else {
-            $this->setProperty($fieldName, $arguments[0]);
+            $stack = [
+                $arguments[0],
+            ];
         }
+        $this->setProperty($fieldName, $stack);
     }
 
     public function getBuild($name, $arguments)
