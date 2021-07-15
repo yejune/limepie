@@ -12,7 +12,7 @@ class Datetime extends \Limepie\Form\Generation\Fields
 
         $default = $property['default'] ?? '';
 
-        if(!$value) {
+        if (!$value && $default) {
             $value = \date('Y-m-d\TH:i:s', \strtotime($default));
         }
 
@@ -22,22 +22,19 @@ class Datetime extends \Limepie\Form\Generation\Fields
             $readonly = ' readonly="readonly"';
         }
 
-        $html = <<<EOT
-        <input type="datetime-local" class="form-control" name="{$key}" value="{$value}" data-default="{$default}"${readonly} />
+        return <<<EOT
+        <input type="datetime-local" class="form-control" name="{$key}" value="{$value}" data-default="{$default}"{$readonly} />
 
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = (string) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }
