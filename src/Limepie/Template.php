@@ -184,7 +184,6 @@ class Template
             $scope = $fid;
         }
         $this->requireFile($this->getCompilePath($fid), $addAssign, $scope);
-
     }
 
     public function compilePath($filename)
@@ -246,7 +245,7 @@ class Template
         if (true === isset($this->tpl_[$fid])) {
             $path = $this->tpl_[$fid];
         } else {
-            throw new Exception('template id "' . $fid . '" is not defined', 11001);
+            throw new Exception\Http('template id "' . $fid . '" is not defined', 404100);
         }
 
         if (0 === \strpos($path, '/')) {
@@ -257,7 +256,7 @@ class Template
         $tplPath2 = \Limepie\stream_resolve_include_path($tplPath);
 
         if (false === $tplPath2) {
-            throw new Exception('cannot find defined template "' . $tplPath . '"', 11002);
+            throw new Exception\Http('cannot find defined template "' . $tplPath . '"', 404101);
         }
 
         $this->cpl_[$fid] = $tplPath2;
@@ -265,38 +264,38 @@ class Template
         return $tplPath2;
     }
 
-    public function templateNoticeHandler($type, $msg, $file, $line)
-    {
-        switch ($type) {
-            case \E_NOTICE:
-                $msg = 'Template Notice #1: ' . $msg;
+    // public function templateNoticeHandler($type, $msg, $file, $line)
+    // {
+    //     switch ($type) {
+    //         case \E_NOTICE:
+    //             $msg = 'Template Notice #1: ' . $msg;
 
-                break;
-            case \E_WARNING:
-            case \E_USER_WARNING:
-                $msg = 'Warning: ' . $msg;
+    //             break;
+    //         case \E_WARNING:
+    //         case \E_USER_WARNING:
+    //             $msg = 'Warning: ' . $msg;
 
-                break;
-            case \E_USER_NOTICE:
-                $msg = 'Notice: ' . $msg;
+    //             break;
+    //         case \E_USER_NOTICE:
+    //             $msg = 'Notice: ' . $msg;
 
-                break;
-            case \E_USER_ERROR:
-                $msg = 'Fatal: ' . $msg;
+    //             break;
+    //         case \E_USER_ERROR:
+    //             $msg = 'Fatal: ' . $msg;
 
-                break;
-            default:
-                $msg = 'Unknown: ' . $msg;
+    //             break;
+    //         default:
+    //             $msg = 'Unknown: ' . $msg;
 
-                break;
-        }
+    //             break;
+    //     }
 
-        $exception = new Exception($msg, 11003);
-        // $exception->setFile($file);
-        // $exception->setLine($line);
+    //     $exception = new Exception\Http($msg, 11003);
+    //     // $exception->setFile($file);
+    //     // $exception->setLine($line);
 
-        throw $exception;
-    }
+    //     throw $exception;
+    // }
 
     public function defined($fid)
     {
@@ -328,7 +327,7 @@ class Template
         }
 
         if (false === $tplPath) {
-            throw new Exception('cannot find defined template "' . $tplPath . '"', 11004);
+            throw new Exception\Http('cannot find defined template "' . $tplPath . '"', 404);
         }
         //( 24 + 1 + 40 + 1 ) + ( 11 + 1 )
         $cplHead = '<?php /* Peanut\\Template ' . \sha1_file($tplPath, false) . ' ' . \date('Y/m/d H:i:s', \filemtime($tplPath)) . ' ' . $tplPath . ' ';
@@ -353,7 +352,7 @@ class Template
         //\pr($cplPath2);
 
         if (false === $cplPath2) {
-            throw new Exception('cannot find defined template compile "' . $cplPath . '"', 11005);
+            throw new Exception\Http('cannot find defined template compile "' . $cplPath . '"', 404);
         }
 
         return $cplPath2;
