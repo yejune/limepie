@@ -230,7 +230,7 @@ class Response
      *</code>
      *
      * @param string     $contentType
-     * @param mixed|null $charset
+     * @param null|mixed $charset
      * @param mixed      $assign
      */
     // public function xsetContentType(string $contentType, $charset = null) : self
@@ -270,6 +270,11 @@ class Response
         $this->headers[$headerName] = $headerValue;
 
         return $this;
+    }
+
+    public function getHeader($name)
+    {
+        return $this->headers[$name];
     }
 
     public function define($define)
