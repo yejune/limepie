@@ -44,7 +44,7 @@ class Menu
     public function add($name, $url, int $parent = 0, $alias = '', $disabled = false)
     {
         $url    = \rtrim($url, '/');
-        $newurl = $url ? $this->prefix . $url : null;
+        $newurl = $this->prefix . $url;
         ++$this->sequence;
 
         $this->menu[$this->sequence] = [
@@ -81,7 +81,7 @@ class Menu
     public function addSeq($name, int $sequence, $url, int $parent = 0, $params = [])
     {
         $url    = \rtrim($url, '/');
-        $newurl = $url ? $this->prefix . $url : null;
+        $newurl =  $this->prefix . $url;
 
         //pr($name,  $sequence, $url,  $parent , $params );
         $this->menu[$sequence] = [
