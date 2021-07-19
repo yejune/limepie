@@ -36,7 +36,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             return $this->buildGetColumn($name, $arguments);
         }
 
-        throw new \Limepie\Exception('"' . $name . '" method not found', 1999);
+        throw new \Limepie\Exception('"' . $name . '" method not found', 500);
     }
 
     public function __get($name)
@@ -45,7 +45,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             return $this->attributes[$name];
         }
 
-        throw new \Limepie\Exception(\get_called_class() . ': Column "' . $name . '" not found #9', 1999);
+        throw new \Limepie\Exception(\get_called_class() . ': Column "' . $name . '" not found #9', 500);
     }
 
     public function isExists() : bool
@@ -96,7 +96,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         }
 
         if (!$name) {
-            throw new \Limepie\Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #2', 1999);
+            throw new \Limepie\Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #2', 500);
         }
 
         //if (true === isset($this->attributes[$fieldName])) {
@@ -133,7 +133,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
         if (false === $isOrNull && false === $isOrEmpty) {
             // unknown column
-            throw new \Limepie\Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #1', 1999);
+            throw new \Limepie\Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #1', 500);
         }
 
         return null;
@@ -258,18 +258,18 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
     // $dateModels->usort(function($a, $b) {
     //     return (new \Datetime($a->getDate()))->format('Y-m-d') <=> (new \Datetime($b->getDate()))->format('Y-m-d');
     // });
-    public function usort(callable $compareFunc): self
+    public function usort(callable $compareFunc) : self
     {
-        if (usort($this->attributes, $compareFunc) !== true) {
+        if (true !== \usort($this->attributes, $compareFunc)) {
             throw new \Limepie\Exception('usort() failed');
         }
+
         return $this;
     }
 
     public function first()
     {
-       return $this->attributes[\array_key_first($this->attributes)];
-
+        return $this->attributes[\array_key_first($this->attributes)];
     }
 
     public function last()
