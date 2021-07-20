@@ -74,6 +74,11 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         $this->attribute += $attributes;
     }
 
+    public function reverse(bool $preserveKeys = false): self
+    {
+        return new static(\array_reverse($this->attributes, $preserveKeys));
+    }
+
     public function buildGetColumn($name, $arguments)
     {
         // field name
