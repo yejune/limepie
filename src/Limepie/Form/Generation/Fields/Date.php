@@ -12,7 +12,7 @@ class Date extends \Limepie\Form\Generation\Fields
 
         $default = $property['default'] ?? '';
 
-        if(!$value) {
+        if(!$value && $default) {
             $value = \date('Y-m-d', \strtotime($default));
         }
 
