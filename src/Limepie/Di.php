@@ -208,11 +208,16 @@ class Di
 
         if (true === \array_key_exists(0, $arguments)) {
             $default = $arguments[0];
+
+            if(true === is_array($default)) {
+                $default = new \Limepie\ArrayObject($default);
+            }
         }
 
         if ($this->hasProperty($fieldName)) {
             return $this->runProperty($fieldName) ?? $default;
         }
+
         $fieldName = \str_replace('_', '-', $fieldName);
 
         if ($this->hasProperty($fieldName)) {
@@ -220,7 +225,7 @@ class Di
         }
 
         if (true === \array_key_exists(0, $arguments)) {
-            return $arguments[0];
+            return $default;
         }
 
         throw new \Limepie\Exception('"' . $fieldName . '" service provider not found', 1999);
