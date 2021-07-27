@@ -24,6 +24,10 @@ class Rule
     {
         $matches = [];
 
+        if(false !== strpos($pattern, '{')) {
+            $pattern = \preg_replace('#\{([^\}]+)\}#', '(?P<$1>[0-9a-zA-Z_\-\.]+)', $pattern);
+        }
+
         if (1 === \preg_match($pattern, $subject, $matches)) {
             $allowMethods = [];
 
