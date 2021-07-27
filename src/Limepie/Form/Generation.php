@@ -311,10 +311,7 @@ class Generation
             }
             $innerhtml .= '<input type="submit" value="' . $submitButtonText . '" class="btn btn-primary" />';
 
-
-
-            if (true === isset($spec['remove_list_button']) && $spec['remove_list_button']) {
-            } else {
+            if (false === isset($spec['remove_list_button']) || !$spec['remove_list_button']) {
                 $listButtonText = '목록';
 
                 if ($spec['list_button_text'] ?? false) {
