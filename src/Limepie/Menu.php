@@ -58,7 +58,7 @@ class Menu
 
         $target = \rtrim(\Limepie\Di::get('request')->getPath(0, \substr_count($this->prefix . $url, '/')), '/') . $this->query;
 
-        if ($url) {
+        if ($this->prefix . $url) {
             if ($this->prefix . $url === $target) {
                 if (false === $this->finalize || $this->prefix . $url === $this->fullpath) {
                     $this->active = $this->sequence;
@@ -96,7 +96,7 @@ class Menu
         $target = \rtrim(\Limepie\Di::get('request')->getPath(0, \substr_count($this->prefix . $url, '/')), '/') . $this->query;
         //\pr($this->prefix . $url, $target, $this->fullpath, $this->prefix . $url === $target);
 
-        if ($url) {
+        if ($this->prefix . $url) {
             if ($this->prefix . $url === $target) {
                 if (false === $this->finalize || $this->prefix . $url === $this->fullpath) {
                     $this->active = $sequence;
