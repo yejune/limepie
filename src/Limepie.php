@@ -114,7 +114,7 @@ function unserialize($value)
 
 function format_mobile($phone, $isMark = false)
 {
-    $phone  = \preg_replace('/[^0-9]/', '', $phone);
+    $phone  = \preg_replace('/[^0-9]/', '', (string)$phone);
     $length = \strlen($phone);
 
     $match = '$1-$2-$3';
