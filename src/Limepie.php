@@ -261,6 +261,23 @@ function is_assoc($array)
     return false;
 }
 
+function array_is_list(array $array) : bool
+{
+    if (empty($array)) {
+        return true;
+    }
+
+    $current_key = 0;
+
+    foreach ($array as $key => $noop) {
+        if ($key !== $current_key) {
+            return false;
+        }
+        ++$current_key;
+    }
+
+    return true;
+}
 /**
  * file을 읽어 확장자에 따라 decode하여 리턴.
  *
