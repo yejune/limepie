@@ -304,7 +304,24 @@ class Generation
                 //$innerhtml .= ' ';
             }
         } else {
-            $innerhtml .= '<input type="submit" value="저장" class="btn btn-primary" />';
+            $submitButtonText = '저장';
+
+            if ($spec['submit_button_text'] ?? false) {
+                $submitButtonText = $spec['submit_button_text'];
+            }
+            $innerhtml .= '<input type="submit" value="' . $submitButtonText . '" class="btn btn-primary" />';
+
+
+
+            if (true === isset($spec['remove_list_button']) && $spec['remove_list_button']) {
+            } else {
+                $listButtonText = '목록';
+
+                if ($spec['list_button_text'] ?? false) {
+                    $listButtonText = $spec['list_button_text'];
+                }
+                $innerhtml .= '<a href="../" class="btn btn-secondary float-right">' . $listButtonText . '</a>';
+            }
         }
         $innerhtml .= '</div>';
 
