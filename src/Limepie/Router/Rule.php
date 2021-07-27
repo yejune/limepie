@@ -52,12 +52,26 @@ class Rule
                 $returns               = [];
                 $returns['properties'] = [];
 
+                foreach ($default as $key => $value) {
+                    if (false === \is_numeric($key)) {
+                        if (true === \in_array($key, static::$keys, true)) {
+                            $returns[$key] = $value;
+                        } else {
+                            if ('properties' === $key) {
+                                $returns['properties'] = \Limepie\array_merge_deep($returns['properties'], $value);
+                            } else {
+                                $returns['properties'][$key] = $value;
+                            }
+                        }
+                    }
+                }
+
                 foreach ($matches as $key => $value) {
                     if (false === \is_numeric($key)) {
                         if (true === \in_array($key, static::$keys, true)) {
-                            $returns[$key] = \rawurldecode($value);
+                            $returns[$key] = $value;
                         } else {
-                            $returns['properties'][$key] = \rawurldecode($value);
+                            $returns['properties'][$key] = $value;
                         }
                     }
                 }
