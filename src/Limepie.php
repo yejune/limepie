@@ -1915,3 +1915,16 @@ function classname_to_filepath(string $className, array $maps = [])
         }
     }
 }
+
+function array_reverse(array | \Limepie\ArrayObject $array = []) : array
+{
+    if (false === \is_array($array)) {
+        $array = $array->toArray();
+    }
+
+    if (!$array) {
+        return [];
+    }
+
+    return \array_reverse($array);
+}
