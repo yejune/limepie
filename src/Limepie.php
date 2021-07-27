@@ -716,21 +716,6 @@ function array_flattenx($items)
     }, []);
 }
 
-function array_mix(array $a, array $b) : array
-{
-    if (2 < \func_num_args()) {
-        $args = \func_get_args();
-        $base = \array_shift($args);
-
-        foreach ($args as $arg) {
-            $base = \Limepie\array_merge_deep($base, $arg);
-        }
-
-        return $base;
-    }
-
-    return \Limepie\array_merge_deep($a, $b);
-}
 /**
  * time으로부터 지난 시간을 문자열로 반환.
  *
