@@ -671,30 +671,6 @@ function yml_parse_file($file, \Closure $callback = null)
 
     throw new \Limepie\Exception('"' . $file . '" file not found');
 }
-/**
- * recursive array를 unique key로 merge.
- *
- * @param array $array1 초기 배열
- * @param array $array2 병합할 배열
- */
-function array_merge_recursive_distinct(array $array1, array $array2) : array
-{
-    $merged = $array1;
-
-    foreach ($array2 as $key => $value) {
-        if (
-            true === \is_array($value)
-            && true === isset($merged[$key])
-            && true === \is_array($merged[$key])
-        ) {
-            $merged[$key] = \Limepie\array_merge_recursive_distinct($merged[$key], $value);
-        } else {
-            $merged[$key] = $value;
-        }
-    }
-
-    return $merged;
-}
 
 function array_key_flatten($array)
 {
@@ -747,13 +723,13 @@ function array_mix(array $a, array $b) : array
         $base = \array_shift($args);
 
         foreach ($args as $arg) {
-            $base = \Limepie\array_merge_recursive_distinct($base, $arg);
+            $base = \Limepie\array_merge_deep($base, $arg);
         }
 
         return $base;
     }
 
-    return \Limepie\array_merge_recursive_distinct($a, $b);
+    return \Limepie\array_merge_deep($a, $b);
 }
 /**
  * time으로부터 지난 시간을 문자열로 반환.
