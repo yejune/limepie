@@ -137,8 +137,8 @@ class Di
             return Di::instance()->getProperty($key);
         }
 
-        // ERRORCODE: 10004, service provider not found
-        throw new Exception('"' . $key . '" service provider not found', 10004);
+        // ERRORCODE: 40004, service provider not found
+        throw new Exception('"' . $key . '" service provider not found', 40004);
     }
 
     public static function merge($arg)
@@ -175,8 +175,8 @@ class Di
             return $value;
         }
 
-        // ERRORCODE: 10004, service provider not found
-        throw new Exception('"' . $key . '" service provider not found', 10004);
+        // ERRORCODE: 40004, service provider not found
+        throw new Exception('"' . $key . '" service provider not found', 40004);
     }
 
     public function setBuild($name, $arguments)
@@ -228,6 +228,6 @@ class Di
             return $default;
         }
 
-        throw new \Limepie\Exception('"' . $fieldName . '" service provider not found', 1999);
+        throw new \Limepie\Exception('"' . $fieldName . '" service provider not found', 40000);
     }
 }

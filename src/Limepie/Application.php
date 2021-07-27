@@ -159,13 +159,13 @@ class Application
     public function handle($arguments)// : ?object
     {
         if (false === Di::has('request')) {
-            // ERRORCODE: 10005, provider not found
-            throw new Exception('"request" service provider not found', 10005);
+            // ERRORCODE: 40005, provider not found
+            throw new Exception('"request" service provider not found', 40005);
         }
 
         if (false === Di::has('response')) {
-            // ERRORCODE: 10006, provider not found
-            throw new Exception('"response" service provider not found', 10006);
+            // ERRORCODE: 40006, provider not found
+            throw new Exception('"response" service provider not found', 40006);
         }
 
         $isStatic       = false;
@@ -309,7 +309,7 @@ class Application
         \natsort($likely);
         \rsort($likely);
 
-        // ERRORCODE: 10002, method not found
-        throw new Exception('"' . \implode('" or "', \array_unique($likely)) . '" method not found in ' . $className . '" class', 10002);
+        // ERRORCODE: 40002, method not found
+        throw new Exception('"' . \implode('" or "', \array_unique($likely)) . '" method not found in ' . $className . '" class', 40002);
     }
 }
