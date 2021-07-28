@@ -923,10 +923,6 @@ class Model extends ArrayObject
         [$conds, $binds] = $this->getConditions($whereKey, $arguments, $offset);
         $condition       = \trim(\implode(PHP_EOL . '        ', $conds));
 
-        if ($condition) {
-            $condition = 'WHERE ' . PHP_EOL . '        ' . $condition;
-        }
-
         return [$condition, $binds];
     }
 
@@ -1121,6 +1117,11 @@ class Model extends ArrayObject
 
         $primaryKey = '';
 
+        if (static::$debug) {
+            $this->print($sql, $binds);
+            \Limepie\Timer::start();
+        }
+
         if ($this->sequenceName) {
             $primaryKey                              = $this->getConnect()->setAndGetSequnce($sql, $binds);
             $this->attributes[$this->primaryKeyName] = $primaryKey;
@@ -1128,6 +1129,10 @@ class Model extends ArrayObject
             if ($this->getConnect()->set($sql, $binds)) {
                 $primaryKey = $this->attributes[$this->primaryKeyName];
             }
+        }
+
+        if (static::$debug) {
+            echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
         }
 
         if ($primaryKey) {
@@ -1232,7 +1237,16 @@ class Model extends ArrayObject
             $binds[':check_updated_ts'] = $this->attributes['updated_ts'];
         }
 
+        if (static::$debug) {
+            $this->print($sql, $binds);
+            \Limepie\Timer::start();
+        }
+
         if ($this->getConnect()->set($sql, $binds)) {
+            if (static::$debug) {
+                echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
+            }
+
             return $this;
         }
 
@@ -1308,12 +1322,13 @@ class Model extends ArrayObject
             ];
 
             if (static::$debug) {
+                $this->print($sql, $binds);
                 \Limepie\Timer::start();
             }
 
             if ($this->getConnect()->set($sql, $binds)) {
                 if (static::$debug) {
-                    $this->print($sql, $binds, timer: \Limepie\Timer::stop());
+                    echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
                 }
                 $this->primaryKeyValue = '';
                 $this->attributes      = [];
@@ -1339,12 +1354,13 @@ class Model extends ArrayObject
             ];
 
             if (static::$debug) {
+                $this->print($sql, $binds);
                 \Limepie\Timer::start();
             }
 
             if ($this->getConnect()->set($sql, $binds)) {
                 if (static::$debug) {
-                    $this->print($sql, $binds, timer: \Limepie\Timer::stop());
+                    echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
                 }
                 $object->primaryKeyValue = '';
                 $object->attributes      = [];
@@ -1579,7 +1595,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function print(?string $sql = null, ?array $binds = null, ?string $timer = null) : void
+    public function print(?string $sql = null, ?array $binds = null) : void
     {
         if (!$sql) {
             $sql = $this->query;
@@ -1588,8 +1604,10 @@ class Model extends ArrayObject
         if (!$binds) {
             $binds = $this->binds;
         }
-
-        echo '<br /><table class="model-debug">';
+        \Limepie\Timer::start();
+        $data = $this->getConnect()->gets('EXPLAIN ' . $sql, $binds);
+        $timer  = \Limepie\Timer::stop();
+        echo '<br /><br /><table class="model-debug">';
 
         foreach (\debug_backtrace() as $trace) {
             if (true === isset($trace['file'])) {
@@ -1597,7 +1615,7 @@ class Model extends ArrayObject
                     $filename = $trace['file'];
                     $line     = $trace['line'];
 
-                    echo '<tr><th>file ' . $filename . ' on line ' . $line . ' (' . $timer . ')</th></tr>';
+                    echo '<tr><th>file ' . $filename . ' on line ' . $line . ($timer ? ', explain timer (' . $timer . ')' : '') . '</th></tr>';
 
                     break;
                 }
@@ -1605,8 +1623,6 @@ class Model extends ArrayObject
         }
         echo '<tr><td>';
         echo (new \Doctrine\SqlFormatter\SqlFormatter)->format($this->replaceQueryBinds($sql, $binds)); //, $binds);
-
-        $data = $this->getConnect()->gets('EXPLAIN ' . $sql, $binds);
 
         if ($data && isset($data[0])) {
             echo '<style>
@@ -1645,28 +1661,52 @@ class Model extends ArrayObject
             }
             echo '</table>';
         }
-        echo '</td></tr></table><br />';
+        echo '</td></tr></table>';
         //exit;
     }
 
-    public function buildGetCount(string $name, array $arguments, int $offset) : int
+    private function buildGetCount(string $name, array $arguments, int $offset) : int
     {
+        $this->attributes = [];
+
+        $condition           = '';
+        $binds               = [];
         [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
 
-        if ($this->condition) {
-            if ($condition) {
-                $condition .= $this->condition;
-            } else {
-                $condition = ' WHERE ' . $condition . $this->condition;
-            }
-        }
+        $condition .= $this->condition;
         $binds += $this->binds;
 
+        $selectColumns = $this->getSelectColumns();
+        $orderBy       = $this->getOrderBy();
+        $limit         = $this->getLimit();
+        $join          = '';
+
+        if ($this->joinModels) {
+            $joinInfomation = $this->getJoin($this);
+            $join           = $joinInfomation['join'];
+            $selectColumns .= $joinInfomation['selectColumns'];
+            $binds += $joinInfomation['binds'];
+
+            if ($joinInfomation['condition']) {
+                if ($condition) {
+                    $condition .= ' ' . $joinInfomation['condition'];
+                } else {
+                    $condition = $joinInfomation['condition'];
+                }
+            }
+
+            $keyName = '';
+        }
+
+        if ($condition) {
+            $condition = ' WHERE ' . $condition;
+        }
         $sql = <<<SQL
             SELECT
                 COUNT(*)
             FROM
                 `{$this->tableName}` AS `{$this->tableAliasName}`
+            {$join}
             {$condition}
         SQL;
 
@@ -1675,16 +1715,21 @@ class Model extends ArrayObject
         $this->binds     = $binds;
 
         if (static::$debug) {
+            $this->print(null, null);
             \Limepie\Timer::start();
         }
 
-        $data = $this->getConnect()->get1($sql, $binds);
+        if ($this->getConnect() instanceof \Pdo) {
+            $data = $this->getConnect()->get1($sql, $binds, false);
 
-        if (static::$debug) {
-            $this->print(null, null, timer: \Limepie\Timer::stop());
+            if (static::$debug) {
+                echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
+            }
+
+            return $data;
         }
 
-        return $data;
+        throw new \Limepie\Exception('lost connection');
     }
 
     public function open() : self
@@ -1768,10 +1813,10 @@ class Model extends ArrayObject
             $join      = '';
 
             if (true === isset($args['condition'])) {
-                $condition = 'WHERE ' . $args['condition'];
+                $condition = ' ' . $args['condition'];
             } else {
                 if ($this->condition) {
-                    $condition = ' WHERE ' . $this->condition;
+                    $condition = '  ' . $this->condition;
                     $binds     = $this->binds;
                 }
             }
@@ -1793,12 +1838,19 @@ class Model extends ArrayObject
                 $selectColumns .= $joinInfomation['selectColumns'];
                 $binds += $joinInfomation['binds'];
 
-                if ($condition) {
-                    $condition .= PHP_EOL . '    AND ' . PHP_EOL . '        ' . $joinInfomation['condition'];
-                } else {
-                    $condition .= ' WHERE ' . PHP_EOL . '    ' . $joinInfomation['condition'];
+                if ($joinInfomation['condition']) {
+                    if ($condition) {
+                        $condition .= ' ' . $joinInfomation['condition'];
+                    } else {
+                        $condition = $joinInfomation['condition'];
+                    }
                 }
+
                 $keyName = '';
+            }
+
+            if ($condition) {
+                $condition = ' WHERE ' . $condition;
             }
             $forceIndex = \implode(', ', $this->forceIndexes);
 
@@ -1815,17 +1867,21 @@ class Model extends ArrayObject
             SQL;
             $this->condition = $condition;
         }
+
         $this->query = $sql;
         $this->binds = $binds;
 
         if (static::$debug) {
+            $this->print(null, null);
             \Limepie\Timer::start();
         }
+
         $data = $this->getConnect()->gets($sql, $binds, false);
 
         if (static::$debug) {
-            $this->print(null, null, timer: \Limepie\Timer::stop());
+            echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
         }
+
         $class = \get_called_class();
 
         $attributes = [];
@@ -1920,13 +1976,12 @@ class Model extends ArrayObject
             $join          = '';
             $binds         = [];
             $orderBy       = $this->getOrderBy();
-            // TODO: buildGets와 같이 정리 필요
 
             if (true === isset($args['condition'])) {
-                $condition = 'WHERE ' . $args['condition'];
+                $condition = ' ' . $args['condition'];
             } else {
                 if ($this->condition) {
-                    $condition = ' WHERE ' . $this->condition;
+                    $condition = '  ' . $this->condition;
                     $binds     = $this->binds;
                 }
             }
@@ -1948,12 +2003,19 @@ class Model extends ArrayObject
                 $selectColumns .= $joinInfomation['selectColumns'];
                 $binds += $joinInfomation['binds'];
 
-                if ($condition) {
-                    $condition .= PHP_EOL . '    AND ' . PHP_EOL . '        ' . $joinInfomation['condition'];
-                } else {
-                    $condition .= ' WHERE ' . PHP_EOL . '    ' . $joinInfomation['condition'];
+                if ($joinInfomation['condition']) {
+                    if ($condition) {
+                        $condition .= ' ' . $joinInfomation['condition'];
+                    } else {
+                        $condition = $joinInfomation['condition'];
+                    }
                 }
+
                 $keyName = '';
+            }
+
+            if ($condition) {
+                $condition = ' WHERE ' . $condition;
             }
 
             $sql = <<<SQL
@@ -1974,13 +2036,14 @@ class Model extends ArrayObject
         $this->binds = $binds;
 
         if (static::$debug) {
+            $this->print(null, null);
             \Limepie\Timer::start();
         }
 
         $attributes = $this->getConnect()->get($sql, $binds, false);
 
         if (static::$debug) {
-            $this->print(null, null, timer: \Limepie\Timer::stop());
+            echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
         }
 
         if ($attributes) {
@@ -2095,11 +2158,9 @@ class Model extends ArrayObject
             $this->condition .= ' AND ' . $operator;
         } else {
             [$conds, $binds] = $this->getConditions($name, $arguments, $offset);
-            $condition       = \trim(\implode(PHP_EOL . '        ', $conds));
 
-            if ($condition) {
-                $condition = ' AND ' . PHP_EOL . '        ' . $condition;
-                $this->condition .= $condition;
+            if ($conds) {
+                $this->condition .= ' AND ' . PHP_EOL . '        ' . \trim(\implode(PHP_EOL . '        ', $conds));
             }
 
             if ($binds) {
@@ -2172,8 +2233,7 @@ class Model extends ArrayObject
         $whereKey = \trim(\Limepie\decamelize(\substr($name, $offset)), '_ ');
 
         if ($whereKey) {
-            $matches = \preg_split('#([^_]+])?(_and_|_or_)([^_]+])?#U', $whereKey, flags: \PREG_SPLIT_OFFSET_CAPTURE);
-
+            $matches   = \preg_split('#([^_]+])?(_and_|_or_)([^_]+])?#U', $whereKey, flags: \PREG_SPLIT_OFFSET_CAPTURE);
             $splitKeys = [];
             $prevMatch = [];
             $offset    = 0;
@@ -2539,14 +2599,20 @@ class Model extends ArrayObject
             $selectColumns .= $joinInfomation['selectColumns'];
             $binds += $joinInfomation['binds'];
 
-            if ($condition) {
-                $condition .= PHP_EOL . '    AND ' . PHP_EOL . '        ' . $joinInfomation['condition'];
-            } else {
-                $condition .= ' WHERE ' . PHP_EOL . '    ' . $joinInfomation['condition'];
+            if ($joinInfomation['condition']) {
+                if ($condition) {
+                    $condition .= ' ' . $joinInfomation['condition'];
+                } else {
+                    $condition = $joinInfomation['condition'];
+                }
             }
+
             $keyName = '';
         }
 
+        if ($condition) {
+            $condition = ' WHERE ' . $condition;
+        }
         $sql = <<<SQL
             SELECT
                 {$selectColumns}
@@ -2564,12 +2630,14 @@ class Model extends ArrayObject
 
         if ($this->getConnect() instanceof \Pdo) {
             if (static::$debug) {
+                $this->print(null, null);
                 \Limepie\Timer::start();
             }
+
             $attributes = $this->getConnect()->get($sql, $binds, false);
 
             if (static::$debug) {
-                $this->print(null, null, timer: \Limepie\Timer::stop());
+                echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
             }
         } else {
             throw new \Limepie\Exception('lost connection');
@@ -2636,14 +2704,20 @@ class Model extends ArrayObject
             $selectColumns .= $joinInfomation['selectColumns'];
             $binds += $joinInfomation['binds'];
 
-            if ($condition) {
-                $condition .= PHP_EOL . '    AND ' . PHP_EOL . '        ' . $joinInfomation['condition'];
-            } else {
-                $condition .= ' WHERE ' . PHP_EOL . '    ' . $joinInfomation['condition'];
+            if ($joinInfomation['condition']) {
+                if ($condition) {
+                    $condition .= ' ' . $joinInfomation['condition'];
+                } else {
+                    $condition = $joinInfomation['condition'];
+                }
             }
+
             $keyName = '';
         }
 
+        if ($condition) {
+            $condition = ' WHERE ' . $condition;
+        }
         $sql = <<<SQL
             SELECT
                 {$selectColumns}
@@ -2661,12 +2735,14 @@ class Model extends ArrayObject
         $this->binds     = $binds;
 
         if (static::$debug) {
+            $this->print(null, null);
             \Limepie\Timer::start();
         }
+
         $data = $this->getConnect()->gets($sql, $binds, false);
 
         if (static::$debug) {
-            $this->print(null, null, timer: \Limepie\Timer::stop());
+            echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
         }
 
         $attributes = [];
@@ -2806,9 +2882,9 @@ class Model extends ArrayObject
         static::$debug = true;
 
         if (!$filename) {
-            $trace = \debug_backtrace()[0];
+            $trace    = \debug_backtrace()[0];
             $filename = $trace['file'];
-            $line = $trace['line'];
+            $line     = $trace['line'];
         }
         echo 'debug on: file ' . $filename . ' on line ' . $line . '<br />';
     }
