@@ -191,8 +191,18 @@ class Pagination
             $listModel = clone $countModel;
         }
 
-        $totalCount  = $countModel->getCount();
-        $urlPattern  = '?page={=page}';
+        $totalCount = $countModel->getCount();
+
+        $qs = $_SERVER['QUERY_STRING'] ?? '';
+        if(0 < strlen($qs)) {
+            $qs = '?' . $qs;
+        }
+        if (1 === \preg_match('#(\?|&)page=(\d+)#', $qs, $m)) {
+            $query = \preg_replace('#(\?|&)page=(\d+)#', '$1page={=page}', $qs);
+        } else {
+            $query = $qs . (0 < strlen($qs) ? '&' : '?') . 'page={=page}';
+        }
+        $urlPattern  = $query;
         $currentPage = $_GET['page'] ?? 1;
         $totalPages  = (0 === $recordsPerPage ? 0 : (int) \ceil($totalCount / $recordsPerPage));
 
