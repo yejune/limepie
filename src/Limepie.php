@@ -1278,12 +1278,8 @@ function is_binary(string $string) : bool
     return false;
 }
 
-function decimal($number) : float
+function decimal($number) : float | int
 {
-    // $tmp = new \Decimal\Decimal((string) $number);
-
-    // return $tmp->trim();
-
     if (0 < \strlen((string) $number)) {
         $parts  = \explode('.', (string) $number);
         $result = $parts[0];
@@ -1291,13 +1287,15 @@ function decimal($number) : float
         if (true === isset($parts[1])) {
             if ($r = \rtrim($parts[1], '0')) {
                 $result .= '.' . $r;
+
+                return (float) $result;
             }
         }
 
-        return (float) $result;
+        return (int) $result;
     }
 
-    return 0;
+    return (int) 0;
 }
 function nf($number)
 {
