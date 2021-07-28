@@ -294,7 +294,7 @@ class Generation
 
                     $innerhtml .= '<a href="" data-method="delete" data-value="' . $string . '" ' . \str_replace('{=string}', $string, $description) . ' class="btn ' . $class . '">' . $text . '</a>';
                 } elseif ('a' === $button['type']) {
-                    $innerhtml .= '<a href="' . $href . '" class="btn ' . $class . '">' . $text . '</a>';
+                    $innerhtml .= '<a href="' . $href . (true === isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : '') . '" class="btn ' . $class . '">' . $text . '</a>';
                 } else {
                     $innerhtml .= '<button type="' . $type . '" ' . $name . ' class="btn ' . $class . '" ' . $value . ' ' . $onclick . ' >' . $text . '</button>';
                 }
@@ -317,7 +317,7 @@ class Generation
                 if ($spec['list_button_text'] ?? false) {
                     $listButtonText = $spec['list_button_text'];
                 }
-                $innerhtml .= '<a href="../" class="btn btn-secondary float-right">' . $listButtonText . '</a>';
+                $innerhtml .= '<a href="../' . (true === isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : '') . '" class="btn btn-secondary float-right">' . $listButtonText . '</a>';
             }
         }
         $innerhtml .= '</div>';
