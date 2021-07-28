@@ -72,6 +72,8 @@ class Model extends ArrayObject
 
     public $deleteLock = false;
 
+    public $sumColumn = '';
+
     public static $debug = false;
 
     public static function newInstance(\Pdo $pdo = null, array $attributes = []) : self
@@ -118,6 +120,10 @@ class Model extends ArrayObject
             return $this->buildAnd($name, $arguments, 3);
         }
 
+        if (0 === \strpos($name, 'sum')) {
+            return $this->buildSum($name, $arguments, 3);
+        }
+
         if (0 === \strpos($name, 'or')) {
             return $this->buildOr($name, $arguments);
         }
@@ -160,6 +166,10 @@ class Model extends ArrayObject
 
         if (0 === \strpos($name, 'getCount')) {
             return $this->buildGetCount($name, $arguments, 8);
+        }
+
+        if (0 === \strpos($name, 'getSum')) {
+            return $this->buildGetSum($name, $arguments, 6);
         }
 
         if (0 === \strpos($name, 'getsAllBy')) {
@@ -1732,6 +1742,79 @@ class Model extends ArrayObject
         throw new \Limepie\Exception('lost connection');
     }
 
+
+    private function buildGetSum(string $name, array $arguments, int $offset) : int | float
+    {
+        $this->attributes = [];
+
+        $condition           = '';
+        $binds               = [];
+        [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
+
+        $condition .= $this->condition;
+        $binds += $this->binds;
+
+        $selectColumns = $this->getSelectColumns();
+        $orderBy       = $this->getOrderBy();
+        $limit         = $this->getLimit();
+        $join          = '';
+
+        $sumColumn = $this->sumColumn;
+        if ($this->joinModels) {
+            $joinInfomation = $this->getJoin($this);
+
+            if ($joinInfomation['sumColumn']) {
+                $sumColumn = $joinInfomation['sumColumn'];
+            }
+            $join           = $joinInfomation['join'];
+            $selectColumns .= $joinInfomation['selectColumns'];
+            $binds += $joinInfomation['binds'];
+
+            if ($joinInfomation['condition']) {
+                if ($condition) {
+                    $condition .= ' ' . $joinInfomation['condition'];
+                } else {
+                    $condition = $joinInfomation['condition'];
+                }
+            }
+
+            $keyName = '';
+        }
+
+        if ($condition) {
+            $condition = ' WHERE ' . $condition;
+        }
+        $sql = <<<SQL
+            SELECT
+                COALESCE(SUM({$sumColumn}), 0)
+            FROM
+                `{$this->tableName}` AS `{$this->tableAliasName}`
+            {$join}
+            {$condition}
+        SQL;
+
+        $this->condition = $condition;
+        $this->query     = $sql;
+        $this->binds     = $binds;
+
+        if (static::$debug) {
+            $this->print(null, null);
+            \Limepie\Timer::start();
+        }
+
+        if ($this->getConnect() instanceof \Pdo) {
+            $data = $this->getConnect()->get1($sql, $binds, false);
+
+            if (static::$debug) {
+                echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
+            }
+
+            return \Limepie\decimal($data);
+        }
+
+        throw new \Limepie\Exception('lost connection');
+    }
+
     public function open() : self
     {
         $this->conditions[] = ['string' => '('];
@@ -1795,6 +1878,7 @@ class Model extends ArrayObject
             'condition'     => $condition,
             'join'          => $join,
             'selectColumns' => $selectColumns,
+            'sumColumn'     => $class->sumColumn
         ];
     }
 
@@ -2141,6 +2225,13 @@ class Model extends ArrayObject
     private function buildWhere(string $name, array $arguments, int $offset = 5)
     {
         [$this->condition, $this->binds] = $this->getConditionAndBinds($name, $arguments, $offset);
+
+        return $this;
+    }
+
+    private function buildSum(string $name, array $arguments, int $offset = 3) : self
+    {
+        $this->sumColumn = '`'.$this->tableAliasName.'`.`'.\Limepie\decamelize(\substr($name, $offset)).'`';
 
         return $this;
     }
