@@ -2,7 +2,7 @@
 
 namespace Limepie;
 
-class Model extends ArrayObject
+class ModelOld extends ArrayObject
 {
     public $pdo;
 
@@ -217,10 +217,10 @@ class Model extends ArrayObject
 
                         if (false === \in_array($offset, $this->allColumns, true)) {
                             $message = 'Undefined offset: ' . $offset;
-                            $code    = 400234;
+                            $code    = 234;
                         } else {
                             $message = 'offset ' . $offset . ' is null';
-                            $code    = 400123;
+                            $code    = 123;
                         }
                         $filename = $trace['file'];
                         $line     = $trace['line'];
@@ -370,267 +370,171 @@ class Model extends ArrayObject
     {
         if ($this->oneToOne) {
             foreach ($this->oneToOne as $class) {
-                $attributes = $this->getRelationData(
-                    $class,
-                    $attributes,
-                    functionName: 'getBy',
-                    isSingle: true
-                );
+                if ($class->leftKeyName) {
+                    $leftKeyName = $class->leftKeyName;
+                } else {
+                    $leftKeyName = $class->primaryKeyName;
+                }
+
+                if ($class->rightKeyName) {
+                    $rightKeyName = $class->rightKeyName;
+                } else {
+                    $rightKeyName = $class->tableName . '_' . $class->primaryKeyName;
+                }
+
+                $functionName = 'getBy' . \Limepie\camelize($rightKeyName);
+
+                if (false === \array_key_exists($leftKeyName, $attributes)) {
+                    throw new \Limepie\Exception($class->tableName . ': Undefined left key "' . $leftKeyName . '"');
+                }
+
+                $args = [$attributes[$leftKeyName]];
+
+                foreach ($class->and as $key => $value) {
+                    $functionName .= 'And' . \Limepie\camelize($key);
+                    $args[] = $value;
+                }
+
+                $class->keyName = $rightKeyName;
+
+                $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
+
+                if ($data) {
+                    $data->deleteLock = $class->deleteLock;
+                }
+
+                if ($class->newTableName) {
+                    $attributes[$class->newTableName] = $data;
+                } else {
+                    $attributes[$class->tableName . '_model'] = $data;
+                }
             }
         }
 
         if ($this->oneToOnes ?? false) {
             foreach ($this->oneOnes as $parentTableName => $oneToOne) {
                 foreach ($oneToOne as $class) {
-                    $attributes = $this->getRelationData(
-                        $class,
-                        $attributes,
-                        parentTableName: $parentTableName,
-                        functionName: 'getBy',
-                        isSingle: true
-                    );
+                    if ($class->leftKeyName) {
+                        $leftKeyName = $class->leftKeyName;
+                    } else {
+                        $leftKeyName = $class->primaryKeyName;
+                    }
+
+                    if ($class->rightKeyName) {
+                        $rightKeyName = $class->rightKeyName;
+                    } else {
+                        $rightKeyName = $class->tableName . '_' . $class->primaryKeyName;
+                    }
+
+                    $functionName = 'getBy' . \Limepie\camelize($rightKeyName);
+
+                    if (false === \array_key_exists($leftKeyName, $attributes[$parentTableName]->toArray())) {
+                        throw new \Limepie\Exception($class->tableName . ': Undefined left key "' . $leftKeyName . '"');
+                    }
+
+                    $args = [$attributes[$parentTableName][$leftKeyName]];
+
+                    foreach ($class->and as $key => $value) {
+                        $functionName .= 'And' . \Limepie\camelize($key);
+                        $args[] = $value;
+                    }
+
+                    $class->keyName = $rightKeyName;
+
+                    $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
+
+                    if ($data) {
+                        $data->deleteLock = $class->deleteLock;
+                    }
+
+                    if ($class->newTableName) {
+                        $attributes[$parentTableName][$class->newTableName] = $data;
+                    } else {
+                        $attributes[$parentTableName][$class->tableName . '_model'] = $data;
+                    }
                 }
             }
         }
 
         if ($this->oneToMany) {
             foreach ($this->oneToMany as $class) {
-                $attributes = $this->getRelationData(
-                    $class,
-                    $attributes,
-                    functionName: 'getsBy',
-                    isSingle: false
-                );
+                if ($class->leftKeyName) {
+                    $leftKeyName = $class->leftKeyName;
+                } else {
+                    $leftKeyName = $class->primaryKeyName;
+                }
+
+                if ($class->rightKeyName) {
+                    $rightKeyName = $class->rightKeyName;
+                } else {
+                    $rightKeyName = $class->tableName . '_' . $class->primaryKeyName;
+                }
+
+                $functionName = 'getsBy' . \Limepie\camelize($rightKeyName);
+
+                if (false === \array_key_exists($leftKeyName, $attributes)) {
+                    throw new \Limepie\Exception($class->tableName . ': Undefined left key "' . $leftKeyName . '"');
+                }
+
+                $args = [$attributes[$leftKeyName]];
+
+                foreach ($class->and as $key1 => $value) {
+                    $functionName .= 'And' . \Limepie\camelize($key1);
+                    $args[] = $value;
+                }
+
+                $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
+
+                if ($data) {
+                    $data->deleteLock = $class->deleteLock;
+                }
+
+                if ($class->newTableName) {
+                    $attributes[$class->newTableName] = $data;
+                } else {
+                    $attributes[$class->tableName . '_models'] = $data;
+                }
             }
         }
 
         if ($this->oneToManys ?? false) {
             foreach ($this->oneToManys as $parentTableName => $oneToMany) {
                 foreach ($oneToMany as $class) {
-                    $attributes = $this->getRelationData(
-                        $class,
-                        $attributes,
-                        parentTableName: $parentTableName,
-                        functionName: 'getsBy',
-                        isSingle: false
-                    );
-                }
-            }
-        }
-
-        return $attributes;
-    }
-
-    public function getRelationData($class, $attribute, $functionName, $parentTableName = '', $isSingle = true)
-    {
-        if ($class->leftKeyName) {
-            $leftKeyName = $class->leftKeyName;
-        } else {
-            $leftKeyName = $class->primaryKeyName;
-        }
-
-        if ($class->rightKeyName) {
-            $rightKeyName = $class->rightKeyName;
-        } else {
-            $rightKeyName = $class->tableName . '_' . $class->primaryKeyName;
-        }
-
-        if (true === $isSingle) {
-            $class->keyName = $rightKeyName;
-        }
-
-        $row = $attribute;
-
-        if ($parentTableName) {
-            $row = $attribute[$parentTableName];
-        }
-
-        if ($row instanceof self) {
-            $row = $attribute->toArray();
-        }
-
-        if (false === \array_key_exists($leftKeyName, $row)) {
-            throw new \Limepie\Exception($class->tableName . ': Undefined left key "' . $leftKeyName . '"');
-        }
-
-        $args = [$row[$leftKeyName]];
-
-        foreach ($class->and as $key => $value) {
-            $functionName .= 'And' . \Limepie\camelize($key);
-            $args[] = $value;
-        }
-
-        $functionName .= \Limepie\camelize($rightKeyName);
-
-        $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
-
-        if ($data) {
-            $data->deleteLock = $class->deleteLock;
-        }
-
-        if ($class->newTableName) {
-            $moduleName = $class->newTableName;
-        } else {
-            if (true === $isSingle) {
-                $append = '_model';
-            } else {
-                $append = '_models';
-            }
-            $moduleName = $class->tableName . $append;
-        }
-
-        if ($parentTableName) {
-            $attribute[$parentTableName][$moduleName] = $data;
-        } else {
-            $attribute[$moduleName] = $data;
-        }
-
-        return $attribute;
-    }
-
-    public function getRelationsData($class, $attributes, $functionName, $parentTableName = '', $isSingle = true)
-    {
-        $seqs = [];
-        $data = [];
-
-        if ($class->leftKeyName) {
-            $leftKeyName = $class->leftKeyName;
-        } else {
-            $leftKeyName = $class->primaryKeyName;
-        }
-
-        if ($class->rightKeyName) {
-            $rightKeyName = $class->rightKeyName;
-        } else {
-            $rightKeyName = $class->tableName . '_' . $class->primaryKeyName;
-        }
-
-        if ($isSingle) {
-            $class->keyName = $rightKeyName;
-        } else {
-            $remapKey       = $class->keyName;
-            $class->keyName = $leftKeyName;
-        }
-
-        foreach ($attributes as $attribute) {
-            if ($parentTableName) {
-                $row = $attribute[$parentTableName];
-            } else {
-                $row = $attribute;
-            }
-
-            if ($row instanceof self) {
-                $row = $row->toArray();
-            }
-
-            if (true === \array_key_exists($leftKeyName, $row)) {
-                if (null !== $row[$leftKeyName]) {
-                    $seqs[] = $row[$leftKeyName];
-                }
-            } else {
-                throw new \Limepie\Exception($this->tableName . ' table ' . $leftKeyName . ' column not found #2');
-            }
-        }
-
-        if ($seqs) {
-            $seqs = \array_unique($seqs);
-            $functionName .= \Limepie\camelize($rightKeyName);
-            $args = [$seqs];
-
-            foreach ($class->and as $key => $value) {
-                $functionName .= 'And' . \Limepie\camelize($key);
-                $args[] = $value;
-            }
-
-            $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
-        }
-
-        if ($class->newTableName) {
-            $moduleName = $class->newTableName;
-        } else {
-            if (true === $isSingle) {
-                $append = '_model';
-            } else {
-                $append = '_models';
-            }
-            $moduleName = $class->tableName . $append;
-        }
-
-        if ($isSingle) {
-            foreach ($attributes as $attribute) {
-                if ($parentTableName) {
-                    $attr = $attribute[$parentTableName][$leftKeyName] ?? false;
-                } else {
-                    $attr = $attribute[$leftKeyName] ?? false;
-                }
-
-                if ($attr && true === isset($data[$attr]) && $data[$attr]) {
-                    $data[$attr]->deleteLock = $class->deleteLock;
-                }
-
-                if ($parentTableName) {
-                    $attribute[$parentTableName]->offsetSet($moduleName, $data[$attr] ?? null);
-                } else {
-                    $attribute->offsetSet($moduleName, $data[$attr] ?? null);
-                }
-            }
-        } else {
-            $group = [];
-
-            foreach ($data ?? [] as $key => $row) {
-                $group[$row[$rightKeyName]][$key] = $row;
-            }
-
-            foreach ($attributes as $attribute) {
-                if ($parentTableName) {
-                    $attr = $attribute[$parentTableName][$leftKeyName] ?? '';
-                } else {
-                    $attr = $attribute[$leftKeyName] ?? '';
-                }
-
-                if ($attr && true === isset($group[$attr])) {
-                    if ($class->keyName === $remapKey) {
-                        $instance             = new $class($this->getConnect(), $group[$attr]);
-                        $instance->deleteLock = $class->deleteLock;
-
-                        if ($parentTableName) {
-                            $attribute[$parentTableName]->offsetSet($moduleName, $instance);
-                        } else {
-                            $attribute->offsetSet($moduleName, $instance);
-                        }
+                    if ($class->leftKeyName) {
+                        $leftKeyName = $class->leftKeyName;
                     } else {
-                        $new = [];
-
-                        foreach ($group[$attr] as $key => $value) {
-                            if (false === \in_array($remapKey, $value->allColumns, true)) {
-                                throw new \Limepie\Exception($remapKey . ' column not found #3');
-                            }
-
-                            if (false === \array_key_exists($remapKey, $value->attributes)) {
-                                throw new \Limepie\Exception($remapKey . ' column is null, not match');
-                            }
-
-                            if ($class->secondKeyName) {
-                                $new[$value[$remapKey]][$value[$class->secondKeyName]] = $value;
-                            } else {
-                                $new[$value[$remapKey]] = $value;
-                            }
-                        }
-
-                        $instance             = new $class($this->getConnect(), $new);
-                        $instance->deleteLock = $class->deleteLock;
-
-                        if ($parentTableName) {
-                            $attribute[$parentTableName]->offsetSet($moduleName, $instance);
-                        } else {
-                            $attribute->offsetSet($moduleName, $instance);
-                        }
+                        $leftKeyName = $class->primaryKeyName;
                     }
-                } else {
-                    if ($parentTableName) {
-                        $attribute[$parentTableName]->offsetSet($moduleName, null);
+
+                    if ($class->rightKeyName) {
+                        $rightKeyName = $class->rightKeyName;
                     } else {
-                        $attribute->offsetSet($moduleName, null);
+                        $rightKeyName = $class->tableName . '_' . $class->primaryKeyName;
+                    }
+
+                    $functionName = 'getsBy' . \Limepie\camelize($rightKeyName);
+
+                    if (false === \array_key_exists($leftKeyName, $attributes[$parentTableName])) {
+                        throw new \Limepie\Exception($class->tableName . ': Undefined left key "' . $leftKeyName . '"');
+                    }
+
+                    $args = [$attributes[$parentTableName][$leftKeyName]];
+
+                    foreach ($class->and as $key1 => $value) {
+                        $functionName .= 'And' . \Limepie\camelize($key1);
+                        $args[] = $value;
+                    }
+
+                    $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
+
+                    if ($data) {
+                        $data->deleteLock = $class->deleteLock;
+                    }
+
+                    if ($class->newTableName) {
+                        $attributes[$parentTableName][$class->newTableName] = $data;
+                    } else {
+                        $attributes[$parentTableName][$class->tableName . '_models'] = $data;
                     }
                 }
             }
@@ -643,50 +547,349 @@ class Model extends ArrayObject
     {
         if ($this->oneToOne) {
             foreach ($this->oneToOne as $class) {
-                $attributes = $this->getRelationsData(
-                    $class,
-                    $attributes,
-                    functionName: 'getsBy',
-                    isSingle: true
-                );
+                if ($class->newTableName) {
+                    $moduleName = $class->newTableName;
+                } else {
+                    $moduleName = $class->tableName . '_model';
+                }
+
+                if ($class->leftKeyName) {
+                    $leftKeyName = $class->leftKeyName;
+                } else {
+                    $leftKeyName = $class->primaryKeyName;
+                }
+
+                if ($class->rightKeyName) {
+                    $rightKeyName = $class->rightKeyName;
+                } else {
+                    $rightKeyName = $class->tableName . '_' . $class->primaryKeyName;
+                }
+
+                $seqs = [];
+
+                foreach ($attributes as $row) {
+                    if (true === \array_key_exists($leftKeyName, $row->toArray())) {
+                        if (null !== $row[$leftKeyName]) {
+                            $seqs[] = $row[$leftKeyName];
+                        }
+                    } else {
+                        throw new \Limepie\Exception($this->tableName . ' table ' . $leftKeyName . ' column not found #2');
+                    }
+                }
+
+                if ($seqs) {
+                    $seqs         = \array_unique($seqs);
+                    $functionName = 'getsBy' . \Limepie\camelize($rightKeyName);
+                    $args         = [$seqs];
+
+                    foreach ($class->and as $key => $value) {
+                        $functionName .= 'And' . \Limepie\camelize($key);
+                        $args[] = $value;
+                    }
+
+                    $class->keyName = $rightKeyName;
+
+                    $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
+
+                    if ($data) {
+                        foreach ($attributes as $attribute) {
+                            $attr = $attribute[$leftKeyName] ?? false;
+
+                            if ($attr && true === isset($data[$attr])) {
+                                if ($data[$attr]) {
+                                    $data[$attr]->deleteLock = $class->deleteLock;
+                                }
+                                $attribute->offsetSet($moduleName, $data[$attr]);
+                            } else {
+                                $attribute->offsetSet($moduleName, null);
+                            }
+                        }
+                    } else {
+                        foreach ($attributes as $attribute) {
+                            $attribute->offsetSet($moduleName, null);
+                        }
+                    }
+                } else {
+                    foreach ($attributes as $attribute) {
+                        $attribute->offsetSet($moduleName, null);
+                    }
+                }
             }
         }
 
         if ($this->oneToOnes ?? false) {
             foreach ($this->oneToOnes as $parentTableName => $oneToOne) {
                 foreach ($oneToOne as $class) {
-                    $attributes = $this->getRelationsData(
-                        $class,
-                        $attributes,
-                        functionName: 'getsBy',
-                        parentTableName: $parentTableName,
-                        isSingle: true
-                    );
+                    if ($class->newTableName) {
+                        $moduleName = $class->newTableName;
+                    } else {
+                        $moduleName = $class->tableName . '_model';
+                    }
+
+                    if ($class->leftKeyName) {
+                        $leftKeyName = $class->leftKeyName;
+                    } else {
+                        $leftKeyName = $class->primaryKeyName;
+                    }
+
+                    if ($class->rightKeyName) {
+                        $rightKeyName = $class->rightKeyName;
+                    } else {
+                        $rightKeyName = $class->tableName . '_' . $class->primaryKeyName;
+                    }
+
+                    $seqs = [];
+
+                    foreach ($attributes as $row) {
+                        if (true === \array_key_exists($leftKeyName, $row[$parentTableName]->toArray())) {
+                            if (null !== $row[$parentTableName][$leftKeyName]) {
+                                $seqs[] = $row[$parentTableName][$leftKeyName];
+                            }
+                        } else {
+                            throw new \Limepie\Exception($this->tableName . ' table ' . $leftKeyName . ' column not found #1');
+                        }
+                    }
+
+                    if ($seqs) {
+                        $seqs = \array_unique($seqs);
+
+                        $functionName = 'getsBy' . \Limepie\camelize($rightKeyName);
+                        $args         = [$seqs];
+
+                        foreach ($class->and as $key => $value) {
+                            $functionName .= 'And' . \Limepie\camelize($key);
+                            $args[] = $value;
+                        }
+
+                        $class->keyName = $rightKeyName;
+
+                        $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
+
+                        if ($data) {
+                            foreach ($attributes as $attribute) {
+                                $attr = $attribute[$parentTableName][$leftKeyName] ?? false;
+
+                                if ($attr && true === isset($data[$attr])) {
+                                    if ($data[$attr]) {
+                                        $data[$attr]->deleteLock = $class->deleteLock;
+                                    }
+                                    $attribute[$parentTableName]->offsetSet($moduleName, $data[$attr]);
+                                } else {
+                                    $attribute[$parentTableName]->offsetSet($moduleName, null);
+                                }
+                            }
+                        } else {
+                            foreach ($attributes as $attribute) {
+                                $attribute[$parentTableName]->offsetSet($moduleName, null);
+                            }
+                        }
+                    } else {
+                        foreach ($attributes as $attribute) {
+                            $attribute[$parentTableName]->offsetSet($moduleName, null);
+                        }
+                    }
                 }
             }
         }
 
         if ($this->oneToMany) {
             foreach ($this->oneToMany as $class) {
-                $attributes = $this->getRelationsData(
-                    $class,
-                    $attributes,
-                    functionName: 'getsBy',
-                    isSingle: false
-                );
+                if ($class->newTableName) {
+                    $moduleName = $class->newTableName;
+                } else {
+                    $moduleName = $class->tableName . '_models';
+                }
+
+                if ($class->leftKeyName) {
+                    $leftKeyName = $class->leftKeyName;
+                } else {
+                    $leftKeyName = $class->primaryKeyName;
+                }
+
+                if ($class->rightKeyName) {
+                    $rightKeyName = $class->rightKeyName;
+                } else {
+                    $rightKeyName = $class->tableName . '_' . $class->primaryKeyName;
+                }
+                // ->key로 바꿈
+                $remapKey       = $class->keyName;
+                $class->keyName = $leftKeyName;
+
+                $seqs = [];
+
+                foreach ($attributes as $attribute) {
+                    if (false === isset($attribute[$leftKeyName])) {
+                        throw new \Limepie\Exception($class->tableName . ' table not found left key: ' . $leftKeyName);
+                    }
+
+                    if (null !== $attribute[$leftKeyName]) {
+                        $seqs[] = $attribute[$leftKeyName];
+                    }
+                }
+
+                $functionName = 'getsBy' . \Limepie\camelize($rightKeyName);
+
+                $seqs = \array_unique($seqs);
+
+                $args = [$seqs];
+
+                foreach ($class->and as $key1 => $value) {
+                    $functionName .= 'And' . \Limepie\camelize($key1);
+                    $args[] = $value;
+                }
+
+                $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
+
+                if ($data) {
+                    $group = [];
+
+                    foreach ($data as $key => $row) {
+                        $group[$row[$rightKeyName]][$key] = $row;
+                    }
+
+                    if ($group) {
+                        foreach ($attributes as $attribute) {
+                            $attr = $attribute[$leftKeyName] ?? '';
+
+                            if ($attr && true === isset($group[$attr])) {
+                                if ($class->keyName === $remapKey) {
+                                    $attribute->offsetSet($moduleName, new $class($this->getConnect(), $group[$attr]));
+                                } else {
+                                    $new = [];
+
+                                    foreach ($group[$attr] as $key => $value) {
+                                        if (false === \in_array($remapKey, $value->allColumns, true)) {
+                                            throw new \Limepie\Exception($remapKey . ' column not found #4');
+                                        }
+
+                                        if (false === \array_key_exists($remapKey, $value->attributes)) {
+                                            throw new \Limepie\Exception($remapKey . ' column is null, not match');
+                                        }
+
+                                        if ($class->secondKeyName) {
+                                            $new[$value[$remapKey]][$value[$class->secondKeyName]] = $value;
+                                        } else {
+                                            $new[$value[$remapKey]] = $value;
+                                        }
+                                    }
+
+                                    $attribute->offsetSet($moduleName, $tmp = new $class($this->getConnect(), $new));
+                                    $tmp->deleteLock = $class->deleteLock;
+                                }
+                            } else {
+                                $attribute->offsetSet($moduleName, null);
+                            }
+                        }
+                    } else {
+                        foreach ($attributes as $attribute) {
+                            $attribute->offsetSet($moduleName, null);
+                        }
+                    }
+                } else {
+                    foreach ($attributes as $attribute) {
+                        $attribute->offsetSet($moduleName, null);
+                    }
+                }
             }
         }
 
         if ($this->oneToManys ?? []) {
             foreach ($this->oneToManys as $parentTableName => $oneToMany) {
                 foreach ($oneToMany as $class) {
-                    $attributes = $this->getRelationsData(
-                        $class,
-                        $attributes,
-                        functionName: 'getsBy',
-                        parentTableName: $parentTableName,
-                        isSingle: false
-                    );
+                    if ($class->newTableName) {
+                        $moduleName = $class->newTableName;
+                    } else {
+                        $moduleName = $class->tableName . '_models';
+                    }
+
+                    if ($class->leftKeyName) {
+                        $leftKeyName = $class->leftKeyName;
+                    } else {
+                        $leftKeyName = $class->primaryKeyName;
+                    }
+
+                    if ($class->rightKeyName) {
+                        $rightKeyName = $class->rightKeyName;
+                    } else {
+                        $rightKeyName = $class->tableName . '_' . $class->primaryKeyName;
+                    }
+                    // ->key로 바꿈
+                    $remapKey       = $class->keyName;
+                    $class->keyName = $leftKeyName;
+
+                    $seqs = [];
+
+                    foreach ($attributes as $attribute) {
+                        if (false === isset($attribute[$parentTableName][$leftKeyName])) {
+                            throw new \Limepie\Exception($class->tableName . ' table not found left key: ' . $leftKeyName);
+                        }
+
+                        if (null !== $attribute[$parentTableName][$leftKeyName]) {
+                            $seqs[] = $attribute[$parentTableName][$leftKeyName];
+                        }
+                    }
+                    $functionName = 'getsBy' . \Limepie\camelize($rightKeyName);
+                    $seqs         = \array_unique($seqs);
+
+                    $args = [$seqs];
+
+                    foreach ($class->and as $key1 => $value) {
+                        $functionName .= 'And' . \Limepie\camelize($key1);
+                        $args[] = $value;
+                    }
+
+                    $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
+
+                    if ($data) {
+                        $group = [];
+
+                        foreach ($data as $key => $row) {
+                            $group[$row[$rightKeyName]][$key] = $row;
+                        }
+
+                        if ($group) {
+                            foreach ($attributes as $attribute) {
+                                $attr = $attribute[$parentTableName][$leftKeyName] ?? '';
+
+                                if ($attr && true === isset($group[$attr])) {
+                                    if ($class->keyName === $remapKey) {
+                                        $attribute[$parentTableName]->offsetSet($moduleName, $tmp = new $class($this->getConnect(), $group[$attr]));
+                                        $tmp->deleteLock = $class->deleteLock;
+                                    } else {
+                                        $new = [];
+
+                                        foreach ($group[$attr] as $key => $value) {
+                                            if (false === \in_array($remapKey, $value->allColumns, true)) {
+                                                throw new \Limepie\Exception($remapKey . ' column not found #3');
+                                            }
+
+                                            if (false === \array_key_exists($remapKey, $value->attributes)) {
+                                                throw new \Limepie\Exception($remapKey . ' column is null, not match');
+                                            }
+
+                                            if ($class->secondKeyName) {
+                                                $new[$value[$remapKey]][$value[$class->secondKeyName]] = $value;
+                                            } else {
+                                                $new[$value[$remapKey]] = $value;
+                                            }
+                                        }
+                                        $attribute[$parentTableName]->offsetSet($moduleName, $tmp = new $class($this->getConnect(), $new));
+                                        $tmp->deleteLock = $class->deleteLock;
+                                    }
+                                } else {
+                                    $attribute[$parentTableName]->offsetSet($moduleName, null);
+                                }
+                            }
+                        } else {
+                            foreach ($attributes as $attribute) {
+                                $attribute[$parentTableName]->offsetSet($moduleName, null);
+                            }
+                        }
+                    } else {
+                        foreach ($attributes as $attribute) {
+                            $attribute[$parentTableName]->offsetSet($moduleName, null);
+                        }
+                    }
                 }
             }
         }
