@@ -202,38 +202,6 @@ class Model extends ArrayObject
             return $this->buildGetColumn($name, $arguments);
         }
 
-        if (0 === \strpos($name, 'gt')) {
-            return $this->buildGt($name, $arguments);
-        }
-
-        if (0 === \strpos($name, 'lt')) {
-            return $this->buildLt($name, $arguments);
-        }
-
-        if (0 === \strpos($name, 'ge')) {
-            return $this->buildGe($name, $arguments);
-        }
-
-        if (0 === \strpos($name, 'le')) {
-            return $this->buildLe($name, $arguments);
-        }
-
-        if (0 === \strpos($name, 'eq')) {
-            return $this->buildEq($name, $arguments);
-        }
-
-        if (0 === \strpos($name, 'ne')) {
-            return $this->buildNe($name, $arguments);
-        }
-
-        if (0 === \strpos($name, 'lk')) {
-            return $this->buildLk($name, $arguments);
-        }
-
-        if (0 === \strpos($name, 'between')) {
-            return $this->buildBetween($name, $arguments);
-        }
-
         throw new \Limepie\Exception('"' . $name . '" method not found', 1999);
     }
 
@@ -427,15 +395,9 @@ class Model extends ArrayObject
                     $args[] = $value;
                 }
 
-                $connect = $class->getConnectOrNull();
-
-                if (!$connect) {
-                    $connect = $this->getConnect();
-                }
-
                 $class->keyName = $rightKeyName;
 
-                $data = \call_user_func_array([$class($connect), $functionName], $args);
+                $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
 
                 if ($data) {
                     $data->deleteLock = $class->deleteLock;
@@ -477,15 +439,9 @@ class Model extends ArrayObject
                         $args[] = $value;
                     }
 
-                    $connect = $class->getConnectOrNull();
-
-                    if (!$connect) {
-                        $connect = $this->getConnect();
-                    }
-
                     $class->keyName = $rightKeyName;
 
-                    $data = \call_user_func_array([$class($connect), $functionName], $args);
+                    $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
 
                     if ($data) {
                         $data->deleteLock = $class->deleteLock;
@@ -527,13 +483,7 @@ class Model extends ArrayObject
                     $args[] = $value;
                 }
 
-                $connect = $class->getConnectOrNull();
-
-                if (!$connect) {
-                    $connect = $this->getConnect();
-                }
-
-                $data = \call_user_func_array([$class($connect), $functionName], $args);
+                $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
 
                 if ($data) {
                     $data->deleteLock = $class->deleteLock;
@@ -575,13 +525,7 @@ class Model extends ArrayObject
                         $args[] = $value;
                     }
 
-                    $connect = $class->getConnectOrNull();
-
-                    if (!$connect) {
-                        $connect = $this->getConnect();
-                    }
-
-                    $data = \call_user_func_array([$class($connect), $functionName], $args);
+                    $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
 
                     if ($data) {
                         $data->deleteLock = $class->deleteLock;
@@ -642,14 +586,10 @@ class Model extends ArrayObject
                         $functionName .= 'And' . \Limepie\camelize($key);
                         $args[] = $value;
                     }
-                    $connect = $class->getConnectOrNull();
-
-                    if (!$connect) {
-                        $connect = $this->getConnect();
-                    }
 
                     $class->keyName = $rightKeyName;
-                    $data           = \call_user_func_array([$class($connect), $functionName], $args);
+
+                    $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
 
                     if ($data) {
                         foreach ($attributes as $attribute) {
@@ -720,14 +660,10 @@ class Model extends ArrayObject
                             $functionName .= 'And' . \Limepie\camelize($key);
                             $args[] = $value;
                         }
-                        $connect = $class->getConnectOrNull();
-
-                        if (!$connect) {
-                            $connect = $this->getConnect();
-                        }
 
                         $class->keyName = $rightKeyName;
-                        $data           = \call_user_func_array([$class($connect), $functionName], $args);
+
+                        $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
 
                         if ($data) {
                             foreach ($attributes as $attribute) {
@@ -802,13 +738,7 @@ class Model extends ArrayObject
                     $args[] = $value;
                 }
 
-                $connect = $class->getConnectOrNull();
-
-                if (!$connect) {
-                    $connect = $this->getConnect();
-                }
-
-                $data = \call_user_func_array([$class($connect), $functionName], $args);
+                $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
 
                 if ($data) {
                     $group = [];
@@ -908,13 +838,7 @@ class Model extends ArrayObject
                         $args[] = $value;
                     }
 
-                    $connect = $class->getConnectOrNull();
-
-                    if (!$connect) {
-                        $connect = $this->getConnect();
-                    }
-
-                    $data = \call_user_func_array([$class($connect), $functionName], $args);
+                    $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
 
                     if ($data) {
                         $group = [];
@@ -1037,11 +961,6 @@ class Model extends ArrayObject
             throw new \Limepie\Exception($this->tableName . ' db connection not found');
         }
 
-        return $this->pdo;
-    }
-
-    public function getConnectOrNull()
-    {
         return $this->pdo;
     }
 
@@ -2036,9 +1955,15 @@ class Model extends ArrayObject
                     $parentTableName = $joinModel->tableName . '_model';
                 }
 
-                $row[$parentTableName]              = new $joinModel($this->getConnect(), $tmp);
-                $this->oneToOnes[$parentTableName]  = $joinModel->oneToOne;
-                $this->oneToManys[$parentTableName] = $joinModel->oneToMany;
+                $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
+
+                if ($joinModel->oneToOne) {
+                    $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
+                }
+
+                if ($joinModel->oneToMany) {
+                    $this->oneToManys[$parentTableName] = $joinModel->oneToMany;
+                }
             }
 
             if ($keyName) {
@@ -2199,8 +2124,14 @@ class Model extends ArrayObject
                 }
 
                 $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
-                $this->oneToOnes[$parentTableName]  = $joinModel->oneToOne;
-                $this->oneToManys[$parentTableName] = $joinModel->oneToMany;
+
+                if ($joinModel->oneToOne) {
+                    $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
+                }
+
+                if ($joinModel->oneToMany) {
+                    $this->oneToManys[$parentTableName] = $joinModel->oneToMany;
+                }
             }
 
             $this->attributes      = $this->getRelation($attributes);
@@ -2519,98 +2450,6 @@ class Model extends ArrayObject
         return [$conds, $binds];
     }
 
-    private function buildGe(string $name, array $arguments) : self
-    {
-        $key = \Limepie\decamelize(\substr($name, 2));
-
-        ++$this->bindcount;
-
-        $this->conditions[] = [
-            'string' => $key . ' >= :' . $key . '_' . $this->bindcount,
-            'bind'   => [
-                $key . '_' . $this->bindcount => $arguments[0],
-            ],
-        ];
-
-        return $this;
-    }
-
-    private function buildLe(string $name, array $arguments) : self
-    {
-        $key = \Limepie\decamelize(\substr($name, 2));
-
-        ++$this->bindcount;
-
-        $this->conditions[] = [
-            'string' => $key . ' <= :' . $key . '_' . $this->bindcount,
-            'bind'   => [
-                $key . '_' . $this->bindcount => $arguments[0],
-            ],
-        ];
-
-        return $this;
-    }
-
-    private function buildNe(string $name, array $arguments) : self
-    {
-        $key = \Limepie\decamelize(\substr($name, 2));
-
-        ++$this->bindcount;
-
-        if (null === $arguments[0]) {
-            $this->conditions[] = [
-                'string' => $key . ' IS NOT NULL',
-                'bind'   => [
-                ],
-            ];
-        } else {
-            $this->conditions[] = [
-                'string' => $key . ' != :' . $key . '_' . $this->bindcount,
-                'bind'   => [
-                    $key . '_' . $this->bindcount => $arguments[0],
-                ],
-            ];
-        }
-
-        return $this;
-    }
-
-    private function buildLk(string $name, array $arguments) : self
-    {
-        $key = \Limepie\decamelize(\substr($name, 2));
-
-        ++$this->bindcount;
-
-        $this->conditions[] = [
-            'string' => $key . ' like concat("%", :' . $key . '_' . $this->bindcount, ', "%")',
-            'bind'   => [
-                $key . '_' . $this->bindcount => $arguments[0],
-            ],
-        ];
-
-        return $this;
-    }
-
-    private function buildBetween(string $name, array $arguments) : self
-    {
-        $key = \Limepie\decamelize(\substr($name, 7));
-
-        ++$this->bindcount;
-
-        $a = $key . '_' . $this->bindcount . '_a';
-        $b = $key . '_' . $this->bindcount . '_b';
-
-        $this->conditions[] = [
-            'string' => $key . ' BETWEEN :' . $a . ' AND :' . $b,
-            'bind'   => [
-                $a => $arguments[0][0],
-                $b => $arguments[0][1],
-            ],
-        ];
-
-        return $this;
-    }
-
     private function buildKeyName(string $name, array $arguments) : self
     {
         if (1 === \preg_match('#keyName(?P<leftKeyName>.*)(With(?P<rightKeyName>.*))?$#U', $name, $m)) {
@@ -2691,13 +2530,6 @@ class Model extends ArrayObject
         } else {
             $this->addColumn($columnName);
         }
-
-        return $this;
-    }
-
-    public function move($parent) : self
-    {
-        $this->parent = $parent;
 
         return $this;
     }
@@ -2807,8 +2639,14 @@ class Model extends ArrayObject
                 }
 
                 $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
-                $this->oneToOnes[$parentTableName]  = $joinModel->oneToOne;
-                $this->oneToManys[$parentTableName] = $joinModel->oneToMany;
+
+                if ($joinModel->oneToOne) {
+                    $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
+                }
+
+                if ($joinModel->oneToMany) {
+                    $this->oneToManys[$parentTableName] = $joinModel->oneToMany;
+                }
             }
 
             $this->attributes      = $this->getRelation($attributes);
@@ -2913,8 +2751,14 @@ class Model extends ArrayObject
                 }
 
                 $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
-                $this->oneToOnes[$parentTableName]  = $joinModel->oneToOne;
-                $this->oneToManys[$parentTableName] = $joinModel->oneToMany;
+
+                if ($joinModel->oneToOne) {
+                    $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
+                }
+
+                if ($joinModel->oneToMany) {
+                    $this->oneToManys[$parentTableName] = $joinModel->oneToMany;
+                }
             }
 
             if ($keyName) {
