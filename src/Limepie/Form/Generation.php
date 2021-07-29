@@ -290,7 +290,11 @@ class Generation
                 }
 
                 if ('delete' === $button['type']) {
-                    $string = \Limepie\genRandomString(6);
+                    if(true === isset($button['string'])) {
+                        $string = $button['string'];
+                    } else {
+                        $string = \Limepie\genRandomString(6);
+                    }
 
                     $innerhtml .= '<a href="" data-method="delete" data-value="' . $string . '" ' . \str_replace('{=string}', $string, $description) . ' class="btn ' . $class . '">' . $text . '</a>';
                 } elseif ('a' === $button['type']) {
