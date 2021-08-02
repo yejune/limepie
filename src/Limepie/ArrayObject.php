@@ -74,7 +74,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         $this->attribute += $attributes;
     }
 
-    public function reverse(bool $preserveKeys = false): self
+    public function reverse(bool $preserveKeys = false) : self
     {
         return new static(\array_reverse($this->attributes, $preserveKeys));
     }
@@ -280,5 +280,24 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
     public function last()
     {
         return $this->attributes[\array_key_last($this->attributes)];
+    }
+
+    public function children(array $data, array $maps = [], $params = [])
+    {
+        $request   = Di::getRequest();
+        $children = &$this->attributes;
+        $attribute = [];
+        foreach ($maps as $step) {
+            $attribute = &$children[$request->getPath(0, $step)];// ['children'];
+            $children = &$attribute['children'];
+        }
+
+        $attribute['params'] = $params + $attribute['params'];
+        $attribute['children'] = $data;
+
+        $children = &$attribute;
+        Di::setMenus($this->attributes);
+
+        return $this;
     }
 }
