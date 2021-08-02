@@ -274,7 +274,7 @@ class Response
 
     public function getHeader($name)
     {
-        return $this->headers[$name];
+        return $this->headers[$name] ?? null;
     }
 
     public function define($define)
