@@ -41,19 +41,19 @@ class Menu
         return $this->add($name, $link, $parent);
     }
 
-    public function add($name, $url, int $parent = 0, $alias = '', $disabled = false)
+    public function add($name, $url, int $parent = 0, $params = [])
     {
         $url    = \rtrim($url, '/');
         $newurl = $this->prefix . $url;
         ++$this->sequence;
 
         $this->menu[$this->sequence] = [
-            'parent'   => $parent,
-            'seq'      => $this->sequence,
-            'name'     => $name,
-            'url'      => $newurl,
-            'active'   => false,
-            'disabled' => $disabled,
+            'parent' => $parent,
+            'seq'    => $this->sequence,
+            'name'   => $name,
+            'url'    => $newurl,
+            'active' => false,
+            'params' => $params,
         ];
 
         $target = \rtrim(\Limepie\Di::get('request')->getPath(0, \substr_count($this->prefix . $url, '/')), '/') . $this->query;
@@ -81,9 +81,8 @@ class Menu
     public function addSeq($name, int $sequence, $url, int $parent = 0, $params = [])
     {
         $url    = \rtrim($url, '/');
-        $newurl =  $this->prefix . $url;
+        $newurl = $this->prefix . $url;
 
-        //pr($name,  $sequence, $url,  $parent , $params );
         $this->menu[$sequence] = [
             'parent' => $parent,
             'seq'    => $sequence,
@@ -94,7 +93,6 @@ class Menu
         ];
 
         $target = \rtrim(\Limepie\Di::get('request')->getPath(0, \substr_count($this->prefix . $url, '/')), '/') . $this->query;
-        //\pr($this->prefix . $url, $target, $this->fullpath, $this->prefix . $url === $target);
 
         if ($this->prefix . $url) {
             if ($this->prefix . $url === $target) {
@@ -127,11 +125,11 @@ class Menu
 
         while (1) {
             if (true === isset($this->menu[$active]) && $this->start < $this->menu[$active]['parent']) {
-                $tmp    = $this->menu[$active];
+                $item = $this->menu[$active];
 
-                if (true === isset($this->menu[$tmp['parent']])) {
-                    $parent = $this->menu[$tmp['parent']];
-                    \array_push($parents, $tmp['parent']);
+                if (true === isset($this->menu[$item['parent']])) {
+                    $parent = $this->menu[$item['parent']];
+                    \array_push($parents, $item['parent']);
                 }
                 $active = $parent['seq'] ?? 0;
             } else {
@@ -149,11 +147,11 @@ class Menu
 
         while (1) {
             if (true === isset($this->menu[$active]) && $this->start < $this->menu[$active]['parent']) {
-                $tmp    = $this->menu[$active];
+                $item = $this->menu[$active];
 
-                if (true === isset($this->menu[$tmp['parent']])) {
-                    $parent = $this->menu[$tmp['parent']];
-                    \array_unshift($location, $tmp);
+                if (true === isset($this->menu[$item['parent']])) {
+                    $parent = $this->menu[$item['parent']];
+                    \array_unshift($location, $item);
                 }
                 $active = $parent['seq'] ?? 0;
             } else {
@@ -207,10 +205,16 @@ class Menu
                 unset($tree[$child]);
                 // Append the child into result array and parse its children
 
-                $tmp             = $value;
-                $tmp['children'] = $this->parseTree($tree, $child, $depth);
-                $tmp['depth']    = $depth;
-                $return[]        = $tmp;
+                $item = [
+                    'seq'    => $value['seq'],
+                    'name'   => $value['name'],
+                    'url'    => $value['url'],
+                    'active' => $value['active'],
+                    'params' => $value['params'],
+                ];
+                $item['children'] = $this->parseTree($tree, $child, $depth);
+                //$item['depth']    = $depth;
+                $return[$value['url']] = $item;
             }
         }
 
