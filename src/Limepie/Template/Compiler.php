@@ -298,8 +298,10 @@ class Compiler
                 case '#':
                     if (1 === \preg_match('`^#([\s+])?([a-zA-Z0-9\-_\.]+)$`', $statement)) {
                         $result = [2, $this->compileDefine($statement, $line)];
-                    } elseif (1 === \preg_match('`^#([\s+])?([a-zA-Z0-9\-_\.]+) ([^ ]+)( ([^ ]+))?$`', $statement, $tmp)) {
-                        $result = [2, $this->compileInDefine('#' . $tmp[2], $this->basepath . '/' . $tmp[3], $line, $tmp[5] ?? '')];
+                    } elseif (1 === \preg_match('`^#([\s+])?([a-zA-Z0-9\-_\.]+) scope (.*)$`', $statement, $tmp)) {
+                        $result = [2, $this->compileScorpDefine('#' . $tmp[2], $line, $tmp[3])];
+                    } elseif (1 === \preg_match('`^#([\s+])?([a-zA-Z0-9\-_\.]+) ([^ ]+)$`', $statement, $tmp)) {
+                        $result = [2, $this->compileInDefine('#' . $tmp[2], null, $line, $tmp[5] ?? '')];
                     } else {
                         $result = [1, $statement];
                     }
@@ -393,6 +395,11 @@ class Compiler
         }
 
         return "self::define('" . \trim(\substr($statement, 1)) . "', '" . $file . "');self::printContents('" . \trim(\substr($statement, 1)) . "')";
+    }
+
+    public function compileScorpDefine($statement, $line, $scope = '')
+    {
+            return 'self::setScope("' . $scope . '", $' . trim($scope) . ');' . "self::printContents('" . \trim(\substr($statement, 1)) . "', [], '" . $scope . "')";
     }
 
     /**
