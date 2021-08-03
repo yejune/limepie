@@ -185,7 +185,7 @@ class Pagination
         ];
     }
 
-    public static function getList($countModel, $listModel = null, $recordsPerPage = 10, $pagesPerBlock = 9)
+    public static function getList($countModel, $listModel = null, int $recordsPerPage = 10, int $pagesPerBlock = 9) : array
     {
         if (!$listModel) {
             $listModel = clone $countModel;
