@@ -1887,3 +1887,17 @@ function array_reverse(array | \Limepie\ArrayObject $array = []) : array
 
     return \array_reverse($array);
 }
+
+function getQueystring($append = '?')
+{
+    if (true === isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING']) {
+        return $append . $_SERVER['QUERY_STRING'];
+    }
+
+    return '';
+}
+
+function getQs($append = '?')
+{
+    return \Limepie\getQueystring($append);
+}
