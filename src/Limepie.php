@@ -114,7 +114,7 @@ function unserialize($value)
 
 function format_mobile($phone, $isMark = false)
 {
-    $phone  = \preg_replace('/[^0-9]/', '', (string)$phone);
+    $phone  = \preg_replace('/[^0-9]/', '', (string) $phone);
     $length = \strlen($phone);
 
     $match = '$1-$2-$3';
@@ -1039,7 +1039,7 @@ function uniqid(int $length = 13) : string
     } elseif (true === \function_exists('openssl_random_pseudo_bytes')) {
         $bytes = \openssl_random_pseudo_bytes((int) \ceil($length / 2));
     } else {
-        $bytes = \md5(\mt_rand());
+        $bytes = \md5((string)\mt_rand());
     }
 
     return \substr(\bin2hex($bytes), 0, $length);
