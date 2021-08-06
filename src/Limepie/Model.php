@@ -1955,6 +1955,10 @@ class Model extends ArrayObject
             throw new \Limepie\Exception('set ' . $this->tableName . ' "' . $columnName . '" column not found #6');
         }
 
+        if (false === \array_key_exists(0, $arguments)) {
+            throw new \Limepie\Exception($columnName . ' not found.');
+        }
+
         $this->attributes[$columnName] = $arguments[0];
 
         return $this;
