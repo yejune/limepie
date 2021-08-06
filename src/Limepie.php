@@ -1888,7 +1888,7 @@ function array_reverse(array | \Limepie\ArrayObject $array = []) : array
     return \array_reverse($array);
 }
 
-function getQueystring($append = '?')
+function getQueystring(string $append = '?') : string
 {
     if (true === isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING']) {
         return $append . $_SERVER['QUERY_STRING'];
@@ -1897,7 +1897,12 @@ function getQueystring($append = '?')
     return '';
 }
 
-function getQs($append = '?')
+function getQs(string $append = '?') : string
+{
+    return \Limepie\getQueystring($append);
+}
+
+function qs(string $append = '?') : string
 {
     return \Limepie\getQueystring($append);
 }
