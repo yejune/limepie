@@ -186,11 +186,11 @@ class Template
         $this->requireFile($this->getCompilePath($fid), $addAssign, $scope);
     }
 
-    public function compilePath($filename)
+    public function xshow($file, $assign)
     {
-        $this->_define('*', $filename);
-
-        return $this->getCompilePath('*');
+        $this->setScope('scope');
+        $this->define('*', $file);
+        $this->printContents('*', $assign, 'scope');
     }
 
     /**
@@ -251,7 +251,8 @@ class Template
         if (0 === \strpos($path, '/')) {
             $tplPath = $path;
         } else {
-            $tplPath = $path;
+            $parent  = \dirname(\str_replace($this->compileRoot, '', \debug_backtrace(limit: 4)[3]['file']));
+            $tplPath = $parent . '/' . $path;
         }
         $tplPath2 = \Limepie\stream_resolve_include_path($tplPath);
 
