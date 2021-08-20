@@ -33,13 +33,18 @@ class Rule
 
             if (true === isset($default['methods'])) {
                 if (true === \is_array($default['methods'])) {
-                    foreach ($default['methods'] as $method) {
-                        if ('all' == $method) {
-                            $allowMethods = static::$allowMethods;
+                    if (true === \in_array('all', $default['methods'], true)) {
+                        $allowMethods = static::$allowMethods;
+                    } else {
+                        foreach ($default['methods'] as $method) {
+                            $index = \array_search($method, $allowMethods, true);
 
-                            break;
+                            if (false !== $index && true === isset($allowMethods[$index])) {
+                                $allowMethods[$index] = $method;
+                            } else {
+                                $allowMethods[] = $method;
+                            }
                         }
-                        $allowMethods[] = $default;
                     }
                 }
             } elseif (true === isset($default['method'])) {
