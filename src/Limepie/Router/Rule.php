@@ -24,7 +24,7 @@ class Rule
     {
         $matches = [];
 
-        if(false !== strpos($pattern, '{')) {
+        if (false !== \strpos($pattern, '{')) {
             $pattern = \preg_replace('#\{([^\}]+)\}#', '(?P<$1>[0-9a-zA-Z_\-\.]+)', $pattern);
         }
 
@@ -43,6 +43,10 @@ class Rule
                     }
                 }
             } elseif (true === isset($default['method'])) {
+                if (true === \is_array($default['method'])) {
+                    throw new \Limepie\Exception('Change property name method to methods');
+                }
+
                 if ('all' == $default['method']) {
                     $allowMethods = static::$allowMethods;
                 } else {
