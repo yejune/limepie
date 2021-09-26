@@ -15,28 +15,29 @@ class Validation
     public $errors = [];
 
     public $defaultMessages = [
-        'required'    => 'This field is required.',
-        'remote'      => 'Please fix this field.',
-        'email'       => 'Please enter a valid email address.',
-        'url'         => 'Please enter a valid URL.',
-        'date'        => 'Please enter a valid date.',
-        'dateISO'     => 'Please enter a valid date (ISO).',
-        'number'      => 'Please enter a valid number.',
-        'digits'      => 'Please enter only digits.',
-        'equalTo'     => 'Please enter the same value again.',
-        'maxlength'   => 'Please enter no more than {0} characters.',
-        'minlength'   => 'Please enter at least {0} characters.',
-        'rangelength' => 'Please enter a value between {0} and {1} characters long.',
-        'range'       => 'Please enter a value between {0} and {1}.',
-        'max'         => 'Please enter a value less than or equal to {0}.',
-        'min'         => 'Please enter a value greater than or equal to {0}.',
-        'maxcount'    => 'Please enter a value less than or equal to {0}.',
-        'mincount'    => 'Please enter a value greater than or equal to {0}.',
-        'step'        => 'Please enter a multiple of {0}.',
-        'unique'      => 'unique',
-        'accept'      => 'Please enter a value with a valid mimetype.',
-        'in'          => 'Not a allowed value',
-        'enddate'     => 'Must be greater than {0}.',
+        'required'     => 'This field is required.',
+        'remote'       => 'Please fix this field.',
+        'email'        => 'Please enter a valid email address.',
+        'url'          => 'Please enter a valid URL.',
+        'date'         => 'Please enter a valid date.',
+        'dateISO'      => 'Please enter a valid date (ISO).',
+        'number'       => 'Please enter a valid number.',
+        'digits'       => 'Please enter only digits.',
+        'equalTo'      => 'Please enter the same value again.',
+        'maxlength'    => 'Please enter no more than {0} characters.',
+        'minlength'    => 'Please enter at least {0} characters.',
+        'rangelength'  => 'Please enter a value between {0} and {1} characters long.',
+        'range'        => 'Please enter a value between {0} and {1}.',
+        'max'          => 'Please enter a value less than or equal to {0}.',
+        'min'          => 'Please enter a value greater than or equal to {0}.',
+        'maxcount'     => 'Please enter a value less than or equal to {0}.',
+        'mincount'     => 'Please enter a value greater than or equal to {0}.',
+        'minformcount' => 'Please enter a value greater than or equal to {0}.',
+        'step'         => 'Please enter a multiple of {0}.',
+        'unique'       => 'unique',
+        'accept'       => 'Please enter a value with a valid mimetype.',
+        'in'           => 'Not a allowed value',
+        'enddate'      => 'Must be greater than {0}.',
     ];
 
     public function __construct($data = [], $language = '')
@@ -198,6 +199,13 @@ class Validation
 
             return true;
         });
+
+        Validation::addMethod('minformcount', function ($value, $name, $param) {
+            $elements = $this->getValue($name);
+
+            return $this->optional($value) || \count($elements) >= $param;
+        });
+
         Validation::addMethod('accept', function ($value, $name, $pattern) {
             if ($optionValue = $this->optional($value)) {
                 return $optionValue;
