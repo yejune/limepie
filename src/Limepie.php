@@ -2,6 +2,7 @@
 
 namespace Limepie;
 
+use Closure;
 use Throwable;
 
 function _($string)
@@ -44,6 +45,16 @@ function per1($point, $step)
     }
 
     return 0;
+}
+
+function date_format(string $date, $format)
+{
+    $week   = ['일', '월', '화', '수', '목', '금', '토'];
+    $time   = \strtotime($date);
+    $yoil   = $week[\date('w', $time)];
+    $format = \str_replace('w', $yoil, $format);
+
+    return \date($format, $time);
 }
 
 function date($date)
@@ -652,7 +663,7 @@ function drupal_array_merge_deep_array($arrays)
 
     return $result;
 }
-function yml_parse_file($file, \Closure $callback = null)
+function yml_parse_file($file, Closure $callback = null)
 {
     $filepath = \Limepie\stream_resolve_include_path($file);
 
@@ -1039,7 +1050,7 @@ function uniqid(int $length = 13) : string
     } elseif (true === \function_exists('openssl_random_pseudo_bytes')) {
         $bytes = \openssl_random_pseudo_bytes((int) \ceil($length / 2));
     } else {
-        $bytes = \md5((string)\mt_rand());
+        $bytes = \md5((string) \mt_rand());
     }
 
     return \substr(\bin2hex($bytes), 0, $length);
@@ -1078,8 +1089,8 @@ function camelize($word)
 }
 
 function array_extract(
-    array | object | null $arrays = [],
-    array | string $key = [],
+    array|object|null $arrays = [],
+    array|string $key = [],
     $index = null
 ) {
     $return = [];
@@ -1278,7 +1289,7 @@ function is_binary(string $string) : bool
     return false;
 }
 
-function decimal($number) : float | int
+function decimal($number) : float|int
 {
     if (0 < \strlen((string) $number)) {
         $parts  = \explode('.', (string) $number);
@@ -1324,7 +1335,7 @@ function number_format($number, $int = 0)
 function array_last($array)
 {
     if ($array instanceof \Limepie\ArrayObject) {
-        $array = $array->toArray();
+        $array = $array->attributes;
     }
 
     return \array_pop($array);
@@ -1875,7 +1886,7 @@ function classname_to_filepath(string $className, array $maps = [])
     }
 }
 
-function array_reverse(array | \Limepie\ArrayObject $array = []) : array
+function array_reverse(array|ArrayObject $array = []) : array
 {
     if (false === \is_array($array)) {
         $array = $array->toArray();
@@ -1905,4 +1916,144 @@ function getQs(string $append = '?') : string
 function qs(string $append = '?') : string
 {
     return \Limepie\getQueystring($append);
+}
+
+function arrays_set(array|ArrayObject $array, Closure|array|string $params)
+{
+    if (true === \is_string($params)) {
+        $params = [$params];
+    }
+
+    if (false === \is_array($array)) {
+        $array = $array->toArray();
+    }
+
+    if (true === \is_array($params)) {
+        foreach ($array as &$data) {
+            foreach ($data as $key => &$row) {
+                if (false === \in_array($key, $params, true)) {
+                    unset($data[$key]);
+                }
+            }
+        }
+
+        return $array;
+    }
+    $return = [];
+
+    foreach ($array as $key => $row) {
+        $return[$key] = $params($row);
+    }
+
+    return $return;
+}
+
+function arrays_unset(array|ArrayObject $array, array|string $params)
+{
+    if (true === \is_string($params)) {
+        $params = [$params];
+    }
+
+    if (false === \is_array($array)) {
+        $array = $array->toArray();
+    }
+
+    if (true === \is_array($params)) {
+        foreach ($array as &$data) {
+            foreach ($data as $key => &$row) {
+                if (true === \in_array($key, $params, true)) {
+                    unset($data[$key]);
+                }
+            }
+        }
+
+        return $array;
+    }
+
+    return null;
+}
+
+function array_set(array|ArrayObject $array, array|string $params)
+{
+    if (true === \is_string($params)) {
+        $params = [$params];
+    }
+
+    if (false === \is_array($array)) {
+        $array = $array->toArray();
+    }
+
+    if (true === \is_array($params)) {
+        foreach ($array as $key => &$data) {
+            if (false === \in_array($key, $params, true)) {
+                unset($array[$key]);
+            }
+        }
+
+        return $array;
+    }
+}
+
+function array_unset(array|ArrayObject $array, array|string $params)
+{
+    if (true === \is_string($params)) {
+        $params = [$params];
+    }
+
+    if (false === \is_array($array)) {
+        $array = $array->toArray();
+    }
+
+    if (true === \is_array($params)) {
+        foreach ($array as $key => &$data) {
+            if (true === \in_array($key, $params, true)) {
+                unset($array[$key]);
+            }
+        }
+
+        return $array;
+    }
+
+    return null;
+}
+
+function array_key_rename(array $array, $old_key, $new_key)
+{
+    if (false === \array_key_exists($old_key, $array)) {
+        return $array;
+    }
+
+    $keys                                 = \array_keys($array);
+    $keys[\array_search($old_key, $keys)] = $new_key;
+
+    return \array_combine($keys, $array);
+}
+
+function array_cleanup(array $array)
+{
+    $isNull = true;
+
+    foreach ($array as $key => &$row) {
+        if (true === \is_array($row)) {
+            $row = \Limepie\array_cleanup($row);
+        } elseif (true === \is_string($row) || true === \is_numeric($row)) {
+            if (0 === \strlen((string) $row)) {
+                $row = null;
+            }
+        } elseif (true === \is_object($row)) {
+            // obejct는 허용
+        } else {
+            throw new \Limepie\Exception(\gettype($row) . ' not support.');
+        }
+
+        if (null !== $row) {
+            $isNull = false;
+        }
+    }
+
+    if ($isNull) {
+        return null;
+    }
+
+    return $array;
 }

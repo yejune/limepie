@@ -8,7 +8,7 @@ class Di
 
     private $properties = [];
 
-    private $isInstance = false;
+    private $instances = [];
 
     /**
      * reset variables.
@@ -63,6 +63,16 @@ class Di
         return Di::$instance;
     }
 
+    public function hasInstance(string $key) : bool
+    {
+        return \array_key_exists($key, $this->instances);
+    }
+
+    public function setInstance(string $key) : void
+    {
+        $this->instances[$key] = true;
+    }
+
     public function hasProperty(string $key) : bool
     {
         return \array_key_exists($key, $this->properties);
@@ -92,11 +102,9 @@ class Di
     {
         $value = Di::instance()->getProperty($key);
 
-        if (false === $this->isInstance && true === Di::isCallableClosure($value)) {
-            // TODO: invoke method가 있으면 callable가 true임, invoke를 계속 실행하게 됨
-            // => isInstance check
-            $value             = $value();
-            $value->isInstance = true;
+        if (false === Di::instance()->hasInstance($key) && true === Di::isCallableClosure($value)) {
+            $value = $value();
+            Di::instance()->setInstance($key);
             Di::instance()->setProperty($key, $value);
         }
 
@@ -209,7 +217,7 @@ class Di
         if (true === \array_key_exists(0, $arguments)) {
             $default = $arguments[0];
 
-            if(true === is_array($default)) {
+            if (true === \is_array($default)) {
                 $default = new \Limepie\ArrayObject($default);
             }
         }

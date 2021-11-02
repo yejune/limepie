@@ -2,7 +2,7 @@
 
 namespace Limepie;
 
-class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializable, \Serializable
+class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializable //, \Serializable
 {
     public $attributes = [];
 
@@ -18,6 +18,16 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         } else {
             $this->attributes = $array;
         }
+    }
+
+    public function __serialize() : array
+    {
+        return $this->attributes;
+    }
+
+    public function __unserialize(array $data) : void
+    {
+        $this->attributes = $data;
     }
 
     public function __isset($name)
@@ -36,7 +46,18 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             return $this->buildGetColumn($name, $arguments);
         }
 
+        if (0 === \strpos($name, 'set')) { // get field
+            return $this->buildSetColumn($name, $arguments);
+        }
+
         throw new \Limepie\Exception('"' . $name . '" method not found', 500);
+    }
+
+    public function __set($key, $value)
+    {
+        $this->attributes[$key] = $value;
+
+        return $this;
     }
 
     public function __get($name)
@@ -79,42 +100,46 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return new static(\array_reverse($this->attributes, $preserveKeys));
     }
 
+    public function buildSetColumn($name, $arguments)
+    {
+        $fieldName = \Limepie\decamelize(\substr($name, 3));
+
+        $this->attributes[$fieldName] = $arguments[0];
+
+        return $this;
+    }
+
     public function buildGetColumn($name, $arguments)
     {
         // field name
         $isOrEmpty = false;
         $isOrNull  = false;
-        $default   = null;
 
-        if (true === \array_key_exists(0, $arguments)) {
-            $isOrNull  = true;
-            $default   = $arguments[0];
-            $fieldName = \Limepie\decamelize(\substr($name, 3));
-        } elseif (false !== \strpos($name, 'OrNull')) {
-            $isOrNull  = true;
-            $fieldName = \Limepie\decamelize(\substr($name, 3, -6));
-        } elseif (false !== \strpos($name, 'OrEmpty')) {
-            $isOrEmpty = true;
-            $fieldName = \Limepie\decamelize(\substr($name, 3, -7));
-        } else {
-            $fieldName = \Limepie\decamelize(\substr($name, 3));
-        }
+        $fieldName = \Limepie\decamelize(\substr($name, 3));
 
         if (!$name) {
             throw new \Limepie\Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #2', 500);
         }
 
-        //if (true === isset($this->attributes[$fieldName])) {
+        if (
+            (
+                false === isset($this->attributes[$fieldName])
+                || true === \is_null($this->attributes[$fieldName])
+            )
+            && true === \array_key_exists(0, $arguments)
+        ) {
+            $default = $arguments[0];
+
+            if (true === \is_array($default)) {
+                return new ArrayObject($default);
+            }
+
+            return $default;
+        }
+
         if (
             true === \array_key_exists($fieldName, $this->attributes)
         ) {
-            if (true === \is_null($this->attributes[$fieldName])) {
-                if (true === \is_array($default)) {
-                    return new ArrayObject($default);
-                }
-                //}
-                return $default;
-            }
             // 배열일 경우에는 arrayobject에 담아 리턴
             if (true === \is_array($this->attributes[$fieldName])) {
                 return new ArrayObject($this->attributes[$fieldName]);
@@ -144,39 +169,46 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return null;
     }
 
-    public function rewind()
+    #[\ReturnTypeWillChange]
+    public function rewind()// : void
     {
         \reset($this->attributes);
     }
 
+    #[\ReturnTypeWillChange]
     public function current()
     {
         return \current($this->attributes);
     }
 
-    public function key(?string $keyName = null)
+    #[\ReturnTypeWillChange]
+    public function key(?string $keyName = null)// : mixed
     {
         return \key($this->attributes);
     }
 
+    #[\ReturnTypeWillChange]
     public function next()
     {
         return \next($this->attributes);
     }
 
-    public function valid()
+    #[\ReturnTypeWillChange]
+    public function valid()// : bool
     {
         $key = \key($this->attributes);
 
         return null !== $key && false !== $key;
     }
 
-    public function count()
+    #[\ReturnTypeWillChange]
+    public function count()// : int
     {
         return \count($this->attributes);
     }
 
-    public function offsetSet($offset, $value)
+    #[\ReturnTypeWillChange]
+    public function offsetSet($offset, $value)// : void
     {
         if (null === $offset) {
             $this->attributes[] = $value;
@@ -197,12 +229,14 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         }
     }
 
-    public function offsetExists($offset)
+    #[\ReturnTypeWillChange]
+    public function offsetExists($offset)// : bool
     {
         return isset($this->attributes[$offset]);
     }
 
-    public function offsetUnset($offset)
+    #[\ReturnTypeWillChange]
+    public function offsetUnset($offset)// : void
     {
         $keys = \func_get_args();
 
@@ -214,7 +248,8 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         }
     }
 
-    public function offsetGet($offset)
+    #[\ReturnTypeWillChange]
+    public function offsetGet($offset)// : mixed
     {
         if (false === \array_key_exists($offset, $this->attributes)) {
             $message = 'Undefined offset: ' . $offset;
@@ -285,14 +320,15 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
     public function children(array $data, array $maps = [], $params = [])
     {
         $request   = Di::getRequest();
-        $children = &$this->attributes;
+        $children  = &$this->attributes;
         $attribute = [];
+
         foreach ($maps as $step) {
-            $attribute = &$children[$request->getPath(0, $step)];// ['children'];
-            $children = &$attribute['children'];
+            $attribute = &$children[$request->getPath(0, $step)]; // ['children'];
+            $children  = &$attribute['children'];
         }
 
-        $attribute['params'] = $params + $attribute['params'];
+        $attribute['params']   = $params + ($attribute['params'] ?? []);
         $attribute['children'] = $data;
 
         $children = &$attribute;

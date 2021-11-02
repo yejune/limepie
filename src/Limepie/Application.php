@@ -136,12 +136,12 @@ class Application
         return $this->path;
     }
 
-    public function getProperties() : array
+    public function getProperties() : array | \Limepie\ArrayObject
     {
         return $this->properties;
     }
 
-    public function getstore() : array
+    public function getStore() : array
     {
         return $this->store;
     }

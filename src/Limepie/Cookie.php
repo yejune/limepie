@@ -71,7 +71,7 @@ class Cookie
         $domain = true === (null === $domain) ? self::$domain : $domain;
 
         if (4096 < \strlen($value)) {
-            die('4 KB per cookie maximum');
+            exit('4 KB per cookie maximum');
         }
 
         if (0 < $expires && \time() >= $expires) {

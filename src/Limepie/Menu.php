@@ -264,22 +264,26 @@ class Menu
 
 class UlRecursiveIteratorIterator extends \RecursiveIteratorIterator
 {
-    public function beginIteration()
+    #[\ReturnTypeWillChange]
+    public function beginIteration()// : void
     {
         echo '<ul>', \PHP_EOL;
     }
 
-    public function endIteration()
+    #[\ReturnTypeWillChange]
+    public function endIteration()// : void
     {
         echo '</ul>', \PHP_EOL;
     }
 
-    public function beginChildren()
+    #[\ReturnTypeWillChange]
+    public function beginChildren()// : void
     {
         echo \str_repeat("\t", $this->getDepth()), '<ul>', \PHP_EOL;
     }
 
-    public function endChildren()
+    #[\ReturnTypeWillChange]
+    public function endChildren()// : void
     {
         echo \str_repeat("\t", $this->getDepth()), '</ul>', \PHP_EOL;
         echo \str_repeat("\t", $this->getDepth()), '</li>', \PHP_EOL;

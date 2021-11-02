@@ -14,16 +14,16 @@ class AdjacencyList extends \RecursiveArrayIterator
 
         $array = null !== $array
             ? $array
-            : \array_filter($adjacencyList, function($node) {
+            : \array_filter($adjacencyList, function ($node) {
                 return null === $node['parent'] || 0 === $node['parent'];
             });
 
         parent::__construct($array, $flags);
     }
 
-    public function hasChildren()
+    public function hasChildren() : bool
     {
-        $children = \array_filter($this->adjacencyList, function($node) {
+        $children = \array_filter($this->adjacencyList, function ($node) {
             return $this->current()['seq'] === $node['parent'];
         });
 
@@ -36,6 +36,7 @@ class AdjacencyList extends \RecursiveArrayIterator
         return false;
     }
 
+    #[\ReturnTypeWillChange]
     public function getChildren()
     {
         return new static($this->adjacencyList, $this->children);

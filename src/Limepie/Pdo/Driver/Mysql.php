@@ -41,10 +41,10 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
-     * @param  $statement
+     * @param       $statement
      * @param array $bindParameters
-     * @param  $mode
-     * @param mixed $type 모델에서는 기본적으로 false로 넘겨 배열을 받고 pdo에 직접 접근할때는 true로 ArrayObject를 받음.
+     * @param       $mode
+     * @param mixed $type           모델에서는 기본적으로 false로 넘겨 배열을 받고 pdo에 직접 접근할때는 true로 ArrayObject를 받음
      *
      * @throws \PDOException
      *
@@ -81,10 +81,10 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
-     * @param  $statement
+     * @param       $statement
      * @param array $bindParameters
-     * @param  $mode
-     * @param mixed $type 모델에서는 기본적으로 false로 넘겨 배열을 받고 pdo에 직접 접근할때는 true로 ArrayObject를 받음.
+     * @param       $mode
+     * @param mixed $type           모델에서는 기본적으로 false로 넘겨 배열을 받고 pdo에 직접 접근할때는 true로 ArrayObject를 받음
      *
      * @throws \PDOException
      *
@@ -120,9 +120,9 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
-     * @param  $statement
+     * @param       $statement
      * @param array $bindParameters
-     * @param  $mode
+     * @param       $mode
      *
      * @throws \PDOException
      *
@@ -160,7 +160,7 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
-     * @param  $statement
+     * @param       $statement
      * @param array $bindParameters
      *
      * @throws \PdoException
@@ -180,9 +180,8 @@ class Mysql extends \Limepie\Pdo
     public function last_row_count()
     {
         return $this->rowCount;
-        $result = $this->get1('SELECT FOUND_ROWS()');
 
-        return $result;
+        return $this->get1('SELECT FOUND_ROWS()');
     }
 
     /*
@@ -260,10 +259,10 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
-     * @param  $statement
+     * @param       $statement
      * @param array $bindParameters
      *
-     * @return int|null
+     * @return null|int
      */
     public function setAndGetSequnce($statement, $bindParameters = [])
     {
@@ -336,14 +335,14 @@ class Mysql extends \Limepie\Pdo
         }
     }
 
-    public function begin()
+    public function xbegin()
     {
         parent::setAttribute(\PDO::ATTR_AUTOCOMMIT, 0);
 
         return parent::beginTransaction();
     }
 
-    public function commit()
+    public function xcommit()
     {
         if (parent::inTransaction()) {
             $return = parent::commit();
@@ -355,7 +354,7 @@ class Mysql extends \Limepie\Pdo
         throw new Exception\Transaction('commit, There is no active transaction', 50001);
     }
 
-    public function rollback()
+    public function xrollback()
     {
         if (parent::inTransaction()) {
             while (parent::inTransaction()) {
@@ -372,7 +371,7 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
-     * @param  $callback
+     * @param $callback
      *
      * @throws \Exception
      *
@@ -381,7 +380,7 @@ class Mysql extends \Limepie\Pdo
     public function transaction(\Closure $callback)
     {
         try {
-            if ($this->begin()) {
+            if ($this->xbegin()) {
                 $callback = $callback->bindTo($this);
                 $return   = $callback();
 
@@ -389,21 +388,21 @@ class Mysql extends \Limepie\Pdo
                     throw new Exception\Transaction('Transaction Failure', 50003);
                 }
 
-                if ($this->commit()) {
+                if ($this->xcommit()) {
                     return $return;
                 }
             }
 
             throw new Exception\Transaction('Transaction Failure', 50005);
         } catch (\PDOException $e) {
-            $this->rollback();
+            $this->xrollback();
             // 데드락에 의한 실패일 경우 한번더 실행
             if (40001 === $e->errorInfo[0]) {
                 //1초 지연
                 $cho = 1000000;
                 \usleep($cho / 2);
 
-                if ($this->begin()) {
+                if ($this->xbegin()) {
                     $callback = $callback->bindTo($this);
                     $return   = $callback();
 
@@ -411,7 +410,7 @@ class Mysql extends \Limepie\Pdo
                         throw $e;
                     }
 
-                    if ($this->commit()) {
+                    if ($this->xcommit()) {
                         return $return;
                     }
                 }
@@ -419,7 +418,7 @@ class Mysql extends \Limepie\Pdo
 
             throw $e;
         } catch (\Throwable $e) {
-            $this->rollback();
+            $this->xrollback();
 
             throw $e;
         }
@@ -428,35 +427,35 @@ class Mysql extends \Limepie\Pdo
     public function transaction2(callable $callback)
     {
         try {
-            if ($this->begin()) {
+            if ($this->xbegin()) {
                 $return = $callback($this);
 
                 if (!$return) {
                     throw new Exception\Transaction('Transaction Failure', 50003);
                 }
 
-                if ($this->commit()) {
+                if ($this->xcommit()) {
                     return $return;
                 }
             }
 
             throw new Exception\Transaction('Transaction Failure', 50005);
         } catch (\PDOException $e) {
-            $this->rollback();
+            $this->xrollback();
             // 데드락에 의한 실패일 경우 한번더 실행
             if (40001 === $e->errorInfo[0]) {
                 //1초 지연
                 $cho = 1000000;
                 \usleep($cho / 2);
 
-                if ($this->begin()) {
+                if ($this->xbegin()) {
                     $return = $callback($this);
 
                     if (!$return) {
                         throw $e;
                     }
 
-                    if ($this->commit()) {
+                    if ($this->xcommit()) {
                         return $return;
                     }
                 }
@@ -464,7 +463,7 @@ class Mysql extends \Limepie\Pdo
 
             throw $e;
         } catch (\Throwable $e) {
-            $this->rollback();
+            $this->xrollback();
 
             throw $e;
         }
@@ -523,6 +522,6 @@ class Mysql extends \Limepie\Pdo
 
     private function getErrorFormat($statement, array $binds = [])
     {
-        return trim($statement) . ', [' . \Limepie\http_build_query($binds, '=', ', ') . ']';
+        return \trim($statement) . ', [' . \Limepie\http_build_query($binds, '=', ', ') . ']';
     }
 }

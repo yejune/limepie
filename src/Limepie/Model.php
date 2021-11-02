@@ -205,7 +205,8 @@ class Model extends ArrayObject
         throw new \Limepie\Exception('"' . $name . '" method not found', 1999);
     }
 
-    public function offsetGet($offset)
+    #[\ReturnTypeWillChange]
+    public function offsetGet($offset)// : mixed
     {
         if (false === \array_key_exists($offset, $this->attributes)) {
             $traces = \debug_backtrace();
@@ -245,7 +246,7 @@ class Model extends ArrayObject
         $this->attributes[$column] = $attribute;
     }
 
-    public function setAttributeses(array | \Limepie\ArrayObject $attributes = [])
+    public function setAttributeses(array|ArrayObject $attributes = [])
     {
         $class = \get_called_class();
 
@@ -260,7 +261,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function setAttributes(array | \Limepie\ArrayObject $attributes = [])
+    public function setAttributes(array|ArrayObject $attributes = [])
     {
         if ($attributes instanceof \Limepie\ArrayObject) {
             $attributes = $attributes->attributes;
@@ -773,7 +774,8 @@ class Model extends ArrayObject
         }
     }
 
-    public function key(?string $keyName = null)
+    #[\ReturnTypeWillChange]
+    public function key(?string $keyName = null)// : mixed
     {
         if ($keyName) {
             return $this->keyName($keyName);
@@ -1030,7 +1032,7 @@ class Model extends ArrayObject
         return $this->doDelete();
     }
 
-    private function iteratorToDelete(array | self $attributes)
+    private function iteratorToDelete(array|self $attributes)
     {
         foreach ($attributes as $key => $attribute) {
             if ($attribute instanceof self) {
@@ -1074,7 +1076,7 @@ class Model extends ArrayObject
         return true;
     }
 
-    public function doDelete() : self | bool
+    public function doDelete() : self|bool
     {
         if (true === isset($this->attributes[$this->primaryKeyName])) {
             $sql = <<<SQL
@@ -1500,7 +1502,7 @@ class Model extends ArrayObject
         throw new \Limepie\Exception('lost connection');
     }
 
-    private function buildGetSum(string $name, array $arguments, int $offset) : int | float
+    private function buildGetSum(string $name, array $arguments, int $offset) : int|float
     {
         $this->attributes = [];
 
@@ -1640,7 +1642,7 @@ class Model extends ArrayObject
         ];
     }
 
-    public function gets(array | string | null $sql = null, array $binds = []) : ?self
+    public function gets(array|string|null $sql = null, array $binds = []) : ?self
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -1814,7 +1816,12 @@ class Model extends ArrayObject
         };
     }
 
-    public function get(string | array | null $sql = null, array $binds = []) : ?self
+    public function get1(string|array|null $sql = null, array $binds = []) : ?self
+    {
+        throw new \Limepie\Exception('not support get1');
+    }
+
+    public function get(string|array|null $sql = null, array $binds = []) : ?self
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -2347,7 +2354,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildGetBy(string $name, array $arguments, int $offset) : self | null
+    private function buildGetBy(string $name, array $arguments, int $offset) : self|null
     {
         $this->attributes = [];
 
@@ -2459,7 +2466,7 @@ class Model extends ArrayObject
         return $this->empty();
     }
 
-    private function buildGetsBy(string $name, array $arguments, int $offset) : self | null
+    private function buildGetsBy(string $name, array $arguments, int $offset) : self|null
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -2663,7 +2670,7 @@ class Model extends ArrayObject
 
     public static function debug(
         ?string $filename = null,
-        string | int | null $line = null
+        string|int|null $line = null
     ) {
         static::$debug = true;
 

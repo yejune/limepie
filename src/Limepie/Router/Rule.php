@@ -11,6 +11,8 @@ class Rule
         'action',
         'path',
         'next',
+        'prev',
+        'method'
     ];
 
     public static $allowMethods = [
@@ -24,7 +26,7 @@ class Rule
     {
         $matches = [];
 
-        if(false !== strpos($pattern, '{')) {
+        if (false !== \strpos($pattern, '{')) {
             $pattern = \preg_replace('#\{([^\}]+)\}#', '(?P<$1>[0-9a-zA-Z_\-\.]+)', $pattern);
         }
 
@@ -33,16 +35,25 @@ class Rule
 
             if (true === isset($default['methods'])) {
                 if (true === \is_array($default['methods'])) {
-                    foreach ($default['methods'] as $method) {
-                        if ('all' == $method) {
-                            $allowMethods = static::$allowMethods;
+                    if (true === \in_array('all', $default['methods'], true)) {
+                        $allowMethods = static::$allowMethods;
+                    } else {
+                        foreach ($default['methods'] as $method) {
+                            $index = \array_search($method, $allowMethods, true);
 
-                            break;
+                            if (false !== $index && true === isset($allowMethods[$index])) {
+                                $allowMethods[$index] = $method;
+                            } else {
+                                $allowMethods[] = $method;
+                            }
                         }
-                        $allowMethods[] = $default;
                     }
                 }
             } elseif (true === isset($default['method'])) {
+                if (true === \is_array($default['method'])) {
+                    throw new \Limepie\Exception('Change property name method to methods');
+                }
+
                 if ('all' == $default['method']) {
                     $allowMethods = static::$allowMethods;
                 } else {
