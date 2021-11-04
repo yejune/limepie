@@ -1899,6 +1899,11 @@ function array_reverse(array|ArrayObject $array = []) : array
     return \array_reverse($array);
 }
 
+function array_value_sum(array $array) : int
+{
+    return \array_sum(\array_values($array));
+}
+
 function getQueystring(string $append = '?') : string
 {
     if (true === isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING']) {
