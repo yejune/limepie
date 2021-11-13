@@ -1800,7 +1800,7 @@ class Model extends ArrayObject
                 )
             ;
         */
-        return new class($bind, $extraCondition, $extraBinds) {
+        return new class ($bind, $extraCondition, $extraBinds) {
             public $extraCondition;
 
             public $bind;
@@ -2291,7 +2291,7 @@ class Model extends ArrayObject
         if (null === $aliasName) {
             $this->selectColumns[$columnName] = null;
         } else {
-            $this->selectColumns[$aliasName] = new class($columnName, $aliasName, $format) {
+            $this->selectColumns[$aliasName] = new class ($columnName, $aliasName, $format) {
                 public $columnName;
 
                 public $aliasName;
@@ -2497,7 +2497,7 @@ class Model extends ArrayObject
                 }
             }
 
-            $keyName = '';
+            //$keyName = '';
         }
 
         if ($condition) {
@@ -2576,7 +2576,7 @@ class Model extends ArrayObject
 
                 $attributes[$row[$keyName]] = new $class($this->getConnect(), $row);
             } else {
-                $attributes[] = new $class($this->getConnect(), $row);
+                $attributes[$row[$this->primaryKeyName]] = new $class($this->getConnect(), $row);
             }
         }
         unset($row);
