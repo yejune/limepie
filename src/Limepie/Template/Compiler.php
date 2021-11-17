@@ -41,11 +41,11 @@ class Compiler
     }
 
     /**
-     * @param  $tpl
-     * @param  $fid
-     * @param  $tplPath
-     * @param  $cplPath
-     * @param  $cplHead
+     * @param $tpl
+     * @param $fid
+     * @param $tplPath
+     * @param $cplPath
+     * @param $cplHead
      *
      * @return mixed
      */
@@ -202,7 +202,7 @@ class Compiler
 
                     break;
                 case '{{!--':
-                    $newTokens[$_index]     = '<?php /*';
+                    $newTokens[$_index] = '<?php /*';
 
                     break;
                 case '<!--{':
@@ -214,7 +214,7 @@ class Compiler
 
                     break;
                 case '--}}':
-                    $newTokens[$_index]     = '*/ ?>';
+                    $newTokens[$_index] = '*/ ?>';
 
                     break;
                 case '}-->':
@@ -222,7 +222,6 @@ class Compiler
                 case '}}"':
                 case "}}'":
                 case '}':
-
                     if ($_index - 2 !== $isOpen) {
                         break; // switch exit
                     }
@@ -243,6 +242,7 @@ class Compiler
                     }
 
                     break;
+
                 default:
             }
         }
@@ -259,8 +259,8 @@ class Compiler
     }
 
     /**
-     * @param  $statement
-     * @param  $line
+     * @param $statement
+     * @param $line
      *
      * @return mixed
      */
@@ -368,6 +368,7 @@ class Compiler
                     $result = [2, $this->compileElseif($statement, $line)];
 
                     break;
+
                 default:
                     if (!$statement) {
                         $result = [1, $org];
@@ -399,7 +400,7 @@ class Compiler
 
     public function compileScorpDefine($statement, $line, $scope = '')
     {
-            return 'self::setScope("' . $scope . '", $' . trim($scope) . ');' . "self::printContents('" . \trim(\substr($statement, 1)) . "', [], '" . $scope . "')";
+        return 'self::setScope("' . $scope . '", $' . \trim($scope) . ');' . "self::printContents('" . \trim(\substr($statement, 1)) . "', [], '" . $scope . "')";
     }
 
     /**
@@ -417,8 +418,8 @@ class Compiler
     }
 
     /**
-     * @param  $statement
-     * @param  $line
+     * @param $statement
+     * @param $line
      *
      * @return mixed
      */
@@ -428,8 +429,8 @@ class Compiler
     }
 
     /**
-     * @param  $statement
-     * @param  $line
+     * @param $statement
+     * @param $line
      */
     public function compileLoop($statement, $line)
     {
@@ -541,8 +542,8 @@ class Compiler
     }
 
     /**
-     * @param  $source
-     * @param  $line
+     * @param $source
+     * @param $line
      *
      * @return mixed
      */
@@ -837,7 +838,6 @@ class Compiler
 
                     break;
                 case 'number':
-
                     if ($current['value'] === $source) {
                         return $this->empty($prev, $current, $xpr, __LINE__);
                     }
@@ -876,10 +876,10 @@ class Compiler
 
                     break;
                 case 'number_concat':
-
                     if (false === \in_array($prev['name'], ['string', 'string_number', 'right_bracket'], true)) {
                         throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
+
                     break;
                 case 'double_operator':
                     if (false === \in_array($prev['name'], ['string', 'number', 'string_number', 'assign', 'sam', 'sam2'], true)) {
@@ -1016,7 +1016,7 @@ class Compiler
                 case 'left_parenthesis': // ()
                     $stat[] = $current;
 
-                    if (false === \in_array($prev['name'], ['', 'quote_number_concat', 'operator', 'compare', 'assoc_array', 'left_parenthesis', 'comma', 'left_bracket', 'array_keyword', 'string', 'assign'], true)) {
+                    if (false === \in_array($prev['name'], ['', 'quote_number_concat', 'operator', 'compare', 'assoc_array', 'left_parenthesis', 'comma', 'left_bracket', 'array_keyword', 'string', 'assign', 'right_bracket'], true)) {
                         //, 'string_number' ->d.3.a() -> ->d[3]['a']() 제외
                         throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
@@ -1103,7 +1103,9 @@ class Compiler
 
         return $xpr;
     }
-    private function empty($prev, $current, $xpr, $line) {
+
+    private function empty($prev, $current, $xpr, $line)
+    {
         // \pr($prev, $current, $xpr, $line);
 
         // if(false !== strpos($xpr, "guest")) {
@@ -1111,6 +1113,7 @@ class Compiler
         // }
         return false;
     }
+
     /**
      * @param $cplPath
      * @param $source
@@ -1142,6 +1145,7 @@ class Compiler
     {
         $func_split    = \preg_split('/\s*(?<!\\\\)\|\s*/', \trim($this->{$type . 'filter'}));
         $func_sequence = [];
+
         for ($i = 0,$s = \count($func_split); $i < $s; ++$i) {
             if ($func_split[$i]) {
                 $func_sequence[] = \str_replace('\\|', '|', $func_split[$i]);
@@ -1151,6 +1155,7 @@ class Compiler
         if (!empty($func_sequence)) {
             for ($i = 0,$s = \count($func_sequence); $i < $s; ++$i) {
                 $func_args = \preg_split('/\s*(?<!\\\\)\&\s*/', $func_sequence[$i]);
+
                 for ($j = 1,$k = \count($func_args); $j < $k; ++$j) {
                     $func_args[$j] = \str_replace('\\&', '&', \trim($func_args[$j]));
                 }
