@@ -1236,6 +1236,74 @@ function uuid(int $type = \UUID_TYPE_TIME) : string
     return \uuid_create($type);
 }
 
+// The code is inspired by the following discussions and post:
+// http://stackoverflow.com/questions/5483851/manually-parse-raw-http-data-with-php/5488449#5488449
+// http://www.chlab.ch/blog/archives/webdevelopment/manually-parse-raw-http-data-php
+
+/**
+ * Parse raw HTTP request data.
+ *
+ * Pass in $appends as an array. This is done by reference to avoid copying
+ * the data around too much.
+ *
+ * Any files found in the request will be added by their field name to the
+ * $data['files'] array.
+ *
+ * @param   array  Empty array to fill with data
+ * @param mixed $appends
+ *
+ * @return array Associative array of request data
+ */
+function parse_raw_http_request($appends = [])
+{
+    // read incoming data
+    $input = \file_get_contents('php://input');
+
+    // grab multipart boundary from content type header
+    \preg_match('/boundary=(.*)$/', $_SERVER['CONTENT_TYPE'], $matches);
+
+    // content type is probably regular form-encoded
+    if (!count($matches)) {
+        // we expect regular puts to containt a query string containing data
+        \parse_str(\urldecode($input), $appends);
+
+        return $appends;
+    }
+
+    $boundary = $matches[1];
+
+    // split content by boundary and get rid of last -- element
+    $boundaryBlocks = \preg_split("/-+{$boundary}/", $input);
+    \array_pop($boundaryBlocks);
+
+    $keyValueStr = '';
+    // loop data blocks
+    foreach ($boundaryBlocks as $id => $block) {
+        if (empty($block)) {
+            continue;
+        }
+
+        // you'll have to var_dump $block to understand this and maybe replace \n or \r with a visibile char
+
+        // parse uploaded files
+        if (false !== \strpos($block, 'application/octet-stream')) {
+            // match "name", then everything after "stream" (optional) except for prepending newlines
+            \preg_match("/name=\"([^\"]*)\".*stream[\n|\r]+([^\n\r].*)?$/s", $block, $matches);
+            $appends['files'][$matches[1]] = $matches[2];
+        }
+        // parse all other fields
+        else {
+            // match "name" and optional value in between newline sequences
+            \preg_match('/name=\"([^\"]*)\"[\n|\r]+([^\n\r].*)?\r$/s', $block, $matches);
+            $keyValueStr .= $matches[1] . '=' . ($matches[2] ?? '') . '&';
+        }
+    }
+    $keyValueArr = [];
+    \parse_str($keyValueStr, $keyValueArr);
+
+    return \array_merge($appends, $keyValueArr);
+}
+
 function stream_resolve_include_path($filename)
 {
     $includePaths = \explode(\PATH_SEPARATOR, \get_include_path());
