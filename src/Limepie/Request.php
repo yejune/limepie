@@ -508,7 +508,7 @@ class Request
         return $this->getServer('REQUEST_URI');
     }
 
-    public function getServer($key) : string | array | null
+    public function getServer($key) : string|array|null
     {
         return $_SERVER[$key] ?? null;
     }
@@ -580,15 +580,20 @@ class Request
 
                 break;
             case 'multipart/form-data':
-                if (
-                    'POST' === $_SERVER['REQUEST_METHOD']
-                    && (empty($_POST) && empty($_FILES))
-                    && 0 < $_SERVER['CONTENT_LENGTH']
+                if ('POST' === $_SERVER['REQUEST_METHOD']) {
+                    if (
+                        (empty($_POST) && empty($_FILES))
+                        && 0 < $_SERVER['CONTENT_LENGTH']
+                    ) {
+                        throw new Exception(\sprintf('The server was unable to handle that much POST data (%s bytes) due to its current configuration', $_SERVER['CONTENT_LENGTH']), 20012);
+                    }
+                    $this->bodies = $_POST;
+                } elseif (
+                    'DELETE' === $_SERVER['REQUEST_METHOD']
+                    || 'PUT' === $_SERVER['REQUEST_METHOD']
                 ) {
-                    throw new Exception(\sprintf('The server was unable to handle that much POST data (%s bytes) due to its current configuration', $_SERVER['CONTENT_LENGTH']), 20012);
+                    $this->bodies = \Limepie\parse_raw_http_request();
                 }
-
-                $this->bodies = $_POST;
 
                 return $this->bodies;
 
