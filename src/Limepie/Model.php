@@ -1452,7 +1452,7 @@ class Model extends ArrayObject
         $join          = '';
 
         if ($this->joinModels) {
-            $joinInfomation = $this->getJoin($this);
+            $joinInfomation = $this->getJoin();
             $join           = $joinInfomation['join'];
             $selectColumns .= $joinInfomation['selectColumns'];
             $binds += $joinInfomation['binds'];
@@ -1521,7 +1521,7 @@ class Model extends ArrayObject
         $sumColumn = $this->sumColumn;
 
         if ($this->joinModels) {
-            $joinInfomation = $this->getJoin($this);
+            $joinInfomation = $this->getJoin();
 
             if ($joinInfomation['sumColumn']) {
                 $sumColumn = $joinInfomation['sumColumn'];
@@ -1589,7 +1589,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function getJoin(Model $prevModel) : array
+    public function getJoin() : array
     {
         $andConditions = [];
         $join          = '';
@@ -1616,7 +1616,7 @@ class Model extends ArrayObject
             $join .= ' JOIN'
                    . PHP_EOL . '        ' . ' `' . $tableName . '` AS `' . $tableAliasName . '`'
                    . PHP_EOL . '    ON'
-                   . PHP_EOL . '        `' . $prevModel->tableAliasName . '`.`' . $joinLeft . '` = `' . $tableAliasName . '`.`' . $joinRight . '`';
+                   . PHP_EOL . '        `' . $this->tableAliasName . '`.`' . $joinLeft . '` = `' . $tableAliasName . '`.`' . $joinRight . '`';
             $join .= ' ' . \implode(', ', $this->forceIndexes);
 
             $selectColumns .= PHP_EOL . '        ' . ', ' . $class->getSelectColumns($tableAliasName);
@@ -1677,7 +1677,7 @@ class Model extends ArrayObject
             $selectColumns = $this->getSelectColumns();
 
             if ($this->joinModels) {
-                $joinInfomation = $this->getJoin($this);
+                $joinInfomation = $this->getJoin();
                 $join           = $joinInfomation['join'];
                 $selectColumns .= $joinInfomation['selectColumns'];
                 $binds += $joinInfomation['binds'];
@@ -1855,7 +1855,7 @@ class Model extends ArrayObject
             $selectColumns = $this->getSelectColumns();
 
             if ($this->joinModels) {
-                $joinInfomation = $this->getJoin($this);
+                $joinInfomation = $this->getJoin();
                 $join           = $joinInfomation['join'];
                 $selectColumns .= $joinInfomation['selectColumns'];
                 $binds += $joinInfomation['binds'];
@@ -2371,7 +2371,7 @@ class Model extends ArrayObject
         $join          = '';
 
         if ($this->joinModels) {
-            $joinInfomation = $this->getJoin($this);
+            $joinInfomation = $this->getJoin();
             $join           = $joinInfomation['join'];
             $selectColumns .= $joinInfomation['selectColumns'];
             $binds += $joinInfomation['binds'];
@@ -2484,7 +2484,7 @@ class Model extends ArrayObject
         $keyName       = $this->keyName;
 
         if ($this->joinModels) {
-            $joinInfomation = $this->getJoin($this);
+            $joinInfomation = $this->getJoin();
             $join           = $joinInfomation['join'];
             $selectColumns .= $joinInfomation['selectColumns'];
             $binds += $joinInfomation['binds'];
