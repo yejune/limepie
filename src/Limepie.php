@@ -123,6 +123,11 @@ function unserialize($value)
     }
 }
 
+function mask_format(string $string, $endLength = -4) : string
+{
+    return \str_repeat('*', \max(\mb_strlen($string) + $endLength, 0)) . \mb_substr($string, $endLength);
+}
+
 function format_mobile($phone, $isMark = false)
 {
     $phone  = \preg_replace('/[^0-9]/', '', (string) $phone);
@@ -1406,7 +1411,16 @@ function array_last($array)
         $array = $array->attributes;
     }
 
-    return \array_pop($array);
+    return $array[\array_key_last($array)] ?? null;
+}
+
+function array_first($array)
+{
+    if ($array instanceof \Limepie\ArrayObject) {
+        $array = $array->attributes;
+    }
+
+    return $array[\array_key_first($array)] ?? null;
 }
 
 function array_insert(&$array, $position, $insert)

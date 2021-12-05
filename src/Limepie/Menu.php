@@ -264,26 +264,22 @@ class Menu
 
 class UlRecursiveIteratorIterator extends \RecursiveIteratorIterator
 {
-    #[\ReturnTypeWillChange]
-    public function beginIteration()// : void
+    public function beginIteration() : void
     {
         echo '<ul>', \PHP_EOL;
     }
 
-    #[\ReturnTypeWillChange]
-    public function endIteration()// : void
+    public function endIteration() : void
     {
         echo '</ul>', \PHP_EOL;
     }
 
-    #[\ReturnTypeWillChange]
-    public function beginChildren()// : void
+    public function beginChildren() : void
     {
         echo \str_repeat("\t", $this->getDepth()), '<ul>', \PHP_EOL;
     }
 
-    #[\ReturnTypeWillChange]
-    public function endChildren()// : void
+    public function endChildren() : void
     {
         echo \str_repeat("\t", $this->getDepth()), '</ul>', \PHP_EOL;
         echo \str_repeat("\t", $this->getDepth()), '</li>', \PHP_EOL;
@@ -292,22 +288,22 @@ class UlRecursiveIteratorIterator extends \RecursiveIteratorIterator
 
 class TabRecursiveIteratorIterator extends \RecursiveIteratorIterator
 {
-    public function beginIteration()
+    public function beginIteration() : void
     {
         //echo '<ul>', \PHP_EOL;
     }
 
-    public function endIteration()
+    public function endIteration() : void
     {
         //echo '</ul>', \PHP_EOL;
     }
 
-    public function beginChildren()
+    public function beginChildren() : void
     {
         //echo \str_repeat("\t", $this->getDepth()), '<ul>', \PHP_EOL;
     }
 
-    public function endChildren()
+    public function endChildren() : void
     {
         //echo \str_repeat("\t", $this->getDepth()), '</ul>', \PHP_EOL;
         //echo \str_repeat("\t", $this->getDepth()), '</li>', \PHP_EOL;
