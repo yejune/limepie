@@ -110,7 +110,7 @@ class Validation
         });
 
         Validation::addMethod('match', function ($value, $name, $param) {
-            return $this->optional($value, $name) || \preg_match('/^' . $param . '$/', (string) $value, $m);
+            return $this->optional($value, $name) || \preg_match('~^' . $param . '$~', (string) $value, $m);
             // \pr($m);
             //pr(Validation::getMethod('required')($value,'',''),$value, $name, $param, $this->optional($value), \preg_match('/^' . $param . '$/', $value));
         });
