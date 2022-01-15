@@ -89,7 +89,8 @@ class Execute extends \Limepie\Exception
             if (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64)_#', $key, $typeMatch)) {
                 $isBinary = true;
             }
-            $newBinds[] = $key . ' => ' . ($isBinary ? '[binary]' : $value);
+
+            $newBinds[] = $key . ' => ' . ($isBinary ? '[binary]' : print_r($value, true));
         }
 
         return $this->getMessage() . ",\n" . $query . ($newBinds ? ', [' . \implode(', ', $newBinds) . ']' : '');
