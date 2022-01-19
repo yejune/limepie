@@ -20,6 +20,8 @@ class Request
 
     public $path;
 
+    public $originPath;
+
     public $uri;
 
     public $segments = [];
@@ -60,6 +62,9 @@ class Request
             $this->requestUri = $this->getServer('REQUEST_URI');
         }
         $this->reload();
+
+        $this->originPath = $this->path;
+
     }
 
     public function reload($requestUri = null)
@@ -201,6 +206,10 @@ class Request
         return $this->path;
     }
 
+    public function getOriginPath(){
+
+        return $this->originPath;
+    }
     public function getQueryString($append = '')
     {
         if ($this->query) {
