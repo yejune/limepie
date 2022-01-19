@@ -381,7 +381,7 @@ class Model extends ArrayObject
         }
 
         if ($this->oneToOnes ?? false) {
-            foreach ($this->oneOnes as $parentTableName => $oneToOne) {
+            foreach ($this->oneToOnes as $parentTableName => $oneToOne) {
                 foreach ($oneToOne as $class) {
                     $attributes = $this->getRelationData(
                         $class,
@@ -447,7 +447,7 @@ class Model extends ArrayObject
         }
 
         if ($row instanceof self) {
-            $row = $attribute->toArray();
+            $row = $row->toArray();
         }
 
         if (false === \array_key_exists($leftKeyName, $row)) {

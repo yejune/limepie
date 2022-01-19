@@ -412,7 +412,7 @@ class ModelOld extends ArrayObject
         }
 
         if ($this->oneToOnes ?? false) {
-            foreach ($this->oneOnes as $parentTableName => $oneToOne) {
+            foreach ($this->oneToOnes as $parentTableName => $oneToOne) {
                 foreach ($oneToOne as $class) {
                     if ($class->leftKeyName) {
                         $leftKeyName = $class->leftKeyName;
