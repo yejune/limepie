@@ -280,8 +280,89 @@ class Group extends \Limepie\Form\Generation\Fields
             //   0: "display: none"
             //   1: "display: block"
             //   2: "display: block"
+
+            if (true === isset($propertyValue['display_targets'])) {
+                [$left, $right] = $propertyValue['display_targets'];
+
+                $tmpids = \explode('.', $left);
+                //\pr($tmpids, $data);
+                $leftValue = &$data;
+                $leftSpec  = &$specs;
+
+                foreach ($tmpids as $tmpid) {
+                    //\pr($leftValue, $tmpids, $tmpid);
+
+                    if (true === isset($leftValue[$tmpid])) {
+                        $leftValue = &$leftValue[$tmpid];
+                    }
+
+                    if (true === isset($leftSpec['properties'][$tmpid])) {
+                        $leftSpec = &$leftSpec['properties'][$tmpid];
+                    }
+                }
+
+                $tmpids = \explode('.', $right);
+
+                $rightValue = &$data;
+                $rightSpec  = &$specs;
+
+                foreach ($tmpids as $tmpid) {
+                    //\pr($rightValue, $tmpids, $tmpid);
+
+                    if (true === isset($rightValue[$tmpid])) {
+                        $rightValue = &$rightValue[$tmpid];
+                    }
+
+                    if (true === isset($rightSpec['properties'][$tmpid])) {
+                        $rightSpec = &$rightSpec['properties'][$tmpid];
+                    }
+                }
+
+                if ($leftValue) {
+                    if (true === \is_object($leftValue)) {
+                        if (true === \property_exists($leftValue, 'value')) {
+                            $leftValue = $leftValue->value;
+                        }
+                    }
+
+                } elseif (true === isset($leftSpec['default'])) {
+                    $leftValue = $leftSpec['default'];
+
+                    if (true === \is_object($leftValue)) {
+                        if (true === \property_exists($leftValue, 'value')) {
+                            $leftValue = $leftValue->value;
+                        }
+                    }
+                }
+                if ($rightValue) {
+                    if (true === \is_object($rightValue)) {
+                        if (true === \property_exists($rightValue, 'value')) {
+                            $rightValue = $rightValue->value;
+                        }
+                    }
+
+                } elseif (true === isset($rightSpec['default'])) {
+                    $rightValue = $rightSpec['default'];
+
+                    if (true === \is_object($rightValue)) {
+                        if (true === \property_exists($rightValue, 'value')) {
+                            $rightValue = $rightValue->value;
+                        }
+                    }
+                }
+
+                foreach($propertyValue['display_targets_condition'] as $cond => $style) {
+                    if($cond == 'eq') {
+                        if($leftValue == $rightValue) {
+                            $addStyle .= $style;
+                        }
+                    }
+                }
+                //pr($leftValue, $rightValue);
+            }
             if (true === isset($propertyValue['display_target'])) {
                 if (true === isset($data[$propertyValue['display_target']])) {
+                    // 값이 있을때ㅐ
                     $targetValue = $data[$propertyValue['display_target']];
 
                     if (true === \is_object($targetValue)) {
@@ -293,7 +374,9 @@ class Group extends \Limepie\Form\Generation\Fields
                     if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
                         $addStyle .= $propertyValue['display_target_condition'][$targetValue];
                     }
+
                 } elseif (true === isset($specs['properties'][$propertyValue['display_target']])) {
+                    // 값이 없을때 default가 있는지 살펴봄
                     $targetSpec = $specs['properties'][$propertyValue['display_target']];
 
                     if (true === isset($targetSpec['default'])) {
