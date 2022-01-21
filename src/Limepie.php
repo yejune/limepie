@@ -2144,3 +2144,10 @@ function array_cleanup(array $array)
 
     return $array;
 }
+
+function xml2array(\SimpleXMLElement $xml) : array
+{
+    $json = \json_encode($xml);
+
+    return \json_decode($json, true);
+}
