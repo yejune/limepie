@@ -22,9 +22,32 @@ class Date extends \Limepie\Form\Generation\Fields
             $readonly = ' readonly="readonly"';
         }
 
-        $html = <<<EOT
-        <input type="date" class="form-control" name="{$key}" value="{$value}" data-default="{$default}"${readonly} />
+        $prepend = '';
 
+        if (isset($property['prepend']) && $property['prepend']) {
+            $prepend = <<<EOD
+<div class="input-group-prepend">
+<span class="input-group-text">{$property['prepend']}</span>
+</div>
+EOD;
+        }
+
+        $append = '';
+
+        if (isset($property['append']) && $property['append']) {
+            $append = <<<EOD
+<div class="input-group-append">
+<span class="input-group-text">{$property['append']}</span>
+</div>
+EOD;
+        }
+
+        $html = <<<EOT
+        <div class="input-group">
+        {$prepend}
+        <input type="date" class="form-control" name="{$key}" value="{$value}" data-default="{$default}"${readonly} />
+        {$append}
+        </div>
 EOT;
 
         return $html;
