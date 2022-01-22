@@ -2151,3 +2151,8 @@ function xml2array(\SimpleXMLElement $xml) : array
 
     return \json_decode($json, true);
 }
+
+function date_beetween(\DateTime $startDate, \DateTime $endDate, \DateTime $subject)
+{
+    return $subject->getTimestamp() > $startDate->getTimestamp() && $subject->getTimestamp() < $endDate->getTimestamp() ? true : false;
+}
