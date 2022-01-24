@@ -2154,5 +2154,9 @@ function xml2array(\SimpleXMLElement $xml) : array
 
 function date_beetween(\DateTime $startDate, \DateTime $endDate, \DateTime $subject)
 {
-    return $subject->getTimestamp() > $startDate->getTimestamp() && $subject->getTimestamp() < $endDate->getTimestamp() ? true : false;
+    return $subject->getTimestamp() >= $startDate->getTimestamp() && $subject->getTimestamp() <= $endDate->getTimestamp() ? true : false;
+}
+
+function date_count(\DateTime $startDate, \DateTime $endDate) {
+    return $startDate->diff($endDate)->format("%a")+1;
 }
