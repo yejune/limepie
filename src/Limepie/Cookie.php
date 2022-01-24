@@ -39,7 +39,7 @@ class Cookie
 
     public static function set($key, $value, $expires = 0, $path = '/', $domain = null, $secure = true, $httpOnly = true, $samesite = '')
     {
-        $_value = Encrypt::pack($value);
+        $_value = $value;
 
         if (self::setRaw($key, $_value, $expires, $path, $domain, $secure, $httpOnly, $samesite)) {
             return $_value;
@@ -50,7 +50,7 @@ class Cookie
 
     public static function get($key, $check = false)
     {
-        return self::isCookie($key) ? Encrypt::unpack(self::getRaw($key)) : null;
+        return self::isCookie($key) ? self::getRaw($key) : null;
     }
 
     public static function setRaw($key, $value, $expires = 0, $path = '/', $domain = null, $secure = true, $httpOnly = true, $samesite = '')
