@@ -1740,7 +1740,7 @@ class Model extends ArrayObject
 
                 foreach ($row as $innerFieldName => &$innerFieldValue) {
                     if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
-                        $tmp[\str_replace($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
+                        $tmp[\Limepie\str_replace_first($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
 
                         unset($row[$innerFieldName]);
                     }
@@ -1913,7 +1913,7 @@ class Model extends ArrayObject
 
                 foreach ($attributes as $innerFieldName => &$innerFieldValue) {
                     if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
-                        $tmp[\str_replace($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
+                        $tmp[\Limepie\str_replace_first($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
 
                         unset($attributes[$innerFieldName]);
                     }
@@ -2432,7 +2432,7 @@ class Model extends ArrayObject
 
                 foreach ($attributes as $innerFieldName => &$innerFieldValue) {
                     if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
-                        $tmp[\str_replace($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
+                        $tmp[\Limepie\str_replace_first($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
 
                         unset($attributes[$innerFieldName]);
                     }
@@ -2544,7 +2544,7 @@ class Model extends ArrayObject
 
                 foreach ($row as $innerFieldName => &$innerFieldValue) {
                     if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
-                        $tmp[\str_replace($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
+                        $tmp[\Limepie\str_replace_first($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
 
                         unset($row[$innerFieldName]);
                     }

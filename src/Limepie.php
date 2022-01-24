@@ -2160,3 +2160,11 @@ function date_beetween(\DateTime $startDate, \DateTime $endDate, \DateTime $subj
 function date_count(\DateTime $startDate, \DateTime $endDate) {
     return $startDate->diff($endDate)->format("%a")+1;
 }
+
+function str_replace_first($search, $replace, $subject) {
+    $pos = strpos($subject, $search);
+    if ($pos !== false) {
+        return substr_replace($subject, $replace, $pos, strlen($search));
+    }
+    return $subject;
+}
