@@ -2157,14 +2157,18 @@ function date_beetween(\DateTime $startDate, \DateTime $endDate, \DateTime $subj
     return $subject->getTimestamp() >= $startDate->getTimestamp() && $subject->getTimestamp() <= $endDate->getTimestamp() ? true : false;
 }
 
-function date_count(\DateTime $startDate, \DateTime $endDate) {
-    return $startDate->diff($endDate)->format("%a")+1;
+function date_count(\DateTime $startDate, \DateTime $endDate)
+{
+    return $startDate->diff($endDate)->format('%a') + 1;
 }
 
-function str_replace_first($search, $replace, $subject) {
-    $pos = strpos($subject, $search);
-    if ($pos !== false) {
-        return substr_replace($subject, $replace, $pos, strlen($search));
+function str_replace_first($search, $replace, $subject)
+{
+    $pos = \strpos($subject, $search);
+
+    if (false !== $pos) {
+        return \substr_replace($subject, $replace, $pos, \strlen($search));
     }
+
     return $subject;
 }
