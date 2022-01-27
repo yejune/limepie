@@ -12,6 +12,13 @@ class Month
 
     public $holidays = [];
 
+    public $seasons = [];
+
+    public function setSeasons(array $seasons = [])
+    {
+        $this->seasons = $seasons;
+    }
+
     public function setHolidays(array $holidays = [])
     {
         $this->holidays = $holidays;
@@ -21,10 +28,10 @@ class Month
     public function getTable(\DateTime $start, \DateTime $end)
     {
         $this->days = [];
-        $first      = (clone $start)->modify('first day of this month');
-        $last       = (clone $end)->modify('last day of this month');
+        $first      = (clone $start)->setTime(0, 0)->modify('first day of this month');
+        $last       = (clone $end)->setTime(0, 0)->modify('last day of this month');
 
-        $period = new \DatePeriod(
+        $periods = new \DatePeriod(
             $first,
             new \DateInterval('P1D'),
             (clone $last)->modify('+1 day') // include end date
@@ -37,37 +44,59 @@ class Month
 
             $prev = (clone $first)->modify('- ' . $first->format('w') . ' days');
 
-            $prependPeriod = new \DatePeriod(
+            $prependPeriods = new \DatePeriod(
                 $prev,
                 new \DateInterval('P1D'),
                 $first
             );
 
-            foreach ($prependPeriod as $key => $value) {
-                $holiday      = $this->holidays[$value->format('Y-m-d')] ?? ['name' => null, 'is_holiday' => 0];
+            foreach ($prependPeriods as $key => $period) {
+                $holiday = $this->holidays[$period->format('Y-m-d')] ?? ['name' => null, 'is_holiday' => 0];
+
+                $season = '';
+
+                foreach ($this->seasons as $seasonInfo) {
+                    if (new \DateTime($seasonInfo['start_date']) <= $period && new \DateTime($seasonInfo['end_date']) >= $period) {
+                        if (0 == $seasonInfo['is_auto_renew_date']) {
+                            $season = $seasonInfo['name'];
+                        }
+                    }
+                }
                 $this->days[] = [
+                    'season'      => $season,
                     'name'        => $holiday['name'],
-                    'datetime'    => $value,
+                    'datetime'    => $period,
                     'is_holiday'  => $holiday['is_holiday'],
                     'is_blank'    => 1,
-                    'is_current'  => (int)( $value >= $this->start && $value <= $this->end),
-                    'yoil_number' => $value->format('w'),
-                    'day_number'  => $value->format('j')
+                    'is_current'  => (int) ($period >= $this->start && $period <= $this->end),
+                    'yoil_number' => $period->format('w'),
+                    'day_number'  => $period->format('j'),
                 ];
             }
         }
 
-        foreach ($period as $key => $value) {
-            $holiday = $this->holidays[$value->format('Y-m-d')] ?? ['name' => null, 'is_holiday' => 0];
-            //\pr($value, $start, $value >= $start);
+        foreach ($periods as $key => $period) {
+            $holiday = $this->holidays[$period->format('Y-m-d')] ?? ['name' => null, 'is_holiday' => 0];
+            //\pr($period, $start, $period >= $start);
+            $season = '';
+
+            foreach ($this->seasons as $seasonInfo) {
+                if (new \DateTime($seasonInfo['start_date']) <= $period && new \DateTime($seasonInfo['end_date']) >= $period) {
+                    if (0 == $seasonInfo['is_auto_renew_date']) {
+                        $season = $seasonInfo['name'];
+                    }
+                }
+            }
+            //\pr($this->seasons);
             $this->days[] = [
+                'season'      => $season,
                 'name'        => $holiday['name'],
-                'datetime'    => $value,
+                'datetime'    => $period,
                 'is_holiday'  => $holiday['is_holiday'],
                 'is_blank'    => 0,
-                'is_current'  => (int) ($value >= $this->start && $value <= $this->end),
-                'yoil_number' => $value->format('w'),
-                'day_number'  => $value->format('j')
+                'is_current'  => (int) ($period >= $this->start && $period <= $this->end),
+                'yoil_number' => $period->format('w'),
+                'day_number'  => $period->format('j'),
             ];
         }
 
@@ -75,22 +104,32 @@ class Month
 
         if (6 !== (int) $last->format('w')) {
             // 보여줄 달의 이전 달 정보를 가져온다.
-            $appendPeriod = new \DatePeriod(
+            $appendPeriods = new \DatePeriod(
                 (clone $last)->modify('+ 1 days'),
                 new \DateInterval('P1D'),
                 (clone $last)->modify('+ ' . ((6 - $last->format('w')) + 1) . ' days')
             );
 
-            foreach ($appendPeriod as $key => $value) {
-                $holiday      = $this->holidays[$value->format('Y-m-d')] ?? ['name' => null, 'is_holiday' => 0];
+            foreach ($appendPeriods as $key => $period) {
+                $holiday = $this->holidays[$period->format('Y-m-d')] ?? ['name' => null, 'is_holiday' => 0];
+                $season  = '';
+
+                foreach ($this->seasons as $seasonInfo) {
+                    if (new \DateTime($seasonInfo['start_date']) <= $period && new \DateTime($seasonInfo['end_date']) >= $period) {
+                        if (0 == $seasonInfo['is_auto_renew_date']) {
+                            $season = $seasonInfo['name'];
+                        }
+                    }
+                }
                 $this->days[] = [
+                    'season'      => $season,
                     'name'        => $holiday['name'],
-                    'datetime'    => $value,
+                    'datetime'    => $period,
                     'is_holiday'  => $holiday['is_holiday'],
                     'is_blank'    => 1,
-                    'is_current'  => (int)($value >= $this->start && $value <= $this->end),
-                    'yoil_number' => $value->format('w'),
-                    'day_number'  => $value->format('j')
+                    'is_current'  => (int) ($period >= $this->start && $period <= $this->end),
+                    'yoil_number' => $period->format('w'),
+                    'day_number'  => $period->format('j'),
                 ];
             }
         }
