@@ -10,7 +10,7 @@ class Group extends \Limepie\Form\Generation\Fields
         $innerhtml = '';
         $script    = '';
         $html      = '';
-
+//\pr($prevKey, $data);
         foreach ($specs['properties'] ?? [] as $propertyKey => $propertyValue) {
             if (false === isset($propertyValue['type'])) {
                 throw new \Limepie\Exception('group ' . ($prevKey ? '"' . $prevKey . '" ' : '') . '"' . $propertyKey . '" type not found');
@@ -267,12 +267,10 @@ class Group extends \Limepie\Form\Generation\Fields
                 $addClass = ' ';
             }
 
-            $addStyle = '';
+            $addStyle = '; ';
 
             if (true === isset($propertyValue['style'])) {
                 $addStyle = ' ' . $propertyValue['style'] . ' ';
-            } else {
-                $addStyle = ' ';
             }
 
             // display_target: ../is_extra_people
@@ -354,7 +352,7 @@ class Group extends \Limepie\Form\Generation\Fields
                 foreach($propertyValue['display_targets_condition'] as $cond => $style) {
                     if($cond == 'eq') {
                         if($leftValue == $rightValue) {
-                            $addStyle .= $style;
+                            $addStyle .= '; ' . $style;
                         }
                     }
                 }
@@ -372,7 +370,7 @@ class Group extends \Limepie\Form\Generation\Fields
                     }
 
                     if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
-                        $addStyle .= $propertyValue['display_target_condition'][$targetValue];
+                        $addStyle .= '; '.$propertyValue['display_target_condition'][$targetValue];
                     }
 
                 } elseif (true === isset($specs['properties'][$propertyValue['display_target']])) {
@@ -389,7 +387,7 @@ class Group extends \Limepie\Form\Generation\Fields
                         }
 
                         if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
-                            $addStyle .= $propertyValue['display_target_condition'][$targetValue];
+                            $addStyle .= '; '.$propertyValue['display_target_condition'][$targetValue];
                         }
                     }
                 } else {
@@ -399,17 +397,30 @@ class Group extends \Limepie\Form\Generation\Fields
                         $targetValue = &$data;
                         $targetSpec  = &$specs;
 
-                        foreach ($tmpids as $tmpid) {
-                            //\pr($targetValue, $tmpids, $tmpid);
-
-                            if (true === isset($targetValue[$tmpid])) {
-                                $targetValue = &$targetValue[$tmpid];
-                            }
-
-                            if (true === isset($targetSpec['properties'][$tmpid])) {
-                                $targetSpec = &$targetSpec['properties'][$tmpid];
-                            }
+                        //\pr($prevKey, preg_replace('#\[__([^_]{13})__\]#','.*', $prevKey), $propertyValue, $data);
+                        $tmpid = \Limepie\str_replace_first(\preg_replace('#\[__([^_]{13})__\]#', '.*', $prevKey).'.', '', $propertyValue['display_target']);
+                        //\pr($targetValue, $tmpid, $targetSpec['properties'][$tmpid]);
+                        if (true === isset($targetValue[$tmpid])) {
+                            $targetValue = &$targetValue[$tmpid];
+                        } else {
+                            $targetValue = null;
                         }
+
+                        if (true === isset($targetSpec['properties'][$tmpid])) {
+                            $targetSpec = &$targetSpec['properties'][$tmpid];
+                        }
+                        //foreach ($tmpids as $tmpid) {
+                        //     //\pr($targetValue, $tmpids, $tmpid);
+
+                        //     //\pr($tmpid, $targetValue);
+                        //     if (true === isset($targetValue[$tmpid])) {
+                        //         $targetValue = &$targetValue[$tmpid];
+                        //     }
+
+                        //     if (true === isset($targetSpec['properties'][$tmpid])) {
+                        //         $targetSpec = &$targetSpec['properties'][$tmpid];
+                        //     }
+                        // }
 
                         //\pr($propertyKey, $tmpids, $targetValue, $targetSpec);
 
@@ -420,18 +431,19 @@ class Group extends \Limepie\Form\Generation\Fields
                         // }
 
                         // if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
-                        //     $addStyle .= $propertyValue['display_target_condition'][$targetValue];
+                        //     $addStyle .= '; '.$propertyValue['display_target_condition'][$targetValue];
                         // }
 
-                        if ($targetValue) {
+                        if (strlen((string)$targetValue)) {
                             if (true === \is_object($targetValue)) {
                                 if (true === \property_exists($targetValue, 'value')) {
                                     $targetValue = $targetValue->value;
                                 }
                             }
+                            //\pr($propertyValue['display_target'],$propertyValue['display_target_condition'],$targetValue);
 
                             if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
-                                $addStyle .= $propertyValue['display_target_condition'][$targetValue];
+                                $addStyle .= '; '.$propertyValue['display_target_condition'][$targetValue];
                             }
                         } elseif (true === isset($targetSpec['default'])) {
                             $targetValue = $targetSpec['default'];
@@ -442,8 +454,10 @@ class Group extends \Limepie\Form\Generation\Fields
                                 }
                             }
 
+                            //\pr($propertyValue['display_target_condition'][$targetValue]);
+
                             if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
-                                $addStyle .= $propertyValue['display_target_condition'][$targetValue];
+                                $addStyle .= '; '.$propertyValue['display_target_condition'][$targetValue];
                             }
                         }
                     }
