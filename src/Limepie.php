@@ -54,6 +54,8 @@ function date_format(string $date, $format)
     $yoil   = $week[\date('w', $time)];
     $format = \str_replace('w', $yoil, $format);
 
+    return (new \DateTime($date))->format($format);
+
     return \date($format, $time);
 }
 
@@ -1362,8 +1364,14 @@ function is_binary(string $string) : bool
     return false;
 }
 
-function decimal($number) : float|int
+function decimal($number, $zero2null = false) : float|int|null
 {
+    if($zero2null === true) {
+        if (null === $number || (float)$number === 0) {
+            return null;
+        }
+    }
+
     if (0 < \strlen((string) $number)) {
         $parts  = \explode('.', (string) $number);
         $result = $parts[0];
@@ -1385,8 +1393,13 @@ function nf($number)
 {
     return \Limepie\number_format($number);
 }
-function number_format($number, $int = 0)
+function number_format($number, $int = 0, $zero2null = false)
 {
+    if($zero2null === true) {
+        if (null === $number || (float)$number === 0) {
+            return null;
+        }
+    }
     //$stripzero = sprintf('%g',$number);
 
     if (0 < \strlen((string) $number)) {

@@ -64,7 +64,6 @@ class Request
         $this->reload();
 
         $this->originPath = $this->path;
-
     }
 
     public function reload($requestUri = null)
@@ -206,10 +205,11 @@ class Request
         return $this->path;
     }
 
-    public function getOriginPath(){
-
+    public function getOriginPath()
+    {
         return $this->originPath;
     }
+
     public function getQueryString($append = '')
     {
         if ($this->query) {
@@ -853,46 +853,6 @@ class Request
         return $this;
     }
 
-    public function convertFileArray($data)
-    {
-        if (false === \is_array($data)) {
-            return $data;
-        }
-
-        if (
-            false === $this->isFile($data)
-            || false === $this->isMultiFile($data)
-        ) {
-            // \pr([
-            //     $data,
-            //     [$this->fileKeys, $keys],
-            //     [!$this->isFile($data), $this->fileKeys !== $keys],
-            //     [!$this->isFile($data), !isset($data['name'])],
-            //     [!$this->isMultiFile($data), !\is_array($data['name'] ?? '')],
-            // ]);
-
-            return $data;
-        }
-
-        $files = $data;
-
-        foreach ($this->fileKeys as $k) {
-            unset($files[$k]);
-        }
-
-        foreach ($data['name'] as $key => $name) {
-            $files[$key] = $this->convertFileArray([
-                'error'    => $data['error'][$key],
-                'name'     => $name,
-                'type'     => $data['type'][$key],
-                'tmp_name' => $data['tmp_name'][$key],
-                'size'     => $data['size'][$key],
-            ]);
-        }
-
-        return $files;
-    }
-
     // multi file일때만 true
     public function isMultiFile($array, $isMulti = true)
     {
@@ -927,34 +887,47 @@ class Request
         return false;
     }
 
-    public function convertFileInformation($file)
+    public function getFixedFilesArray()
     {
-        $file = $this->convertFileArray($file);
+        $walker = function ($arr, $fileInfokey, callable $walker) {
+            $return = [];
 
-        if (true === $this->isFile($file)) {
-            if (\UPLOAD_ERR_NO_FILE === $file['error']) {
-                $file = null;
-            } else {
-                $file = [
-                    'name'     => $file['name'],
-                    'type'     => $file['type'],
-                    'tmp_name' => $file['tmp_name'],
-                    'error'    => $file['error'],
-                    'size'     => $file['size'],
-                ];
+            foreach ($arr as $k => $v) {
+                if (true === \is_array($v)) {
+                    $return[$k] = $walker($v, $fileInfokey, $walker);
+                } else {
+                    $return[$k][$fileInfokey] = $v;
+                }
             }
-        } else {
-            $file = \array_map([$this, 'convertFileInformation'], $file);
-            $file = \array_filter($file);
+
+            return $return;
+        };
+
+        $files = [];
+
+        foreach ($_FILES as $name => $values) {
+            // init for array_merge
+            if (false === isset($files[$name])) {
+                $files[$name] = [];
+            }
+
+            if (false === \is_array($values['error'])) {
+                // normal syntax
+                $files[$name] = $values;
+            } else {
+                foreach ($values as $fileInfoKey => $subArray) {
+                    $files[$name] = \array_replace_recursive($files[$name], $walker($subArray, $fileInfoKey, $walker));
+                }
+            }
         }
 
-        return $file;
+        return $files;
     }
 
     public function getFileAll()
     {
         if (true === isset($_FILES) && $_FILES) {
-            return $this->convertFileInformation($_FILES);
+            return $this->getFixedFilesArray($_FILES);
         }
 
         return [];

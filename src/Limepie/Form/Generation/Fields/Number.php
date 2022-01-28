@@ -17,18 +17,20 @@ class Number extends \Limepie\Form\Generation\Fields
         $default  = $property['default'] ?? '';
         $readonly = '';
 
-        if (isset($property['readonly']) && $property['readonly']) {
+        if (true === isset($property['readonly']) && $property['readonly']) {
             $readonly = ' readonly="readonly"';
         }
 
         $style = '';
-        if(true === isset($property['readonly']) && $property['readonly']) {
-            if(false === isset($property['element_style'])) {
+
+        if (true === isset($property['readonly']) && $property['readonly']) {
+            if (false === isset($property['element_style'])) {
                 $property['element_style'] = '';
             }
             $property['element_style'] .= ' pointer-events: none;';
         }
-        if (isset($property['element_style']) && $property['element_style']) {
+
+        if (true === isset($property['element_style']) && $property['element_style']) {
             $style = ' style="' . $property['element_style'] . '"';
         }
 
@@ -36,54 +38,61 @@ class Number extends \Limepie\Form\Generation\Fields
 
         if (true === isset($property['onchange'])) {
             $onchange = ' onchange="' . \trim(\addcslashes($property['onchange'], '"')) . '"';
-
             $onchange .= ' onkeyup="' . \trim(\addcslashes($property['onchange'], '"')) . '"';
         }
 
         $prepend = '';
 
-        if (isset($property['prepend']) && $property['prepend']) {
+        if (true === isset($property['prepend']) && $property['prepend']) {
             $prepend = <<<EOD
-<div class="input-group-prepend">
-<span class="input-group-text">{$property['prepend']}</span>
-</div>
-EOD;
+            <div class="input-group-prepend">
+            <span class="input-group-text">{$property['prepend']}</span>
+            </div>
+            EOD;
         }
 
         $append = '';
 
-        if (isset($property['append']) && $property['append']) {
+        if (true === isset($property['append']) && $property['append']) {
             $append = <<<EOD
-<div class="input-group-append">
-<span class="input-group-text">{$property['append']}</span>
-</div>
-EOD;
+            <div class="input-group-append">
+            <span class="input-group-text">{$property['append']}</span>
+            </div>
+            EOD;
         }
 
         $placeholder = '';
 
-        if (isset($property['placeholder']) && $property['placeholder']) {
+        if (true === isset($property['placeholder']) && $property['placeholder']) {
             $placeholder = ' placeholder="' . $property['placeholder'] . '"';
         }
-        $html = <<<EOT
+
+        if (
+            true === isset($property['rules']['min'])
+            && true === isset($property['rules_not_match']) // rule과 맞지 않으면 value를 null로 처리한다.
+            && $property['rules_not_match'] == 'clear'
+        ) {
+            if ($value < $property['rules']['min']) {
+                $value = null;
+            }
+        }
+
+        return <<<EOT
         <div class="input-group">
         {$prepend}
-        <input type="number" class="form-control" name="{$key}" value="{$value}" data-default="{$default}"${readonly}${placeholder}{$style}  ${onchange} />
+        <input type="number" class="form-control" name="{$key}" value="{$value}" data-default="{$default}"{$readonly}{$placeholder}{$style}  {$onchange} />
         {$append}
         </div>
-EOT;
-
-        return $html;
+        EOT;
     }
 
     public static function read($key, $property, $value)
     {
         $value = (string) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
-EOT;
-
-        return $html;
+        EOT;
     }
 }

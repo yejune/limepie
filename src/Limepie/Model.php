@@ -1078,6 +1078,9 @@ class Model extends ArrayObject
 
     public function doDelete() : self|bool
     {
+        if (true == $this->deleteLock) {
+            return true;
+        }
         if (true === isset($this->attributes[$this->primaryKeyName])) {
             $sql = <<<SQL
                 DELETE

@@ -46,7 +46,7 @@ class Generation
         return $value['default'] ?? null;
     }
 
-    public function write(array $spec, array | \Limepie\ArrayObject $data = []) : string
+    public function write(array $spec, array|\Limepie\ArrayObject $data = []) : string
     {
         $method = __NAMESPACE__ . '\\Generation\\Fields\\' . \Limepie\camelize($spec['type']);
         $html   = '';
@@ -221,99 +221,19 @@ class Generation
             //         <button type='{=button.type}'{?button.name??false} name='{=button.name}'{/} class="btn {=button.class}"{?button.value??false} value="{=button.value}"{/}{?button.onclick??false} onclick="/*{=button.onclick}*/"{/}>{=button.text}</button>
             //     {/}
             // {/}
-            $i     = 0;
-            $count = \count($spec['buttons']);
-
-            foreach ($spec['buttons'] ?? [] as $key => $button) {
-                ++$i;
-                $value       = '';
-                $class       = '';
-                $text        = '';
-                $type        = '';
-                $name        = '';
-                $onclick     = '';
-                $href        = '';
-                $description = '';
-
-                if ($button['onclick'] ?? false) {
-                    $onclick = 'onclick="' . $button['onclick'] . '"';
-                }
-
-                if ($button['name'] ?? false) {
-                    $name = 'name="' . $button['name'] . '"';
-                }
-
-                if ($button['type'] ?? false) {
-                    $type = $button['type'];
-                }
-
-                if (true === isset($button['text'][\Limepie\get_language()])) {
-                    $text = $button['text'][\Limepie\get_language()];
-                } elseif (true === isset($button['text'])) {
-                    $text = $button['text'];
-                }
-
-                if ($button['class'] ?? false) {
-                    $class = $button['class'];
-                }
-
-                if ($button['href'] ?? false) {
-                    $href = $button['href'];
-                    $flag = '';
-
-                    if (false !== \strpos($href, '#')) {
-                        [$href, $flag] = \explode('#', $href, 2);
-                    }
-
-                    if (false !== \strpos($href, '{=querystring}')) {
-                        $href = \str_replace('{=querystring}', Di::get('request')->getQueryString(), $href);
-                    }
-                    $href = \rtrim($href, '?');
-
-                    if ($flag) {
-                        $href .= '#' . $flag;
-                    }
-                }
-
-                if ($button['value'] ?? false) {
-                    $value = 'value="' . $button['value'] . '"';
-                }
-
-                if ($button['description'] ?? false) {
-                    if (true === isset($button['description'][\Limepie\get_language()])) {
-                        $description = $button['description'][\Limepie\get_language()];
-                    } elseif (true === isset($button['description'])) {
-                        $description = $button['description'];
-                    }
-
-                    $description = 'data-description="' . \htmlspecialchars($description) . '"';
-                }
-
-                if ('delete' === $button['type']) {
-                    if(true === isset($button['string'])) {
-                        $string = $button['string'];
-                    } else {
-                        $string = \Limepie\genRandomString(6);
-                    }
-
-                    $innerhtml .= '<a href="" data-method="delete" data-value="' . $string . '" ' . \str_replace('{=string}', $string, $description) . ' class="btn ' . $class . '">' . $text . '</a>';
-                } elseif ('a' === $button['type']) {
-                    $innerhtml .= '<a href="' . $href . (true === isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : '') . '" class="btn ' . $class . '">' . $text . '</a>';
-                } else {
-                    $innerhtml .= '<button type="' . $type . '" ' . $name . ' class="btn ' . $class . '" ' . $value . ' ' . $onclick . ' >' . $text . '</button>';
-                }
-
-                if ($i === $count) {
-                }
-                //$innerhtml .= ' ';
-            }
+            $innerhtml .= $this->addButtons($spec['buttons']);
         } else {
             $submitButtonText = '저장';
 
             if ($spec['submit_button_text'] ?? false) {
                 $submitButtonText = $spec['submit_button_text'];
             }
+
             $innerhtml .= '<input type="submit" value="' . $submitButtonText . '" class="btn btn-primary" />';
+
+            if (isset($spec['add_buttons']) && $spec['add_buttons']) {
+                $innerhtml .= $this->addButtons($spec['add_buttons']);
+            }
 
             if (false === isset($spec['remove_list_button']) || !$spec['remove_list_button']) {
                 $listButtonText = '목록';
@@ -325,6 +245,105 @@ class Generation
             }
         }
         $innerhtml .= '</div>';
+
+        return $innerhtml;
+    }
+
+    public function addButtons($buttons)
+    {
+        $innerhtml = '';
+        $i         = 0;
+        $count     = \count($buttons);
+
+        foreach ($buttons ?? [] as $key => $button) {
+            ++$i;
+            $value       = '';
+            $class       = '';
+            $text        = '';
+            $type        = '';
+            $name        = '';
+            $onclick     = '';
+            $href        = '';
+            $description = '';
+
+            if ($button['onclick'] ?? false) {
+                $onclick = 'onclick="' . $button['onclick'] . '"';
+            }
+
+            if ($button['name'] ?? false) {
+                $name = 'name="' . $button['name'] . '"';
+            }
+
+            if ($button['type'] ?? false) {
+                $type = $button['type'];
+            }
+
+            if (true === isset($button['text'][\Limepie\get_language()])) {
+                $text = $button['text'][\Limepie\get_language()];
+            } elseif (true === isset($button['text'])) {
+                $text = $button['text'];
+            }
+
+            if ($button['class'] ?? false) {
+                $class = $button['class'];
+            }
+
+            if ($button['href'] ?? false) {
+                $href = $button['href'];
+                $flag = '';
+
+                if (false !== \strpos($href, '#')) {
+                    [$href, $flag] = \explode('#', $href, 2);
+                }
+
+                if (false !== \strpos($href, '{=querystring}')) {
+                    $href = \str_replace('{=querystring}', Di::get('request')->getQueryString(), $href);
+                }
+                $href = \rtrim($href, '?');
+
+                if ($flag) {
+                    $href .= '#' . $flag;
+                }
+            }
+
+            if ($button['value'] ?? false) {
+                $value = 'value="' . $button['value'] . '"';
+            }
+
+            if ($button['description'] ?? false) {
+                if (true === isset($button['description'][\Limepie\get_language()])) {
+                    $description = $button['description'][\Limepie\get_language()];
+                } elseif (true === isset($button['description'])) {
+                    $description = $button['description'];
+                }
+
+                $description = 'data-description="' . \htmlspecialchars($description) . '"';
+            }
+
+            if ('delete' === $button['type']) {
+                if (true === isset($button['string'])) {
+                    $string = $button['string'];
+                } else {
+                    $string = \Limepie\genRandomString(6);
+                }
+
+                $innerhtml .= '<a href="" data-method="delete" data-value="' . $string . '" ' . \str_replace('{=string}', $string, $description) . ' class="btn ' . $class . '">' . $text . '</a>';
+            } elseif ('a' === $button['type']) {
+                $innerhtml .= '<a href="' . $href . (true === isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : '') . '" class="btn ' . $class . '">' . $text . '</a>';
+            } elseif('open' === $button['type']) {
+                $onclick='window.open("/popup.html", "PopupWin", "width=500,height=600")';
+
+                $innerhtml .= '<button type="' . $type . '" ' . $name . ' class="btn ' . $class . '" ' . $value . ' ' . $onclick . ' >' . $text . '</button>';
+
+
+            } else {
+                $innerhtml .= '<button type="' . $type . '" ' . $name . ' class="btn ' . $class . '" ' . $value . ' ' . $onclick . ' >' . $text . '</button>';
+            }
+
+            if ($i === $count) {
+            }
+            //$innerhtml .= ' ';
+        }
 
         return $innerhtml;
     }
