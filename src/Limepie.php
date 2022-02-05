@@ -2142,6 +2142,9 @@ function array_cleanup(array $array)
             }
         } elseif (true === \is_object($row)) {
             // obejct는 허용
+        } elseif (true === \is_null($row)) {
+            // null 허용
+            $row = null;
         } else {
             throw new \Limepie\Exception(\gettype($row) . ' not support.');
         }
