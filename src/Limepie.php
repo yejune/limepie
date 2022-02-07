@@ -2188,3 +2188,10 @@ function str_replace_first($search, $replace, $subject)
 
     return $subject;
 }
+
+function parse_str($string)
+{
+    \parse_str($string, $array);
+
+    return $array;
+}
