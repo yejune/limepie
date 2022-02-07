@@ -14,7 +14,6 @@ class Tui extends \Limepie\Form\Generation\Fields
         $default = $property['default'] ?? '';
         $rows    = $property['rows']    ?? 5;
 
-        $fileserver = $property['fileserver']    ?? '';
         $class      = $property['element_class'] ?? '';
         $linkcss    = $property['linkcss']       ?? '';
 
@@ -33,6 +32,12 @@ class Tui extends \Limepie\Form\Generation\Fields
         } else {
             $editStyle = 'wysiwyg';
         }
+        if (true === isset($property['fileserver']) && $property['fileserver']) {
+            $fileserver = $property['fileserver'];
+        } else {
+            $fileserver = '';
+        }
+        $uuid   = \Limepie\random_uuid();
 
         $id     = \uniqid();
         $htmlid = 'html' . $id;
@@ -50,6 +55,7 @@ class Tui extends \Limepie\Form\Generation\Fields
         {$linkcss}
         <script src="https://cdnjs.cloudflare.com/ajax/libs/tui-editor/1.4.10/tui-editor-Editor-full.js"></script>
 
+        <input type="hidden" name="{$key}_uuid" value="{$uuid}">
         <textarea class="form-control d-none" id="textarea{$htmlid}" name="{$key}">{$value}</textarea>
         <div id="tui{$id}" class="form-control {$class}"  style="display:block; width: 100%">{$value}</div>
         <style>#tui{$id} .te-mode-switch-section {
@@ -80,6 +86,7 @@ $(function() {
             'addImageBlobHook': function(blob, callback) {
                 var formData = new FormData();
                 formData.append('image', blob);
+                formData.append('uuid', "{$uuid}");
                 $.ajax({
                     url: "{$fileserver}",
                     enctype: 'multipart/form-data',
@@ -90,7 +97,7 @@ $(function() {
                     cache: false,
                     type: 'POST',
                     success: function(response){
-                        callback(response.url, '');
+                        callback(response.payload.url, '');
                         return false;
                     },
                     error: function(e) {
