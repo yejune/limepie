@@ -334,6 +334,23 @@ class Model extends ArrayObject
                             }
 
                             break;
+                        case 'aes':
+                            if ($value) {
+                                if (\Limepie\is_binary($value)) {
+                                    try {
+                                        $body = \Limepie\Aes::unpack($value);
+                                    } catch(\Exception) {
+                                        $body = [];
+                                    }
+                                    $value = new \Limepie\ArrayObject($body);
+                                } else {
+                                    $value = [];
+                                }
+                            } else {
+                                $value = [];
+                            }
+
+                            break;
                         case 'json':
                             if ($value) {
                                 $value = new \Limepie\ArrayObject(\json_decode($value, true));
@@ -844,6 +861,10 @@ class Model extends ArrayObject
                                 $value = \gzcompress(\serialize($value), 9);
 
                                 break;
+                            case 'aes':
+                                $value = \Limepie\Aes::pack($value);
+
+                                break;
                             case 'json':
                                 $value = \json_encode($value);
 
@@ -961,6 +982,10 @@ class Model extends ArrayObject
                                 break;
                             case 'gz':
                                 $value = \gzcompress(\serialize($value), 9);
+
+                                break;
+                            case 'aes':
+                                $value = \Limepie\Aes::pack($value);
 
                                 break;
                             case 'json':
