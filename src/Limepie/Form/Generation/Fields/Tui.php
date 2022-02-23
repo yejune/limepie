@@ -47,6 +47,14 @@ class Tui extends \Limepie\Form\Generation\Fields
         } else {
             $htmlkey = \preg_replace('#\]$#', '_html]', $key);
         }
+
+        if($fileserver) {
+            $imageButton = '';
+        } else {
+            $imageButton = "#tui{$id} .tui-image{
+                display: none !important;
+            }";
+        }
         $html = <<<EOT
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tui-editor/1.4.10/tui-editor.css"></link>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tui-editor/1.4.10/tui-editor-contents.css"></link>
@@ -61,7 +69,9 @@ class Tui extends \Limepie\Form\Generation\Fields
         <style>#tui{$id} .te-mode-switch-section {
         //  display: none !important;
         //  height: 0;
-        }</style>
+        }
+        {$imageButton}
+        </style>
 <script>
 $(function() {
     var editor = new tui.Editor({
@@ -107,6 +117,7 @@ $(function() {
         },
         exts: ['scrollSync']
       });
+      editor.removeToolbarItem('image')
 });
 </script>
 EOT;
