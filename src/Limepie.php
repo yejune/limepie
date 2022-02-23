@@ -1366,8 +1366,8 @@ function is_binary(string $string) : bool
 
 function decimal($number, $zero2null = false) : float|int|null
 {
-    if($zero2null === true) {
-        if (null === $number || (float)$number === 0) {
+    if (true === $zero2null) {
+        if (null === $number || 0 === (float) $number) {
             return null;
         }
     }
@@ -1395,8 +1395,8 @@ function nf($number)
 }
 function number_format($number, $int = 0, $zero2null = false)
 {
-    if($zero2null === true) {
-        if (null === $number || (float)$number === 0) {
+    if (true === $zero2null) {
+        if (null === $number || 0 === (float) $number) {
             return null;
         }
     }
@@ -2194,4 +2194,22 @@ function parse_str($string)
     \parse_str($string, $array);
 
     return $array;
+}
+
+function rawurlencode($url)
+{
+    if (false === \strpos($url, \rawurlencode('https://'))) {
+        $url = \rawurlencode($url);
+    }
+
+    return $url;
+}
+
+function urlencode($url)
+{
+    if (false === \strpos($url, \urlencode('https://'))) {
+        $url = \urlencode($url);
+    }
+
+    return $url;
 }
