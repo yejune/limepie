@@ -2129,8 +2129,12 @@ function array_key_rename(array $array, $old_key, $new_key)
     return \array_combine($keys, $array);
 }
 
-function array_cleanup(array $array)
+function array_cleanup(array|ArrayObject $array)
 {
+    if ($array instanceof \Limepie\ArrayObject) {
+        $array = $array->attributes;
+    }
+
     $isNull = true;
 
     foreach ($array as $key => &$row) {
