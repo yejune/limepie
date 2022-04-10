@@ -79,7 +79,7 @@ class Generation
                 }
             }
         }
-        //pr($reverseConditions);
+        // pr($reverseConditions);
 
         Generation\Fields::$reverseConditions = $reverseConditions;
 
@@ -112,7 +112,7 @@ class Generation
                     } else {
                         $l = false;
                     }
-                    //$active = $step['active'] ?? 0;
+                    // $active = $step['active'] ?? 0;
                     if (1 == $i) {
                         $active = 1;
                     } else {
@@ -330,19 +330,22 @@ class Generation
                 $innerhtml .= '<a href="" data-method="delete" data-value="' . $string . '" ' . \str_replace('{=string}', $string, $description) . ' class="btn ' . $class . '">' . $text . '</a>';
             } elseif ('a' === $button['type']) {
                 $innerhtml .= '<a href="' . $href . (true === isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : '') . '" class="btn ' . $class . '">' . $text . '</a>';
-            } elseif('open' === $button['type']) {
-                $onclick='window.open("/popup.html", "PopupWin", "width=500,height=600")';
+            } elseif ('open' === $button['type']) {
+                if (isset($button['name'])) {
+                    $name = $button['name'];
+                } else {
+                    $name = 'PopupButton';
+                }
+                $onclick = 'window.open("' . $href . '", "' . $name . '", "width=500,height=600")';
 
                 $innerhtml .= '<button type="' . $type . '" ' . $name . ' class="btn ' . $class . '" ' . $value . ' ' . $onclick . ' >' . $text . '</button>';
-
-
             } else {
                 $innerhtml .= '<button type="' . $type . '" ' . $name . ' class="btn ' . $class . '" ' . $value . ' ' . $onclick . ' >' . $text . '</button>';
             }
 
             if ($i === $count) {
             }
-            //$innerhtml .= ' ';
+            // $innerhtml .= ' ';
         }
 
         return $innerhtml;
