@@ -1218,7 +1218,7 @@ function array_flatten_remove($data, $flattenKey)
     $lastSegment = \array_pop($segments);
 
     foreach ($segments as $segment) {
-        if (true === isset($items[$segment]) || false === \is_array($items[$segment])) {
+        if (false === isset($items[$segment]) || false === \is_array($items[$segment])) {
             continue;
         }
 
