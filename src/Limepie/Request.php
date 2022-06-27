@@ -26,7 +26,11 @@ class Request
 
     public $segments = [];
 
+    public $originSegments = [];
+
     public $parameters = [];
+
+    public $originParameters = [];
 
     public $requestId;
 
@@ -63,7 +67,9 @@ class Request
         }
         $this->reload();
 
-        $this->originPath = $this->path;
+        $this->originPath       = $this->path;
+        $this->originSegments   = $this->segments;
+        $this->originParameters = $this->parameters;
     }
 
     public function reload($requestUri = null)
@@ -71,10 +77,8 @@ class Request
         if ($requestUri) {
             $this->requestUri = $requestUri;
         }
-        $this->uri = $this->getRequestUri();
-
-        $this->url = $this->getUrl();
-
+        $this->uri      = $this->getRequestUri();
+        $this->url      = $this->getUrl();
         $this->urlParts = \parse_url($this->url);
         $this->host     = $this->urlParts['host'];
 
@@ -83,11 +87,15 @@ class Request
         $this->query = $tmp[1] ?? '';
 
         if ($this->path) {
+            $this->segments = [];
+
             if (true === \Limepie\is_cli()) {
                 $this->segments = \array_map('rawurldecode', \explode('/', \trim($this->path, '/')));
             } else {
                 $this->segments = \explode('/', \trim($this->path, '/'));
             }
+
+            $this->parameters = [];
 
             for ($i = 0, $j = \count($this->segments); $i < $j; $i += 2) {
                 $this->parameters[$this->segments[$i]] = $this->segments[$i + 1] ?? '';
@@ -205,8 +213,18 @@ class Request
         return $this->path;
     }
 
-    public function getOriginPath()
+    public function getOriginPath(?int $step = null, $length = null)
     {
+        if (null !== $step) {
+            $segments = \array_slice($this->originSegments, $step, $length);
+
+            if ($segments) {
+                return '/' . \implode('/', $segments);
+            }
+
+            return '';
+        }
+
         return $this->originPath;
     }
 
@@ -887,6 +905,30 @@ class Request
         return false;
     }
 
+    public function normalizeFiles()
+    {
+        $out = [];
+
+        foreach ($_FILES as $key => $file) {
+            if (isset($file['name']) && \is_array($file['name'])) {
+                $new = [];
+
+                foreach (['name', 'type', 'tmp_name', 'error', 'size'] as $k) {
+                    \array_walk_recursive($file[$k], function (&$data, $key, $k) {
+                        $data = [$k => $data];
+                    }, $k);
+                    $new = \array_replace_recursive($new, $file[$k]);
+                    \print_r($new);
+                }
+                $out[$key] = $new;
+            } else {
+                $out[$key] = $file;
+            }
+        }
+
+        return $out;
+    }
+
     public function getFixedFilesArray()
     {
         $walker = function ($arr, $fileInfokey, callable $walker) {
@@ -913,7 +955,9 @@ class Request
 
             if (false === \is_array($values['error'])) {
                 // normal syntax
-                $files[$name] = $values;
+                if (4 != $values['error']) {
+                    $files[$name] = $values;
+                }
             } else {
                 foreach ($values as $fileInfoKey => $subArray) {
                     $files[$name] = \array_replace_recursive($files[$name], $walker($subArray, $fileInfoKey, $walker));
@@ -927,7 +971,11 @@ class Request
     public function getFileAll()
     {
         if (true === isset($_FILES) && $_FILES) {
-            return $this->getFixedFilesArray($_FILES);
+            //return $this->normalizeFiles();
+
+            $a = $this->getFixedFilesArray();
+
+            return $a;
         }
 
         return [];

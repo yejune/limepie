@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Boolean extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         $value = (string) $value;
 
@@ -20,27 +20,25 @@ class Boolean extends \Limepie\Form\Generation\Fields
             $onclick = 'onclick="' . \trim(\addcslashes($property['onclick'], '"')) . '"';
         }
         $text = '';
+
         if (true === isset($property['text'])) {
-            $text =' '. $property['text'];
+            $text = ' ' . $property['text'];
         }
 
-        $html = <<<EOT
+        return <<<EOT
         <label style='font-weight: normal'>
-        <input type="checkbox" class="form-control" name="{$key}" value="1" {$checked} ${onclick} />{$text}
+        <input type="checkbox" class="form-control" name="{$key}" data-rule-name="{$ruleName}" value="1" {$checked} {$onclick} />{$text}
         </label>
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = (bool) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

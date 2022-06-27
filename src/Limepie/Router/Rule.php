@@ -12,7 +12,7 @@ class Rule
         'path',
         'next',
         'prev',
-        'method'
+        'method',
     ];
 
     public static $allowMethods = [
@@ -27,7 +27,7 @@ class Rule
         $matches = [];
 
         if (false !== \strpos($pattern, '{')) {
-            $pattern = \preg_replace('#\{([^\}]+)\}#', '(?P<$1>[0-9a-zA-Z_\-\.]+)', $pattern);
+            $pattern = \preg_replace('#\{([^\}0-9]+)\}#', '(?P<$1>[0-9a-zA-Z_\-\.]+)', $pattern);
         }
 
         if (1 === \preg_match($pattern, $subject, $matches)) {

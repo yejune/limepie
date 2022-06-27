@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Number extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         if (true === \is_array($value)) {
             \pr($key, $value);
@@ -70,7 +70,7 @@ class Number extends \Limepie\Form\Generation\Fields
         if (
             true === isset($property['rules']['min'])
             && true === isset($property['rules_not_match']) // rule과 맞지 않으면 value를 null로 처리한다.
-            && $property['rules_not_match'] == 'clear'
+            && 'clear' == $property['rules_not_match']
         ) {
             if ($value < $property['rules']['min']) {
                 $value = null;
@@ -80,7 +80,7 @@ class Number extends \Limepie\Form\Generation\Fields
         return <<<EOT
         <div class="input-group">
         {$prepend}
-        <input type="number" class="form-control" name="{$key}" value="{$value}" data-default="{$default}"{$readonly}{$placeholder}{$style}  {$onchange} />
+        <input type="number" class="form-control" name="{$key}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}"{$readonly}{$placeholder}{$style}  {$onchange} />
         {$append}
         </div>
         EOT;

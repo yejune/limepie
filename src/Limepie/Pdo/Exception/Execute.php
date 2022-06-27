@@ -84,13 +84,15 @@ class Execute extends \Limepie\Exception
         $binds = $this->getBinds();
 
         $newBinds = [];
+
         foreach ($binds as $key => $value) {
             $isBinary = false;
-            if (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64)_#', $key, $typeMatch)) {
+
+            if (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64|aes)_#', $key, $typeMatch)) {
                 $isBinary = true;
             }
 
-            $newBinds[] = $key . ' => ' . ($isBinary ? '[binary]' : print_r($value, true));
+            $newBinds[] = $key . ' => ' . ($isBinary ? '[binary]' : \print_r($value, true));
         }
 
         return $this->getMessage() . ",\n" . $query . ($newBinds ? ', [' . \implode(', ', $newBinds) . ']' : '');

@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Summernote extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         $value = \htmlspecialchars((string) $value);
 
@@ -15,12 +15,13 @@ class Summernote extends \Limepie\Form\Generation\Fields
         $rows    = $property['rows']    ?? 5;
 
         $upload = $property['upload'] ?? 'upload';
-        $id = uniqid();
-        $html = <<<EOT
+        $id     = \uniqid();
+
+        return <<<EOT
         <script src="//cdnjs.cloudflare.com/ajax/libs/popper.js/1.15.0/umd/popper.min.js"   crossorigin="anonymous"></script>
         <link href="//cdnjs.cloudflare.com/ajax/libs/summernote/0.8.12/summernote-bs4.css" rel="stylesheet">
         <script src="//cdnjs.cloudflare.com/ajax/libs/summernote/0.8.12/summernote-bs4.js"></script>
-        <textarea id="summernote{$id}" class="form-control summernote" name="{$key}" data-default="{$default}" rows="{$rows}">{$value}</textarea>
+        <textarea id="summernote{$id}" class="form-control summernote" name="{$key}" data-rule-name="{$ruleName}" data-default="{$default}" rows="{$rows}">{$value}</textarea>
 <script>
 $(function() {
 
@@ -65,18 +66,15 @@ $(function() {
 
 </script>
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = \nl2br((string) $value);
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

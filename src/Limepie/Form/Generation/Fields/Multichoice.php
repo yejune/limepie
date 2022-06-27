@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Multichoice extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value = [])
+    public static function write($key, $property, $value = [], $ruleName)
     {
         //$value = (string) $value;
 
@@ -60,7 +60,7 @@ class Multichoice extends \Limepie\Form\Generation\Fields
                 }
                 $buttons .= <<<EOD
 <label class="btn btn-switch btn-swich-checkbox {$active}">
-<input type="checkbox" name="{$key}" autocomplete="off" value="{$k1}" {$checked} ${onchange}> {$v1}
+<input type="checkbox" name="{$key}" data-rule-name="{$ruleName}" autocomplete="off" value="{$k1}" {$checked} {$onchange}> {$v1}
 </label>
 
 EOD;
@@ -148,11 +148,10 @@ EOT;
     public static function read($key, $property, $value)
     {
         $value = (bool) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

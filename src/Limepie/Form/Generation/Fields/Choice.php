@@ -4,24 +4,25 @@ namespace Limepie\Form\Generation\Fields;
 
 class Choice extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
-        if(true === is_object($value)) {
-            if(true === property_exists($value, 'property')) {
-                $property = $value->property + $property;
+        if (true === \is_object($value)) {
+            if (true === \property_exists($value, 'property')) {
+                $property = [...$property, ...$value->property];
             }
 
-            if (true === property_exists($value, 'value')) {
+            if (true === \property_exists($value, 'value')) {
                 $value = $value->value;
             }
         }
+
         $value = (string) $value;
 
         if (0 === \strlen($value) && true === isset($property['default'])) {
             $value = (string) $property['default'];
         }
-        $default  = $property['default'] ?? '';
-        $default  = \is_array($default) ? '' : $default;
+        $default = $property['default'] ?? '';
+        $default = \is_array($default) ? '' : $default;
 
         $checked = ((bool) $value) ? 'checked' : '';
 
@@ -58,11 +59,11 @@ class Choice extends \Limepie\Form\Generation\Fields
             $readonly = ' disabled-group';
         }
 
-        $buttons = '';
-        $scripts = '';
+        $buttons     = '';
+        $scripts     = '';
         $offpossible = '';
 
-        if(true === isset($property['turnoff']) && $property['turnoff'] == true) {
+        if (true === isset($property['turnoff']) && true == $property['turnoff']) {
             $offpossible = 'btn-switch-radio-turnoff-possible';
         }
 
@@ -77,7 +78,7 @@ class Choice extends \Limepie\Form\Generation\Fields
                 $active  = (string) $value === (string) $k1 ? 'active' : '';
                 $buttons .= <<<EOD
                     <label class="btn btn-switch {$offpossible} {$active} {$elementClass}">
-                    <input type="radio" name="{$key}" autocomplete="off" value="{$k1}"  data-default="{$default}"{$checked} ${onchange}> {$v1}
+                    <input type="radio" name="{$key}" autocomplete="off" data-rule-name="{$ruleName}" value="{$k1}"  data-default="{$default}"{$checked} {$onchange}> {$v1}
                     </label>
 
                 EOD;
@@ -100,6 +101,7 @@ class Choice extends \Limepie\Form\Generation\Fields
 
             $keyName = \addcslashes($key, '[]');
             $script  = '';
+
             if (true === isset(static::$conditions[$dotKey2])) {
                 //pr(static::$conditions[$dotKey2]);
                 foreach (static::$conditions[$dotKey2] as $k1 => $v1) {
@@ -186,11 +188,10 @@ class Choice extends \Limepie\Form\Generation\Fields
     public static function read($key, $property, $value)
     {
         $value = (bool) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
             {$value}
 
         EOT;
-
-        return $html;
     }
 }

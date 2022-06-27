@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Textarea extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         $value = \htmlspecialchars((string) $value);
 
@@ -14,22 +14,19 @@ class Textarea extends \Limepie\Form\Generation\Fields
         $default = $property['default'] ?? '';
         $rows    = $property['rows']    ?? 5;
 
-        $html = <<<EOT
-        <textarea class="form-control" name="{$key}" data-default="{$default}" rows="{$rows}">{$value}</textarea>
+        return <<<EOT
+        <textarea class="form-control" name="{$key}" data-rule-name="{$ruleName}" data-default="{$default}" rows="{$rows}">{$value}</textarea>
 
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = \nl2br((string) $value);
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

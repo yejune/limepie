@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Description extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         if (true === \is_array($value)) {
             $value = '';
@@ -64,25 +64,23 @@ EOD;
 </div>
 EOD;
         }
-        $html = <<<EOT
+
+        return <<<EOT
         <div class="input-group">
         {$prepend}
-        <input type="hidden" class="form-control{$elementClass}" name="{$key}" value="{$value}" data-default="{$default}"${readonly}${disabled}{$placeholder}{$style} />
+        <input type="hidden" class="form-control{$elementClass}" name="{$key}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}"{$readonly}{$disabled}{$placeholder}{$style} />
         {$append}
         </div>
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = (string) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

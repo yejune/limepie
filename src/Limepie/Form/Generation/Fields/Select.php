@@ -4,9 +4,11 @@ namespace Limepie\Form\Generation\Fields;
 
 class Select extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
-        if (0 === \strlen((string) $value)) {
+        if (true === \is_array($value)) {
+            $value = \key($value);
+        } elseif (0 === \strlen((string) $value)) {
             $value = $property['default'] ?? '';
         }
 
@@ -177,6 +179,7 @@ EOD;
                         $depth = $its->getDepth();
 
                         $path = [];
+
                         for ($depth = $its->getDepth(); $depth && $depth--;) {
                             \array_unshift($path, $its->getSubIterator($depth)->current()['name']);
                         }
@@ -271,7 +274,7 @@ EOD;
         $html = <<<EOT
         <div class="input-group">
         {$prepend}
-        <select class="form-control{$class}" {$style} name="{$key}" {$onchange} data-default="{$default}">{$option}</select>
+        <select class="form-control{$class}" {$style} name="{$key}" data-rule-name="{$ruleName}" {$onchange} data-default="{$default}">{$option}</select>
         {$append}
         </div>
         {$scripts}

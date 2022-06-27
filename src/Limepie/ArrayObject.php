@@ -6,16 +6,13 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 {
     public $attributes = [];
 
-    public function __construct($array)
+    public function __construct(ArrayObject|array|\stdClass|null $array)
     {
-        // 키를 object형태로 다루려면 camelize될수 있어야 하므로 소문자로 변환한다.
-        //$this->attributes = \Limepie\array_change_key_case_recursive($array, \CASE_LOWER);
-
         if ($array instanceof \Limepie\ArrayObject) {
             $this->attributes = $array->attributes;
         } elseif ($array instanceof \stdClass) {
             $this->attributes = (array) $array;
-        } else {
+        } elseif (true === \is_array($array)) {
             $this->attributes = $array;
         }
     }
@@ -114,7 +111,6 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         // field name
         $isOrEmpty = false;
         $isOrNull  = false;
-
         $fieldName = \Limepie\decamelize(\substr($name, 3));
 
         if (!$name) {
@@ -275,7 +271,9 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
     public function toJson($option = 0) : string
     {
-        return \json_encode($this->buildArray($this), $option);
+        $attributes = $this->buildArray($this);
+
+        return \json_encode($attributes, $option);
     }
 
     private function buildArray($d)

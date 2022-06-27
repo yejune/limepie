@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Password extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         $value = \htmlspecialchars((string) $value);
 
@@ -19,22 +19,19 @@ class Password extends \Limepie\Form\Generation\Fields
             $readonly = ' readonly="readonly"';
         }
 
-        $html = <<<EOT
-        <input type="password" class="form-control" name="{$key}" value="" data-default="{$default}"${readonly} />
+        return <<<EOT
+        <input type="password" class="form-control" name="{$key}" data-rule-name="{$ruleName}" value="" data-default="{$default}"{$readonly} />
 
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = (string) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

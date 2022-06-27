@@ -2,7 +2,7 @@
 
 namespace Limepie\Pdo\Driver;
 
-use Limepie\Pdo\Exception as Exception;
+use Limepie\Pdo\Exception;
 
 class Mysql extends \Limepie\Pdo
 {

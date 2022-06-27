@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Checkbox extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         $value = (string) $value;
 
@@ -37,7 +37,7 @@ class Checkbox extends \Limepie\Form\Generation\Fields
         }
 
         $html = <<<EOT
-        <div><input type="checkbox" class="xform-control" name="{$key}" value="1" {$checked} ${onclick}{$style} /> <span>{$title}</span></div>
+        <div><input type="checkbox" class="xform-control" name="{$key}" data-rule-name="{$ruleName}" value="1" {$checked} {$onclick}{$style} /> <span>{$title}</span></div>
 
 EOT;
 
@@ -47,11 +47,10 @@ EOT;
     public static function read($key, $property, $value)
     {
         $value = (bool) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

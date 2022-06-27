@@ -28,6 +28,8 @@ class Model extends ArrayObject
 
     public $attributes = [];
 
+    public $originAttributes = [];
+
     public $rawAttributes = [];
 
     public $selectColumns = ['*'];
@@ -80,12 +82,12 @@ class Model extends ArrayObject
 
     public static $debug = false;
 
-    public static function newInstance(\Pdo $pdo = null, array $attributes = []) : self
+    public static function newInstance(\PDO $pdo = null, array $attributes = []) : self
     {
         return new self($pdo, $attributes);
     }
 
-    public function __construct(\Pdo $pdo = null, array $attributes = [])
+    public function __construct(\PDO $pdo = null, array $attributes = [])
     {
         if ($pdo) {
             $this->setConnect($pdo);
@@ -97,7 +99,7 @@ class Model extends ArrayObject
         $this->keyName = $this->primaryKeyName;
     }
 
-    public function __invoke(\Pdo $pdo = null)
+    public function __invoke(\PDO $pdo = null)
     {
         if ($pdo) {
             $this->setConnect($pdo);
@@ -141,7 +143,7 @@ class Model extends ArrayObject
         }
 
         if (0 === \strpos($name, 'matchAll')) {
-            $this->getAllColumns();
+            $this->addAllColumns();
 
             return $this->buildMatch($name, $arguments);
         }
@@ -159,9 +161,15 @@ class Model extends ArrayObject
         }
 
         if (0 === \strpos($name, 'getAllBy')) {
-            $this->getAllColumns();
+            $this->addAllColumns();
 
             return $this->buildGetBy($name, $arguments, 8);
+        }
+
+        if ('getAll' === $name) {
+            $this->addAllColumns();
+
+            return $this->get(...$arguments);
         }
 
         if (0 === \strpos($name, 'getBy')) {
@@ -177,9 +185,15 @@ class Model extends ArrayObject
         }
 
         if (0 === \strpos($name, 'getsAllBy')) {
-            $this->getAllColumns();
+            $this->addAllColumns();
 
             return $this->buildGetsBy($name, $arguments, 9);
+        }
+
+        if ('getsAll' === $name) {
+            $this->addAllColumns();
+
+            return $this->gets(...$arguments);
         }
 
         if (0 === \strpos($name, 'getsBy')) {
@@ -339,7 +353,7 @@ class Model extends ArrayObject
                                 if (\Limepie\is_binary($value)) {
                                     try {
                                         $body = \Limepie\Aes::unpack($value);
-                                    } catch(\Exception) {
+                                    } catch (\Exception) {
                                         $body = [];
                                     }
                                     $value = new \Limepie\ArrayObject($body);
@@ -353,7 +367,13 @@ class Model extends ArrayObject
                             break;
                         case 'json':
                             if ($value) {
-                                $value = new \Limepie\ArrayObject(\json_decode($value, true));
+                                $body = \json_decode($value, true);
+
+                                if ($body) {
+                                    $value = new \Limepie\ArrayObject($body);
+                                } else {
+                                    $value = [];
+                                }
                             } else {
                                 $value = [];
                             }
@@ -361,8 +381,10 @@ class Model extends ArrayObject
                             break;
                         case 'yml':
                         case 'yaml':
-                            if ($value) {
-                                $value = new \Limepie\ArrayObject(\yaml_parse($value));
+                            $body = \yaml_parse($value);
+
+                            if ($body) {
+                                $value = new \Limepie\ArrayObject($body);
                             } else {
                                 $value = [];
                             }
@@ -779,7 +801,7 @@ class Model extends ArrayObject
         return $this->pdo;
     }
 
-    public function setConnect(\Pdo $connect)
+    public function setConnect(\PDO $connect)
     {
         return $this->pdo = $connect;
     }
@@ -866,7 +888,7 @@ class Model extends ArrayObject
 
                                 break;
                             case 'json':
-                                $value = \json_encode($value);
+                                // $value = \json_encode($value);
 
                                 break;
                             case 'yml':
@@ -945,6 +967,27 @@ class Model extends ArrayObject
         ];
 
         foreach ($this->allColumns as $column) {
+            if (true === isset($this->originAttributes[$column])) {
+                if ($this->attributes[$column] == $this->originAttributes[$column]) {
+                    continue;
+                }
+            }
+
+            if (true === isset($this->dataStyles[$column])
+                && 'json' == $this->dataStyles[$column]) {
+                if (true === isset($this->originAttributes[$column]) && $this->originAttributes[$column]) {
+                    if ($this->originAttributes[$column] instanceof \Limepie\ArrayObject) {
+                        $target = $this->originAttributes[$column]->attributes;
+                    } else {
+                        $target = $this->originAttributes[$column];
+                    }
+
+                    if (\json_decode($this->attributes[$column], true) == $target) {
+                        continue;
+                    }
+                }
+            }
+
             if ($this->sequenceName === $column) {
             } else {
                 if ('created_ts' === $column || 'updated_ts' === $column) {
@@ -989,7 +1032,7 @@ class Model extends ArrayObject
 
                                 break;
                             case 'json':
-                                $value = \json_encode($value);
+                                // $value = \json_encode($value);
 
                                 break;
                             case 'yml':
@@ -1016,36 +1059,41 @@ class Model extends ArrayObject
                 }
             }
         }
-        $column = \implode(', ', $columns);
-        $where  = $this->primaryKeyName;
-        $sql    = <<<SQL
-            UPDATE
-                `{$this->tableName}`
-            SET
-                {$column}
-            WHERE
-            `{$where}` = :{$where}
-        SQL;
 
-        if (true === $checkUpdatedTs) {
-            $sql .= ' AND updated_ts = :check_updated_ts';
-            $binds[':check_updated_ts'] = $this->attributes['updated_ts'];
-        }
+        if ($columns) {
+            $column = \implode(', ', $columns);
+            $where  = $this->primaryKeyName;
+            $sql    = <<<SQL
+                UPDATE
+                    `{$this->tableName}`
+                SET
+                    {$column}
+                WHERE
+                `{$where}` = :{$where}
+            SQL;
 
-        if (static::$debug) {
-            $this->print($sql, $binds);
-            \Limepie\Timer::start();
-        }
-
-        if ($this->getConnect()->set($sql, $binds)) {
-            if (static::$debug) {
-                echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
+            if (true === $checkUpdatedTs) {
+                $sql .= ' AND updated_ts = :check_updated_ts';
+                $binds[':check_updated_ts'] = $this->attributes['updated_ts'];
             }
 
-            return $this;
+            if (static::$debug) {
+                $this->print($sql, $binds);
+                \Limepie\Timer::start();
+            }
+
+            if ($this->getConnect()->set($sql, $binds)) {
+                if (static::$debug) {
+                    echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
+                }
+
+                return $this;
+            }
+
+            return false;
         }
 
-        return false;
+        return $this;
     }
 
     public function delete(bool $recursive = false)
@@ -1084,17 +1132,19 @@ class Model extends ArrayObject
 
     public function objectToDelete() : bool
     {
-        if (true === isset($this->attributes[$this->primaryKeyName])) {
+        if (true === isset($this->attributes[$this->primaryKeyName])) { // 단일 row
             $this->iteratorToDelete($this->attributes);
             $this->doDelete();
 
             return true;
         }
 
-        foreach ($this->attributes as $index => $attribute) {
+        foreach ($this->attributes as $index => $attribute) { // multi rows
             if (true === isset($attribute[$attribute->primaryKeyName])) {
                 $this->iteratorToDelete($attribute);
                 $attribute($this->getConnect())->doDelete();
+
+                unset($this->attributes[$index]);
             }
         }
 
@@ -1106,6 +1156,7 @@ class Model extends ArrayObject
         if (true == $this->deleteLock) {
             return true;
         }
+
         if (true === isset($this->attributes[$this->primaryKeyName])) {
             $sql = <<<SQL
                 DELETE
@@ -1160,14 +1211,19 @@ class Model extends ArrayObject
                 if (static::$debug) {
                     echo '<div style="font-size: 9pt;">ㄴ ' . \Limepie\Timer::stop() . '</div>';
                 }
-                $object->primaryKeyValue = '';
-                $object->attributes      = [];
+                $object->primaryKeyValue  = '';
+                $object->attributes       = [];
+                $object->originAttributes = [];
                 unset($ojbect);
                 $result = true;
             }
         }
 
         if ($result) {
+            $this->primaryKeyValue  = '';
+            $this->attributes       = [];
+            $this->originAttributes = [];
+
             return $this;
         }
 
@@ -1305,7 +1361,16 @@ class Model extends ArrayObject
         return $this;
     }
 
-    public function getAllColumns() : self
+    public function onlyColumns(array $columns) : self
+    {
+        $this->selectColumns   = $this->fkColumns;
+        $this->selectColumns[] = $this->primaryKeyName;
+        $this->selectColumns   = \array_merge($this->selectColumns, $columns);
+
+        return $this;
+    }
+
+    public function addAllColumns() : self
     {
         $this->selectColumns = $this->allColumns;
 
@@ -1517,7 +1582,7 @@ class Model extends ArrayObject
             \Limepie\Timer::start();
         }
 
-        if ($this->getConnect() instanceof \Pdo) {
+        if ($this->getConnect() instanceof \PDO) {
             $data = $this->getConnect()->get1($sql, $binds, false);
 
             if (static::$debug) {
@@ -1590,7 +1655,7 @@ class Model extends ArrayObject
             \Limepie\Timer::start();
         }
 
-        if ($this->getConnect() instanceof \Pdo) {
+        if ($this->getConnect() instanceof \PDO) {
             $data = $this->getConnect()->get1($sql, $binds, false);
 
             if (static::$debug) {
@@ -1805,8 +1870,9 @@ class Model extends ArrayObject
         }
 
         if ($attributes) {
-            $attributes       = $this->getRelations($attributes);
-            $this->attributes = $attributes;
+            $attributes             = $this->getRelations($attributes);
+            $this->attributes       = $attributes;
+            $this->originAttributes = $this->attributes;
         }
 
         return $this;
@@ -1966,8 +2032,9 @@ class Model extends ArrayObject
                 }
             }
 
-            $this->attributes      = $this->getRelation($attributes);
-            $this->primaryKeyValue = $this->attributes[$this->primaryKeyName] ?? null;
+            $this->attributes       = $this->getRelation($attributes);
+            $this->originAttributes = $this->attributes;
+            $this->primaryKeyValue  = $this->attributes[$this->primaryKeyName] ?? null;
 
             return $this;
         }
@@ -2433,7 +2500,7 @@ class Model extends ArrayObject
         $this->query     = $sql;
         $this->binds     = $binds;
 
-        if ($this->getConnect() instanceof \Pdo) {
+        if ($this->getConnect() instanceof \PDO) {
             if (static::$debug) {
                 $this->print(null, null);
                 \Limepie\Timer::start();
@@ -2485,8 +2552,9 @@ class Model extends ArrayObject
                 }
             }
 
-            $this->attributes      = $this->getRelation($attributes);
-            $this->primaryKeyValue = $this->attributes[$this->primaryKeyName] ?? null;
+            $this->attributes       = $this->getRelation($attributes);
+            $this->originAttributes = $this->attributes;
+            $this->primaryKeyValue  = $this->attributes[$this->primaryKeyName] ?? null;
 
             return $this;
         }
@@ -2610,7 +2678,8 @@ class Model extends ArrayObject
         unset($row);
 
         if ($attributes) {
-            $this->attributes = $this->getRelations($attributes);
+            $this->attributes       = $this->getRelations($attributes);
+            $this->originAttributes = $this->attributes;
 
             return $this;
         }

@@ -4,14 +4,15 @@ namespace Limepie\Form\Generation\Fields;
 
 class Button extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         $value = \htmlspecialchars((string) $value);
+
         if (0 === \strlen($value) && true === isset($property['default'])) {
             $value = \htmlspecialchars((string) $property['default']);
         }
         $default = $property['default'] ?? '';
-        $id = \str_replace(['[', ']'], ['_', ''], $key);
+        $id      = \str_replace(['[', ']'], ['_', ''], $key);
 
         $readonly = '';
 
@@ -19,22 +20,23 @@ class Button extends \Limepie\Form\Generation\Fields
             $readonly = ' readonly="readonly"';
         }
         $onclick = '';
+
         if (isset($property['onclick']) && $property['onclick']) {
             $onclick = $property['onclick'];
         }
         $class = '';
+
         if (isset($property['element_class']) && $property['element_class']) {
-            $class = ' '.$property['element_class'];
+            $class = ' ' . $property['element_class'];
         }
 
-
         $init_script = '';
+
         if (isset($property['init_script']) && $property['init_script']) {
             $init_script = $property['init_script'];
         }
 
-
-        $html = <<<EOT
+        return <<<EOT
         <script>
         $(function() {
             {$init_script}
@@ -43,22 +45,19 @@ class Button extends \Limepie\Form\Generation\Fields
             });
         });
         </script>
-        <input type="hidden" class="form-control" readonly="readonly" name="{$key}" value="{$value}" data-default="{$default}" />
-        <input type="button" class="btn{$class}" name="btn{$key}" id="btn{$id}" value="{$property['text']}" ${readonly}/>
+        <input type="hidden" class="form-control" readonly="readonly" name="{$key}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}" />
+        <input type="button" class="btn{$class}" name="btn{$key}" id="btn{$id}" value="{$property['text']}" {$readonly}/>
 
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = (string) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

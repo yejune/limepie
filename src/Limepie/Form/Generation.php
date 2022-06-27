@@ -2,8 +2,6 @@
 
 namespace Limepie\Form;
 
-use Limepie\Di;
-
 class Generation
 {
     public function __construct()
@@ -241,7 +239,7 @@ class Generation
                 if ($spec['list_button_text'] ?? false) {
                     $listButtonText = $spec['list_button_text'];
                 }
-                $innerhtml .= '<a href="../' . (true === isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : '') . '" class="btn btn-secondary float-right">' . $listButtonText . '</a>';
+                $innerhtml .= '<a href="../' . '" class="btn btn-secondary float-right">' . $listButtonText . '</a>';
             }
         }
         $innerhtml .= '</div>';
@@ -288,18 +286,30 @@ class Generation
                 $class = $button['class'];
             }
 
+            //    href: ../../?{=querystring}#additional
+
             if ($button['href'] ?? false) {
                 $href = $button['href'];
                 $flag = '';
+                $qs   = '';
 
                 if (false !== \strpos($href, '#')) {
                     [$href, $flag] = \explode('#', $href, 2);
                 }
 
-                if (false !== \strpos($href, '{=querystring}')) {
-                    $href = \str_replace('{=querystring}', Di::get('request')->getQueryString(), $href);
+                if (false !== \strpos($href, '?')) {
+                    [$href, $qs] = \explode('?', $href, 2);
+
+                    if ($qs) {
+                        $qs = '?' . $qs;
+                    }
+                } else {
+                    $qs = $_SERVER['QSA'];
                 }
-                $href = \rtrim($href, '?');
+
+                if ($qs) {
+                    $href .= $qs;
+                }
 
                 if ($flag) {
                     $href .= '#' . $flag;
@@ -329,7 +339,7 @@ class Generation
 
                 $innerhtml .= '<a href="" data-method="delete" data-value="' . $string . '" ' . \str_replace('{=string}', $string, $description) . ' class="btn ' . $class . '">' . $text . '</a>';
             } elseif ('a' === $button['type']) {
-                $innerhtml .= '<a href="' . $href . (true === isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : '') . '" class="btn ' . $class . '">' . $text . '</a>';
+                $innerhtml .= '<a href="' . $href . '" class="btn ' . $class . '">' . $text . '</a>';
             } elseif ('open' === $button['type']) {
                 if (isset($button['name'])) {
                     $name = $button['name'];

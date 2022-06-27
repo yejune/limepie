@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Hidden extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         $value = \htmlspecialchars((string) $value);
 
@@ -18,11 +18,10 @@ class Hidden extends \Limepie\Form\Generation\Fields
                 $value = \Limepie\uuid();
             }
         }
-        $html = <<<EOT
-    <input type="hidden" class="form-control" readonly="readonly" name="{$key}" value="{$value}" data-default="{$default}" />
-EOT;
 
-        return $html;
+        return <<<EOT
+    <input type="hidden" class="form-control" readonly="readonly" name="{$key}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}" />
+EOT;
     }
 
     public static function read($key, $property, $value)

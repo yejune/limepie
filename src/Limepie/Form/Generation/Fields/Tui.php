@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Tui extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         //$value = \htmlspecialchars((string) $value);
 
@@ -14,8 +14,8 @@ class Tui extends \Limepie\Form\Generation\Fields
         $default = $property['default'] ?? '';
         $rows    = $property['rows']    ?? 5;
 
-        $class      = $property['element_class'] ?? '';
-        $linkcss    = $property['linkcss']       ?? '';
+        $class   = $property['element_class'] ?? '';
+        $linkcss = $property['linkcss']       ?? '';
 
         if ($linkcss) {
             $linkcss = '<link rel="stylesheet" href="' . $linkcss . '"></link>';
@@ -32,40 +32,45 @@ class Tui extends \Limepie\Form\Generation\Fields
         } else {
             $editStyle = 'wysiwyg';
         }
+
         if (true === isset($property['fileserver']) && $property['fileserver']) {
             $fileserver = $property['fileserver'];
         } else {
             $fileserver = '';
         }
-        $uuid   = \Limepie\random_uuid();
+        $uuid = \Limepie\random_uuid();
 
-        $id     = \uniqid();
-        $htmlid = 'html' . $id;
-
-        if (false === \strpos($key, ']')) {
-            $htmlkey = $key . '_html';
+        if (\preg_match_all('#(?P<eids>__[a-zA-Z0-9]{13}__)#', '__6288d7db50b82__' . $key, $match)) {
+            $id = \Limepie\array_last($match['eids']);
         } else {
-            $htmlkey = \preg_replace('#\]$#', '_html]', $key);
+            $id = \uniqid();
         }
 
-        if($fileserver) {
+        if (false === \strpos($key, ']')) {
+            $uuidkey = $key . '_uuid';
+        } else {
+            $uuidkey = \preg_replace('#\]$#', '_uuid]', $key);
+        }
+
+        if ($fileserver) {
             $imageButton = '';
         } else {
             $imageButton = "#tui{$id} .tui-image{
                 display: none !important;
             }";
         }
-        $html = <<<EOT
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tui-editor/1.4.10/tui-editor.css"></link>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tui-editor/1.4.10/tui-editor-contents.css"></link>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.48.4/codemirror.css"></link>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css"></link>
-        {$linkcss}
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/tui-editor/1.4.10/tui-editor-Editor-full.js"></script>
 
-        <input type="hidden" name="{$key}_uuid" value="{$uuid}">
-        <textarea class="form-control d-none" id="textarea{$htmlid}" name="{$key}">{$value}</textarea>
-        <div id="tui{$id}" class="form-control {$class}"  style="display:block; width: 100%">{$value}</div>
+        $tuid = \trim($id, '_');
+
+        return <<<EOT
+        <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+        <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
+        {$linkcss}
+
+        <input type="hidden" class="tui_ids" value="{$tuid}">
+        <input type="hidden" name="{$uuidkey}" value="{$uuid}">
+        <textarea class="form-control d-none" id="textarea_html{$id}" name="{$key}" data-rule-name="{$ruleName}">{$value}</textarea>
+        <div id="tui{$id}" class="form-control {$class} tui-body" style="display:block; width: 100%">{$value}</div>
         <style>#tui{$id} .te-mode-switch-section {
         //  display: none !important;
         //  height: 0;
@@ -74,64 +79,18 @@ class Tui extends \Limepie\Form\Generation\Fields
         </style>
 <script>
 $(function() {
-    var editor = new tui.Editor({
-        el: document.querySelector('#tui{$id}'),
-        previewStyle: '{$previewStyle}',
-        width: '100%',
-        height: 'auto',
-        initialEditType: '{$editStyle}',
-        events: {
-            change: function() {
-                console.log('is mark', editor.isMarkdownMode());
-                // if(editor.isMarkdownMode() == true) {
-                //     $('#textarea{$id}').val(editor.getMarkdown());
-                // } else {
-                //     $('#textarea{$id}').val(editor.getHtml());
-                // }
-                $('#textarea{$htmlid}').val(editor.getHtml());
-                $('#textarea{$htmlid}').change();
-            }
-        },
-        hooks: {
-            'addImageBlobHook': function(blob, callback) {
-                var formData = new FormData();
-                formData.append('image', blob);
-                formData.append('uuid', "{$uuid}");
-                $.ajax({
-                    url: "{$fileserver}",
-                    enctype: 'multipart/form-data',
-                    data: formData,
-                    dataType : 'json',
-                    contentType: false,
-                    processData: false,
-                    cache: false,
-                    type: 'POST',
-                    success: function(response){
-                        callback(response.payload.url, '');
-                        return false;
-                    },
-                    error: function(e) {
-                    }
-                });
-            }
-        },
-        exts: ['scrollSync']
-      });
-      editor.removeToolbarItem('image')
+    tui("{$id}");
 });
 </script>
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = \nl2br((string) $value);
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 EOT;
-
-        return $html;
     }
 }

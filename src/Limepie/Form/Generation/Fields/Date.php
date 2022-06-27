@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Date extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         if ($value) {
             $value = \date('Y-m-d', \strtotime($value));
@@ -12,7 +12,7 @@ class Date extends \Limepie\Form\Generation\Fields
 
         $default = $property['default'] ?? '';
 
-        if(!$value && $default) {
+        if (!$value && $default) {
             $value = \date('Y-m-d', \strtotime($default));
         }
 
@@ -42,25 +42,22 @@ EOD;
 EOD;
         }
 
-        $html = <<<EOT
+        return <<<EOT
         <div class="input-group">
         {$prepend}
-        <input type="date" class="form-control" name="{$key}" value="{$value}" data-default="{$default}"${readonly} />
+        <input type="date" class="form-control" name="{$key}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}"{$readonly} />
         {$append}
         </div>
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = (string) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

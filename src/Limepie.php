@@ -31,6 +31,14 @@ function cprint($content, $nl2br = false)
 
     return '';
 }
+function cprint_tags($content, array|string|null $allowTags = null)
+{
+    if ($content) {
+        return \strip_tags($content, $allowTags);
+    }
+
+    return '';
+}
 
 function per1($point, $step)
 {
@@ -49,10 +57,22 @@ function per1($point, $step)
 
 function date_format(string $date, $format)
 {
+    $time = \strtotime($date);
+
     $week   = ['일', '월', '화', '수', '목', '금', '토'];
-    $time   = \strtotime($date);
     $yoil   = $week[\date('w', $time)];
     $format = \str_replace('w', $yoil, $format);
+
+    $week   = ['AM' => '오전', 'PM' => '오후'];
+    $yoil   = $week[\date('A', $time)];
+    $format = \str_replace('A', $yoil, $format);
+
+    $hour = \date('H', $time);
+
+    if ($hour > 12) {
+        $hour -= 12;
+    }
+    $format = \str_replace('h', (string) $hour, $format);
 
     return (new \DateTime($date))->format($format);
 
@@ -389,16 +409,23 @@ function array_percent(array $numbers, $precision = 0)
     return $result;
 }
 
-function array_insert_before(array $array, $key, array $new)
+function array_insert_before(array $array, $key, array|string $new)
 {
+    if (false === \is_array($new)) {
+        $new = [$new];
+    }
     $keys = \array_keys($array);
     $pos  = (int) \array_search($key, $keys, true);
 
     return \array_merge(\array_slice($array, 0, $pos), $new, \array_slice($array, $pos));
 }
 
-function array_insert_after(array $array, $key, array $new)
+function array_insert_after(array $array, $key, array|string $new)
 {
+    if (false === \is_array($new)) {
+        $new = [$new];
+    }
+
     $keys  = \array_keys($array);
     $index = (int) \array_search($key, $keys, true);
     $pos   = false === $index ? \count($array) : $index + 1;
@@ -1087,7 +1114,7 @@ function decamelize($word)
 function camelize($word)
 {
     return \preg_replace_callback(
-        '/(^|_|-)([a-zA-Z]+)/',
+        '/(^|_|-|:)([a-zA-Z]+)/',
         function ($m) {
             return \ucfirst(\strtolower("{$m[2]}"));
         },
@@ -1186,17 +1213,19 @@ function array_flatten_put($data, $flattenKey, $value)
 
 function array_flatten_remove($data, $flattenKey)
 {
-    $keys = \explode('[', \str_replace(']', '', $flattenKey));
-    $d    = &$data;
+    $items       = &$data;
+    $segments    = \explode('[', \str_replace(']', '', $flattenKey));
+    $lastSegment = \array_pop($segments);
 
-    foreach ($keys as $key) {
-        if (true === isset($d[$key])) {
-            $d = &$d[$key];
-        } else {
-            throw new \Limepie\Exception('not found key');
+    foreach ($segments as $segment) {
+        if (true === isset($items[$segment]) || false === \is_array($items[$segment])) {
+            continue;
         }
+
+        $items = &$items[$segment];
     }
-    unset($d);
+
+    unset($items[$lastSegment]);
 
     return $data;
 }

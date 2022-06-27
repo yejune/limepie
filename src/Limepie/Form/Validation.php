@@ -332,9 +332,11 @@ class Validation
                             unset($data[$fixPropertyKey]);
                         }
                     } else {
+                        {
                         // false 가 아닌 error임. 디폴트 form struct가 있어서 property spec이 배열이면 배열로 넘어와야 함.
-
-                        throw new \Exception($fixPropertyKey . ' data not found.');
+                        // -> 폼이 생성되어있지만 필수가아니라 비어있는 채로 넘어오는 키가 있는 빈배열들이있다. 이것을 정리하면 빈 값이 되므로 에러 처리 할 필요 없다.
+                        //throw new \Exception($fixPropertyKey . ' data not found.');
+                        }
                     }
                 }
             } else {

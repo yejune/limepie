@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Text extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         if (true === \is_array($value)) {
             $value = '';
@@ -23,12 +23,14 @@ class Text extends \Limepie\Form\Generation\Fields
         }
 
         $style = '';
-        if(true === isset($property['readonly']) && $property['readonly']) {
-            if(false === isset($property['element_style'])) {
+
+        if (true === isset($property['readonly']) && $property['readonly']) {
+            if (false === isset($property['element_style'])) {
                 $property['element_style'] = '';
             }
             $property['element_style'] .= ' pointer-events: none;';
         }
+
         if (isset($property['element_style']) && $property['element_style']) {
             $style = ' style="' . $property['element_style'] . '"';
         }
@@ -69,25 +71,23 @@ EOD;
 </div>
 EOD;
         }
-        $html = <<<EOT
+
+        return <<<EOT
         <div class="input-group">
         {$prepend}
-        <input type="text" class="form-control{$elementClass}" name="{$key}" value="{$value}" data-default="{$default}"${readonly}${disabled}{$placeholder}{$style} />
+        <input type="text" class="form-control{$elementClass}" name="{$key}" value="{$value}" data-rule-name="{$ruleName}" data-default="{$default}"{$readonly}{$disabled}{$placeholder}{$style} />
         {$append}
         </div>
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = (string) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

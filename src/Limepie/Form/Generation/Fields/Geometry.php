@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Geometry extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         //$value = \htmlspecialchars((string) $value);
 
@@ -59,17 +59,19 @@ EOD;
             $callback = $geometryId . '_initMap';
         }
         $display = 'display: none;';
-        if($value) {
+
+        if ($value) {
             $display = 'display: block;';
         }
-        $html   = <<<EOT
+
+        return <<<EOT
 
 <script src="/assets/googlemap/jquery.googlemap.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBlMmLIXhf24iAAXMeXGllYsZOTkc9bgtM"></script>
 
 
 <div class='input-group' style='position:relative'>
-    <input class="form-control" id="address{$geometryId}" name="{$key}" value="{$value}">
+    <input class="form-control" id="address{$geometryId}" name="{$key}" data-rule-name="{$ruleName}" value="{$value}">
 
     <span class="btn-group input-group-btn">
     <button class="btn btn-geometry" type="button" id="submit{$geometryId}"><span class="fas fa-search"></span></button>
@@ -131,18 +133,15 @@ $(function() {
 });
 </script>
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = (string) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

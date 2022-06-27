@@ -4,12 +4,12 @@ namespace Limepie\Form\Generation\Fields;
 
 class Search extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         if (0 === \strlen((string) $value)) {
             $value = $property['default'] ?? '';
         }
-        $id = \str_replace(['[', ']'], ['_', ''], $key);
+        $id = 'id' . \time() . '_' . \str_replace(['[', ']'], ['_', ''], $key);
 
         $value    = \htmlspecialchars((string) $value);
         $default  = $property['default']  ?? '';
@@ -176,7 +176,7 @@ EOD;
         return <<<EOT
         <div class="input-group">
         {$prepend}
-        <select class="form-control{$class}" {$style} name="{$key}" id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>
+        <select class="form-control{$class}" {$style} name="{$key}" data-rule-name="{$ruleName}" id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>
         {$append}
         </div>
         {$scripts}

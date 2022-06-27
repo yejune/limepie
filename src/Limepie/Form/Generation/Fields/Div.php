@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Div extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         // $value = \htmlspecialchars((string) $value);
 
@@ -19,20 +19,17 @@ class Div extends \Limepie\Form\Generation\Fields
             $elementClass = $property['element_class'];
         }
 
-        $html = <<<EOT
-            <div class="${elementClass}"></div>
+        return <<<EOT
+            <div class="{$elementClass}"></div>
         EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = (string) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
             {$value}
         EOT;
-
-        return $html;
     }
 }

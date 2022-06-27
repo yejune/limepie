@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Datetime extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         if ($value) {
             $value = \date('Y-m-d\TH:i:s', \strtotime($value));
@@ -23,7 +23,7 @@ class Datetime extends \Limepie\Form\Generation\Fields
         }
 
         return <<<EOT
-        <input type="datetime-local" class="form-control" name="{$key}" value="{$value}" data-default="{$default}"{$readonly} />
+        <input type="datetime-local" class="form-control" name="{$key}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}"{$readonly} />
 
 EOT;
     }

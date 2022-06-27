@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Postcode extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         $json = \json_decode($value, true);
 
@@ -34,7 +34,8 @@ class Postcode extends \Limepie\Form\Generation\Fields
         $zoncode      = $json['zonecode']     ?? '';
         $roadAddress  = $json['roadAddress']  ?? '';
         $jibunAddress = $json['jibunAddress'] ?? '';
-        $html         = <<<EOT
+
+        return <<<EOT
         <div class='input-group input-group-postcode col-md-5'>
             <div class="input-group-prepend">
             <span class="input-group-text">우편번호</span>
@@ -59,7 +60,7 @@ class Postcode extends \Limepie\Form\Generation\Fields
             <input type="text" class="form-control address_jibun" readonly="readonly" value="{$jibunAddress}" id="{$id}_jibun" />
         </div>
 
-        <input type="hidden" name="{$key}" value='{$value}' data-default="{$default}" />
+        <input type="hidden" name="{$key}" data-rule-name="{$ruleName}" value='{$value}' data-default="{$default}" />
 
 
 <script src="//ssl.daumcdn.net/dmaps/map_js_init/postcode.v2.js"></script>
@@ -133,18 +134,15 @@ class Postcode extends \Limepie\Form\Generation\Fields
 
 </script>
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = (string) $value;
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }

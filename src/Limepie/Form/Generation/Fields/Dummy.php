@@ -4,7 +4,7 @@ namespace Limepie\Form\Generation\Fields;
 
 class Dummy extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value)
+    public static function write($key, $property, $value, $ruleName)
     {
         // $value = \htmlspecialchars((string) $value);
 
@@ -26,28 +26,27 @@ class Dummy extends \Limepie\Form\Generation\Fields
             $elementStyle = ' ' . $property['element_style'];
         }
 
-        if(true === isset($property['items']) && true === is_array($property['items'])) {
+        if (true === isset($property['items']) && true === \is_array($property['items'])) {
             $value = $property['items'][$value] ?? $value;
         }
+
         if ($value) {
-            $value = \nl2br((string)$value);
+            $value = \nl2br((string) $value);
         }
-        $html = <<<EOT
+
+        return <<<EOT
         <div class="{$elementClass}" style="{$elementStyle}">{$value}</div>
 
 EOT;
-
-        return $html;
     }
 
     public static function read($key, $property, $value)
     {
         $value = \nl2br((string) $value);
-        $html  = <<<EOT
+
+        return <<<EOT
         {$value}
 
 EOT;
-
-        return $html;
     }
 }
