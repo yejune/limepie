@@ -918,6 +918,7 @@ class Model extends ArrayObject
                 }
             }
         }
+
         $column = \implode(', ', $columns);
         $values = \implode(', ', $values);
         $sql    = <<<SQL
@@ -967,7 +968,10 @@ class Model extends ArrayObject
         ];
 
         foreach ($this->allColumns as $column) {
-            if (true === isset($this->originAttributes[$column])) {
+            if (
+                true === isset($this->originAttributes[$column])
+                && false == isset($this->rawAttributes[$column])
+            ) {
                 if ($this->attributes[$column] == $this->originAttributes[$column]) {
                     continue;
                 }
