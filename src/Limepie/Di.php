@@ -238,4 +238,9 @@ class Di
 
         throw new \Limepie\Exception('"' . $fieldName . '" service provider not found', 40000);
     }
+
+    public static function getKeys()
+    {
+        return \array_keys(Di::instance()->properties);
+    }
 }
