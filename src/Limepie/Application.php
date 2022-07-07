@@ -136,7 +136,7 @@ class Application
         return $this->path;
     }
 
-    public function getProperties() : array | \Limepie\ArrayObject
+    public function getProperties() : array|ArrayObject
     {
         return $this->properties;
     }
@@ -174,7 +174,7 @@ class Application
         $actionName     = $this->getDefaultActionName();
         $path           = $this->getDefaultPath();
         $properties     = $this->getDefaultProperties();
-        $store     = $this->getDefaultStore();
+        $store          = $this->getDefaultStore();
 
         if (true === \is_array($arguments)) {
             if (true === isset($arguments['namespace'])) {
@@ -233,7 +233,7 @@ class Application
         $this->controllerName = $controllerName;
         $this->path           = $path;
         $this->properties     = $properties;
-        $this->store         = $store;
+        $this->store          = $store;
 
         $classFile = \str_replace('\\', '/', \strtr($this->className, ['\\App\\' => __BASE_DIR__ . '/app/'])) . '.' . $this->extension;
 
@@ -275,7 +275,7 @@ class Application
         }
 
         if (false === \class_exists($className)) {
-            throw new \Limepie\Exception('Class "' . $className . '" not found');
+            throw (new \Limepie\Exception('Class "' . $className . '" not found', 404))->setDisplayMessage('page not found');
         }
 
         try {
@@ -287,18 +287,22 @@ class Application
         }
 
         if (null === $methods) {
-            throw new \Limepie\Exception('Class "' . $className . '" name error');
+            throw (new \Limepie\Exception('Class "' . $className . '" name error', 404))->setDisplayMessage('page not found');
         }
         $methodNames = \preg_grep('/^' . $actionName . '/', $methods);
 
         // From{REQUEST_METHOD}를 붙임
         if (false !== \array_search($actionName . $from, $methodNames, true)) {
             return $actionName . $from;
-        // FromAll을 붙임
-        } elseif (false !== \array_search($actionName . $fromAll, $methodNames, true)) {
+            // FromAll을 붙임
+        }
+
+        if (false !== \array_search($actionName . $fromAll, $methodNames, true)) {
             return $actionName . $fromAll;
-        // 정확함
-        } elseif (false !== \array_search($actionName, $methodNames, true)) {
+            // 정확함
+        }
+
+        if (false !== \array_search($actionName, $methodNames, true)) {
             return $actionName;
         }
         $likely[] = $org;
@@ -310,6 +314,6 @@ class Application
         \rsort($likely);
 
         // ERRORCODE: 40002, method not found
-        throw new Exception('"' . \implode('" or "', \array_unique($likely)) . '" method not found in ' . $className . '" class', 40002);
+        throw (new \Limepie\Exception('"' . \implode('" or "', \array_unique($likely)) . '" method not found in ' . $className . '" class', 404))->setDisplayMessage('page not found');
     }
 }
