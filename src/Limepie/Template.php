@@ -127,8 +127,8 @@ class Template
     }
 
     /**
-     * @param  $fid
-     * @param  $print
+     * @param $fid
+     * @param $print
      *
      * @return mixed
      */
@@ -148,7 +148,7 @@ class Template
     }
 
     /**
-     * @param  $fid
+     * @param $fid
      *
      * @return mixed
      */
@@ -170,7 +170,7 @@ class Template
     }
 
     /**
-     * @param  $fid
+     * @param       $fid
      * @param mixed $addAssign
      * @param mixed $scope
      */
@@ -194,7 +194,7 @@ class Template
     }
 
     /**
-     * @param  $fid
+     * @param $fid
      *
      * @return mixed
      */
@@ -234,7 +234,7 @@ class Template
     }
 
     /**
-     * @param  $fid
+     * @param $fid
      *
      * @return mixed
      */
@@ -257,7 +257,7 @@ class Template
         $tplPath2 = \Limepie\stream_resolve_include_path($tplPath);
 
         if (false === $tplPath2) {
-            throw new Exception\Http('cannot find defined template "' . $tplPath . '"', 404101);
+            throw (new Exception('cannot find defined template "' . $tplPath . '"', 404))->setDisplayMessage('page not found');
         }
 
         $this->cpl_[$fid] = $tplPath2;
@@ -314,7 +314,7 @@ class Template
     }
 
     /**
-     * @param  $fid
+     * @param $fid
      *
      * @return mixed
      */
@@ -328,7 +328,7 @@ class Template
         }
 
         if (false === $tplPath) {
-            throw new Exception\Http('cannot find defined template "' . $tplPath . '"', 404);
+            throw (new Exception('cannot find defined template "' . $tplPath . '"', 404))->setDisplayMessage('page not found');
         }
         //( 24 + 1 + 40 + 1 ) + ( 11 + 1 )
         $cplHead = '<?php /* Peanut\\Template ' . \sha1_file($tplPath, false) . ' ' . \date('Y/m/d H:i:s', \filemtime($tplPath)) . ' ' . $tplPath . ' ';
@@ -353,7 +353,7 @@ class Template
         //\pr($cplPath2);
 
         if (false === $cplPath2) {
-            throw new Exception\Http('cannot find defined template compile "' . $cplPath . '"', 404);
+            throw (new Exception('cannot find defined template compile "' . $cplPath . '"', 404))->setDisplayMessage('page not found');
         }
 
         return $cplPath2;
