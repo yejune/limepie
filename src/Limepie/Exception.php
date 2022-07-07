@@ -51,6 +51,18 @@ class Exception extends \Exception
             if ($trace['file'] ?? false) {
                 $this->setFile($trace['file']);
             }
+
+            if ($trace['function'] ?? false) {
+                $this->setFunction($trace['function']);
+            }
+
+            if ($trace['class'] ?? false) {
+                $this->setClass($trace['class']);
+            }
+
+            if ($trace['type'] ?? false) {
+                $this->setType($trace['type']);
+            }
         }
     }
 
@@ -131,6 +143,26 @@ class Exception extends \Exception
         return $this;
     }
 
+    public function setFunction($function)
+    {
+        $this->function = $function;
+
+        return $this;
+    }
+
+    public function setClass($class)
+    {
+        $this->class = $class;
+
+        return $this;
+    }
+
+    public function setType($type)
+    {
+        $this->type = $type;
+
+        return $this;
+    }
     // public function getTraces()
     // {
     //     if (true === $this->isLocal) {
