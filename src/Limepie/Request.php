@@ -32,6 +32,8 @@ class Request
 
     public $originParameters = [];
 
+    public $originBasePath = '';
+
     public $requestId;
 
     public $httpMethodParameterOverride = false;
@@ -68,8 +70,21 @@ class Request
         $this->reload();
 
         $this->originPath       = $this->path;
+        $this->originBasePath   = $this->path;
         $this->originSegments   = $this->segments;
         $this->originParameters = $this->parameters;
+    }
+
+    public function setOriginBasePath($path)
+    {
+        $this->originBasePath = $path;
+
+        return $this;
+    }
+
+    public function getOriginBasePath()
+    {
+        return $this->originBasePath;
     }
 
     public function reload($requestUri = null)
