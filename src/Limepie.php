@@ -1015,6 +1015,15 @@ function is_boolean_type($var)
     }
 }
 
+function is_enabled($variable)
+{
+    if (false === isset($variable)) {
+        return null;
+    }
+
+    return \filter_var($variable, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+}
+
 function createTree($array)
 {
     switch (count($array)) {
