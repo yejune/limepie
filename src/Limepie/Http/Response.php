@@ -15,4 +15,12 @@ class Response extends \Limepie\Exception
     {
         return $this->response;
     }
+
+    public function __debugInfo()
+    {
+        $data = (array) $this;
+        unset($data['response']);
+
+        return $data;
+    }
 }

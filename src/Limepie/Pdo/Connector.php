@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie\Pdo;
 
@@ -36,9 +38,7 @@ class Connector
     }
 
     /**
-     * #[username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
-     *
-     * @param $url
+     * #[username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN].
      *
      * @return array
      */
@@ -99,12 +99,14 @@ class Connector
             }
 
             if ($this->persistent) {
-                $options[\Pdo::ATTR_PERSISTENT] = $this->persistent;
+                $options[\PDO::ATTR_PERSISTENT] = $this->persistent;
             }
 
             return new $class($this->dsn, $this->username, $this->password, $options);
         } catch (\Throwable $e) {
-            throw $e;
+            throw (new \Limepie\Exception($e, 500))
+                ->setDisplayMessage('database connect error.', __FILE__, __LINE__)
+            ;
         }
     }
 

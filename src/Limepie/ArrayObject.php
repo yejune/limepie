@@ -1,8 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie;
 
-class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializable //, \Serializable
+class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializable // , \Serializable
 {
     public $attributes = [];
 
@@ -119,7 +121,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
         if (
             (
-                false === isset($this->attributes[$fieldName])
+                false   === isset($this->attributes[$fieldName])
                 || true === \is_null($this->attributes[$fieldName])
             )
             && true === \array_key_exists(0, $arguments)
@@ -127,7 +129,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             $default = $arguments[0];
 
             if (true === \is_array($default)) {
-                return new ArrayObject($default);
+                return new \Limepie\Model();
             }
 
             return $default;
@@ -138,7 +140,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         ) {
             // 배열일 경우에는 arrayobject에 담아 리턴
             if (true === \is_array($this->attributes[$fieldName])) {
-                return new ArrayObject($this->attributes[$fieldName]);
+                return new self($this->attributes[$fieldName]);
             }
 
             return $this->attributes[$fieldName];
@@ -198,7 +200,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
     }
 
     #[\ReturnTypeWillChange]
-    public function count()// : int
+    public function count() : int
     {
         return \count($this->attributes);
     }
@@ -255,7 +257,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         }
 
         return $this->attributes[$offset];
-        //return isset($this->attributes[$offset]) ? $this->attributes[$offset] : null;
+        // return isset($this->attributes[$offset]) ? $this->attributes[$offset] : null;
     }
 
     public function toArray(\Closure $callbackFunction = null)
@@ -279,7 +281,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
     private function buildArray($d)
     {
         if ($d instanceof \Limepie\ArrayObject) {
-            $d = \array_map([__CLASS__, __METHOD__], $d->attributes);
+            $d = \array_map(__METHOD__, $d->attributes);
         }
 
         if (true === \is_object($d)) {
@@ -287,7 +289,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         }
 
         if (true === \is_array($d)) {
-            return \array_map([__CLASS__, __METHOD__], $d);
+            return \array_map(__METHOD__, $d);
         }
 
         return $d;
@@ -315,6 +317,13 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return $this->attributes[\array_key_last($this->attributes)];
     }
 
+    public function set($attributes)
+    {
+        $this->attributes = $attributes;
+
+        return $this;
+    }
+
     public function children(array $data, array $maps = [], $params = [])
     {
         $request   = Di::getRequest();
@@ -322,7 +331,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         $attribute = [];
 
         foreach ($maps as $step) {
-            $attribute = &$children[$request->getPath(0, $step)]; // ['children'];
+            $attribute = &$children[$request->getPathByUrl(0, $step)]; // ['children'];
             $children  = &$attribute['children'];
         }
 

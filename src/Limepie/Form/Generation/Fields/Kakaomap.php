@@ -6,9 +6,9 @@ class Kakaomap extends \Limepie\Form\Generation\Fields
 {
     public static function write($key, $property, $value, $ruleName)
     {
-        //$value = \htmlspecialchars((string) $value);
+        // $value = \htmlspecialchars((string) $value);
 
-        //$value    = '""';
+        // $value    = '""';
         if (true === \is_array($value)) {
             $result      = $value;
             $encodeValue = \json_encode($value);
@@ -27,8 +27,8 @@ class Kakaomap extends \Limepie\Form\Generation\Fields
             'x' => '33.450701',
             'y' => '126.570667',
         ];
-        //\pr($result);
-        //$value = '0';
+        // \pr($result);
+        // $value = '0';
         $method  = 'place.keywordSearch';
         $comment = '//';
 
@@ -80,7 +80,7 @@ class Kakaomap extends \Limepie\Form\Generation\Fields
                 ];
             }
 
-            //$geometry = '(' . $result[0]['geometry']['location']['lat'] . ' ' . $result[0]['geometry']['location']['lng'] . ')';
+        // $geometry = '(' . $result[0]['geometry']['location']['lat'] . ' ' . $result[0]['geometry']['location']['lng'] . ')';
         } else {
             if (0 === \strlen($value) && true === isset($property['default'])) {
                 $geometry = (string) $property['default'];
@@ -143,7 +143,7 @@ EOD;
             $display = 'd-block';
             $init    = 'mapinit();';
         }
-        //$value = '부산시 해운대구 달맞이길 30';
+        // $value = '부산시 해운대구 달맞이길 30';
 
         return <<<EOT
 <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={$apikey}&libraries=services"></script>
@@ -185,7 +185,7 @@ function kakao_map_init{$geometryId}() {
     map.setCenter(coords);
     marker.setMap(map);
 
-    var map_results = {$encodeValue};
+    var map_results = [0=>{$encodeValue}];
     var map_status = null;
     var address_callback = function(result, status) {
         map_results[0]['fixed_address'] = result;
@@ -199,7 +199,7 @@ function kakao_map_init{$geometryId}() {
             }
         }
         if(map_results && map_results.length > 0) {
-            $("#geometry{$geometryId}").val(JSON.stringify(map_results)).trigger('change');
+            $("#geometry{$geometryId}").val(JSON.stringify(map_results[0])).trigger('change');
         }
     };
     var dragend_event_callback = function() {
@@ -216,7 +216,7 @@ function kakao_map_init{$geometryId}() {
             y: latlng.getLat()
         };
 
-        $("#geometry{$geometryId}").val(JSON.stringify(map_results)).trigger('change');
+        $("#geometry{$geometryId}").val(JSON.stringify(map_results[0])).trigger('change');
     };
 
     var click_event_callback = function(mouseEvent) {
@@ -236,14 +236,14 @@ function kakao_map_init{$geometryId}() {
             y: latlng.getLat()
         };
 
-        $("#geometry{$geometryId}").val(JSON.stringify(map_results)).trigger('change');
+        $("#geometry{$geometryId}").val(JSON.stringify(map_results[0])).trigger('change');
     };
     var zoom = function() {
         // 지도의 현재 레벨을 얻어옵니다
         var level = map.getLevel();
 
         map_results[0]['zoom_level'] = level;
-        $("#geometry{$geometryId}").val(JSON.stringify(map_results)).trigger('change');
+        $("#geometry{$geometryId}").val(JSON.stringify(map_results[0])).trigger('change');
     };
 
     // 일반 지도와 스카이뷰로 지도 타입을 전환할 수 있는 지도타입 컨트롤을 생성합니다

@@ -1,12 +1,14 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie\Form\Generation\Fields;
 
 class Multichoice extends \Limepie\Form\Generation\Fields
 {
-    public static function write($key, $property, $value = [], $ruleName)
+    public static function write($key, $property, $value, $ruleName)
     {
-        //$value = (string) $value;
+        // $value = (string) $value;
 
         if (!$value) {
             $value = [];
@@ -85,7 +87,7 @@ EOD;
             $script  = '';
 
             if (true === isset(static::$conditions[$dotKey2])) {
-                //pr(static::$conditions[$dotKey2]);
+                // pr(static::$conditions[$dotKey2]);
                 foreach (static::$conditions[$dotKey2] as $k1 => $v1) {
                     foreach ($v1 as $k2 => $v2) {
                         $parts2      = \explode('.', $k2);

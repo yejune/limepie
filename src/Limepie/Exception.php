@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie;
 
@@ -10,23 +12,33 @@ class Exception extends \Exception
 
     public $displayMessage;
 
+    public $debugLine;
+
+    public $debugFile;
+
+    public $debugTraces = [];
+
     public $location;
+
+    public $class;
+
+    public $function;
+
+    public $type;
 
     public function __construct($e, int $code = 0)
     {
-        // \pr(\debug_backtrace(limit: 1)[0]);
-
         if ($e instanceof \Throwable) {
             $this->setMessage($e->getMessage());
-            $code = $code ?: $e->getCode();
+            $this->setCode($e->getCode());
 
-            if (false !== \strpos($e->getFile(), '/limepie/src/')) {
-                $trace = $this->getLastTrace();
-            } else {
+            if (false === \strpos($e->getFile(), '/limepie/src/')) {
                 $trace = [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                 ];
+            } else {
+                $trace = $this->getLastTrace();
             }
         } elseif (true === \is_string($e)) {
             $this->setMessage($e);
@@ -34,13 +46,8 @@ class Exception extends \Exception
             if (false !== \strpos($this->getFile(), '/limepie/src/')) {
                 $trace = $this->getLastTrace();
             }
-            // $trace = $this->getLastTrace();
         } else {
             throw new \Exception('exception error');
-        }
-
-        if ($code) {
-            $this->setCode($code);
         }
 
         if ($trace ?? false) {
@@ -63,6 +70,10 @@ class Exception extends \Exception
             if ($trace['type'] ?? false) {
                 $this->setType($trace['type']);
             }
+        }
+
+        if (0 < $code) {
+            $this->setCode($code);
         }
     }
 
@@ -96,9 +107,24 @@ class Exception extends \Exception
         return $this->location;
     }
 
-    public function setDisplayMessage($message)
+    public function setDisplayMessage($message, $file = null, $line = null, $description = '')
     {
         $this->displayMessage = $message;
+
+        if (null !== $file) {
+            $this->debugFile = $file;
+        }
+
+        if (null !== $line) {
+            $this->debugLine = $line;
+        }
+
+        $this->debugTraces[] = [
+            'message'     => $this->displayMessage,
+            'file'        => $this->debugFile,
+            'line'        => $this->debugLine,
+            'description' => $description,
+        ];
 
         return $this;
     }
@@ -106,6 +132,30 @@ class Exception extends \Exception
     public function getDisplayMessage()
     {
         return $this->displayMessage ?: $this->getMessage();
+    }
+
+    public function setDebugLine($line)
+    {
+        $this->debugLine = $line;
+
+        return $this;
+    }
+
+    public function getDebugLine()
+    {
+        return $this->debugLine ?: $this->getLine();
+    }
+
+    public function setDebugFile($file)
+    {
+        $this->debugFile = $file;
+
+        return $this;
+    }
+
+    public function getDebugFile()
+    {
+        return $this->debugFile ?: $this->getFile();
     }
 
     public function setLine(int $line)
@@ -229,7 +279,7 @@ class Exception extends \Exception
     //     return $rtn;
     // }
 
-    public function throw() : void
+    public function throw(): void
     {
         exit($this->__toString());
     }

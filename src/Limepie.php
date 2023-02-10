@@ -1,9 +1,8 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie;
-
-use Closure;
-use Throwable;
 
 function _($string)
 {
@@ -122,8 +121,8 @@ function unserialize($value)
     // if ($org !== $value) {
     //     \pr($org, $value);
     // }
-    //$value = \utf8_encode($value);
-    //$value = \Limepie\repairSerializeString($value);
+    // $value = \utf8_encode($value);
+    // $value = \Limepie\repairSerializeString($value);
     // echo '1';
 
     // \var_dump($org);
@@ -162,19 +161,19 @@ function format_mobile($phone, $isMark = false)
     }
 
     switch ($length) {
-      case 11:
-          return \preg_replace('/([0-9]{3})([0-9]{4})([0-9]{4})/', $match, $phone);
+        case 11:
+            return \preg_replace('/([0-9]{3})([0-9]{4})([0-9]{4})/', $match, $phone);
 
-          break;
-      case 10:
-          return \preg_replace('/([0-9]{3})([0-9]{3})([0-9]{4})/', $match, $phone);
+            break;
+        case 10:
+            return \preg_replace('/([0-9]{3})([0-9]{3})([0-9]{4})/', $match, $phone);
 
-          break;
+            break;
 
-      default:
-          return $phone;
+        default:
+            return $phone;
 
-          break;
+            break;
     }
 }
 
@@ -466,30 +465,29 @@ function refparse($arr = [], $basepath = '') : array
     $return = [];
 
     foreach ($arr ?? [] as $key => $value) {
-        if (true === \in_array($key, ['$after', '$before', '$change', '$merge', '$remove'], true)) {
-        } elseif ('$ref' === $key) {
+        if ('$ref' === $key) {
             if (false === \is_array($value)) {
                 $value = [$value];
             }
+
             $data = [];
 
             foreach ($value as $path) {
-                $m       = [];
-                $orgPath = $path;
-                $keys    = [
+                // $m             = [];
+                $orgPath    = $path;
+                $detectKeys = [
                     'properties',
                 ];
 
                 if (0 === \strpos($path, '(')) {
-                    if (\preg_match('#\((?P<path>.*)?\)\.(?P<key>.*)#', $path, $m)) {
-                        $path = $m['path'];
-                        $keys = \array_merge(\explode('.', $m['key']), $keys, );
-                    }
-                    //\pr($m);
-                }
-                //pr($keys);
+                    throw new \Limepie\Exception($orgPath . ' ref error');
 
-                //\pr($basepath, $path);
+                    if (\preg_match('#\((?P<path>.*)?\)\.(?P<keys>.*)#', $path, $m)) {
+                        $path       = $m['path'];
+                        $detectKeys = \array_merge(\explode('.', $m['keys']), $detectKeys);
+                    }
+                }
+
                 if ($path) {
                     if (0 !== \strpos($path, '/')) {
                         if ($basepath) {
@@ -498,88 +496,81 @@ function refparse($arr = [], $basepath = '') : array
                     }
                     $yml = \Limepie\yml_parse_file($path);
 
-                    $yml2 = $yml;
+                    $referenceData = $yml;
 
-                    foreach ($keys as $key2) {
-                        if (true === isset($yml2[$key2])) {
-                            $yml2 = $yml2[$key2];
-                        //pr($keys, $path, $key2, $yml2);
+                    foreach ($detectKeys as $detectKey) {
+                        if (true === isset($referenceData[$detectKey])) {
+                            $referenceData = $referenceData[$detectKey];
                         } else {
-                            throw new \Limepie\Exception($key2 . ' not found2');
+                            throw new \Limepie\Exception($detectKey . ' not found2');
                         }
+                    }
+
+                    if ($referenceData) {
+                        $data    = \array_merge($data, $referenceData);
+                        $newData = \Limepie\refparse($data, $basepath);
+
+                        $return = \array_merge($return, $newData);
                     }
                 } else {
                     throw new \Limepie\Exception($orgPath . ' ref error');
                 }
-
-                if ($yml2) {
-                    $data = \array_merge($data, $yml2);
+            }
+        } elseif ('$after' === $key) {
+            foreach ($value as $k => $v) {
+                foreach ($v as $v1) {
+                    $return = \Limepie\array_insert_after($return, $k, $v1);
                 }
             }
-
-            $yml = \Limepie\refparse($data, $basepath);
-
-            $return = \array_merge($return, $yml);
-        } elseif (true === \is_array($value)) {
-            if (true === isset($value['lang'])) {
-                if (1 === \preg_match('#\[\]$#', $key, $m)) {
-                    // form 이 바뀌어야만 성립한다. 그러므로 지원하지 않음을 밝히고 form 자체를 수정하게 권고한다.
-                    throw new \Limepie\Exception('[] multiple은 lang옵션을 지원하지 않습니다. group 하위로 옮기세요.');
-                    // $rekey = rtrim($key, '[]');
-
-                    // pr($key, $value);
-
-                    // $default = $value;
-                    // unset($default['lang'], $default['class'], $default['default'], $default['multiple']);
-
-                    // $value = [
-                    //     //'label'      => $value['label'],
-                    //     'type'       => 'group',
-                    //     'multiple'   => true,
-                    //     'class'      => $value['class'] ?? '',
-                    //     //'description' => $value['description'],
-                    //     'properties' => [
-                    //         'default' => $default,
-                    //         'langs' => [
-                    //             'label' => $value['label'],
-                    //             'type' => 'group',
-                    //             'properties' => [
-                    //                 'ko' => ['label' => \Limepie\__('core', '한국어'), 'prepend' => '<i class="flag-icon flag-icon-kr"></i>'] + $default2,
-                    //                 'en' => ['label' => \Limepie\__('core', '영어'), 'prepend' => '<i class="flag-icon flag-icon-us"></i>'] + $default2,
-                    //                 'zh' => ['label' => \Limepie\__('core', '중국어'), 'prepend' => '<i class="flag-icon flag-icon-cn"></i>'] + $default2,
-                    //                 'ja' => ['label' => \Limepie\__('core', '일본어'), 'prepend' => '<i class="flag-icon flag-icon-jp"></i>'] + $default2,
-
-                    //             ]
-                    //         ]
-                    //     ],
-                    // ];
-                    //unset($value['lang']);
-                    //pr($value);
-                    $return[$key] = \Limepie\refparse($value, $basepath);
-                // if ('append' === $value['lang']) {
-                    //     $return[$key] = \Limepie\refparse($value, $basepath);
-                    // }
-                    // $default = $value;
-                    // unset($default['lang'], $default['class'], $default['description'], $default['default']);
-                    // $default2 = $default;
-
-                    // if ('append' === $value['lang']) {
-                    //     $default2['rules']['required'] = false;
-                    // }
-                    // $value = [
-                    //     'label'      => $value['label'],
-                    //     'type'       => 'group',
-                    //     'class'      => $value['class'] ?? '',
-                    //     'properties' => [
-                    //         'ko' => ['label' => \Limepie\__('core', '한국어'), 'prepend' => '<i class="flag-icon flag-icon-kr"></i>'] + $default2,
-                    //         'en' => ['label' => \Limepie\__('core', '영어'), 'prepend' => '<i class="flag-icon flag-icon-us"></i>'] + $default2,
-                    //         'zh' => ['label' => \Limepie\__('core', '중국어'), 'prepend' => '<i class="flag-icon flag-icon-cn"></i>'] + $default2,
-                    //         'ja' => ['label' => \Limepie\__('core', '일본어'), 'prepend' => '<i class="flag-icon flag-icon-jp"></i>'] + $default2,
-                    //     ],
-                    // ];
-                    // $return[$key . '_langs'] = \Limepie\refparse($value, $basepath);
-                    // pr($return);
+        } elseif ('$before' === $key) {
+            foreach ($value as $k => $v) {
+                foreach ($v as $v1) {
+                    $return = \Limepie\array_insert_before($return, $k, $v1);
+                }
+            }
+        } elseif ('$change' === $key) {
+            foreach ($value as $k => $v) {
+                if (true === isset($return[$k])) {
+                    $return[$k] = \Limepie\array_merge_deep($return[$k], $v);
                 } else {
+                    throw new \Limepie\Exception($key . ': Undefined array key "' . $k . '"');
+                }
+            }
+        } elseif ('$merge' === $key) {
+            foreach ($value as $k => $v) {
+                if (true === isset($return[$k])) {
+                    $return[$k] = \Limepie\array_merge_deep($return[$k], $v);
+                } else {
+                    throw new \Limepie\Exception($key . ': Undefined array key "' . $k . '"');
+                }
+            }
+        } elseif ('$remove' === $key) {
+            if (true === \is_array($value)) {
+                foreach ($value as $k => $v) {
+                    if (true === isset($return[$k])) {
+                        if (true === \is_array($v)) {
+                            $return[$k] = \Limepie\array_remove($return[$k], $v);
+                        } else {
+                            unset($return[$k]);
+                        }
+                    }
+                    // $remove $change ...
+                    // pr($return, $key, $k, $v);
+
+                    // throw new \Limepie\Exception($key . ': Undefined array key "' . $k . '"');
+                }
+            } else {
+                // pr($return[$value] ?? 'error');
+                unset($return[$value]);
+            }
+        } else {
+            if (true === \is_array($value)) {
+                if (true === isset($value['lang'])) {
+                    if (1 === \preg_match('#\[\]$#', $key, $m)) {
+                        // form 이 바뀌어야만 성립한다. 그러므로 지원하지 않음을 밝히고 form 자체를 수정하게 권고한다.
+                        throw new \Limepie\Exception('[] multiple은 lang옵션을 지원하지 않습니다. group 하위로 옮기세요.');
+                    }
+
                     if ('append' === $value['lang']) {
                         $return[$key] = \Limepie\refparse($value, $basepath);
                     }
@@ -590,7 +581,7 @@ function refparse($arr = [], $basepath = '') : array
                     if ('append' === $value['lang']) {
                         $default2['rules']['required'] = false;
                     }
-                    //unset($default2['label']);
+                    // unset($default2['label']);
 
                     if (true === \is_array($value['label'])) {
                         // TODO: 라벨이 배열일 경우 랭귀지 팩이 포함되어 있다. 이경우 배열 전체를 루프돌면서 언어팩이라는 글짜를 언어별로 추가해줘야 한다. 지금은 랭귀지팩의 특정언어를 선택해서 가져올수 없으므로 개발을 중단하고 현재의 언어에 대해서만 처리하는 형태로 완료한다.
@@ -610,57 +601,46 @@ function refparse($arr = [], $basepath = '') : array
                         'class'      => $value['class'] ?? '',
                         'properties' => [
                             'ko' => ['label' => \Limepie\__('core', '한국어'), 'prepend' => '<i class="flag-icon flag-icon-kr"></i>'] + $default2,
-                            'en' => ['label' => \Limepie\__('core', '영어'), 'prepend' => '<i class="flag-icon flag-icon-us"></i>'] + $default2,
+                            'en' => ['label' => \Limepie\__('core', '영어'), 'prepend' => '<i class="flag-icon flag-icon-us"></i>']  + $default2,
                             'zh' => ['label' => \Limepie\__('core', '중국어'), 'prepend' => '<i class="flag-icon flag-icon-cn"></i>'] + $default2,
                             'ja' => ['label' => \Limepie\__('core', '일본어'), 'prepend' => '<i class="flag-icon flag-icon-jp"></i>'] + $default2,
                         ],
                     ];
                     $return[$key . '_langs'] = \Limepie\refparse($value, $basepath);
+                } else {
+                    $return[$key] = \Limepie\refparse($value, $basepath);
                 }
             } else {
-                $return[$key] = \Limepie\refparse($value, $basepath);
-            }
-        } else {
-            $return[$key] = $value;
-        }
-
-        if ('$after' === $key) {
-            foreach ($value as $k => $v) {
-                foreach ($v as $v1) {
-                    $return = \Limepie\array_insert_after($return, $k, $v1);
-                }
-            }
-        } elseif ('$before' === $key) {
-            foreach ($value as $k => $v) {
-                foreach ($v as $v1) {
-                    $return = \Limepie\array_insert_before($return, $k, $v1);
-                }
-            }
-        } elseif ('$change' === $key) {
-            foreach ($value as $k => $v) {
-                if (true === isset($return[$k])) {
-                    $return[$k] = \Limepie\refparse(\Limepie\array_merge_deep($return[$k], $v));
-                } else {
-                    throw new \Limepie\Exception($key . ': Undefined array key "' . $k . '"');
-                }
-            }
-        } elseif ('$merge' === $key) {
-            foreach ($value as $k => $v) {
-                if (true === isset($return[$k])) {
-                    $return[$k] = \Limepie\refparse(\Limepie\array_merge_deep($return[$k], $v));
-                } else {
-                    throw new \Limepie\Exception($key . ': Undefined array key "' . $k . '"');
-                }
-            }
-        } elseif ('$remove' === $key) {
-            foreach ($value as $k) {
-                unset($return[$k]);
+                $return[$key] = $value;
             }
         }
     }
 
+    // pr($return);
+
     return $return;
 }
+
+function array_remove($result, $arr)
+{
+    foreach ($arr as $key => $value) {
+        if (
+            true    === isset($result[$key])
+            && true === \is_array($result[$key])
+            && true === \is_array($value)
+        ) {
+            $result[$key] = \Limepie\array_remove(
+                $result[$key],
+                $value,
+            );
+        } else {
+            unset($result[$key]);
+        }
+    }
+
+    return $result;
+}
+
 function array_merge_deep()
 {
     $args = \func_get_args();
@@ -681,7 +661,7 @@ function drupal_array_merge_deep_array($arrays)
             if (true === \is_int($key)) {
                 $result[] = $value;
             } elseif (
-                true === isset($result[$key])
+                true    === isset($result[$key])
                 && true === \is_array($result[$key])
                 && true === \is_array($value)
             ) {
@@ -697,7 +677,7 @@ function drupal_array_merge_deep_array($arrays)
 
     return $result;
 }
-function yml_parse_file($file, Closure $callback = null)
+function yml_parse_file($file, \Closure $callback = null)
 {
     $filepath = \Limepie\stream_resolve_include_path($file);
 
@@ -719,9 +699,9 @@ function yml_parse_file($file, Closure $callback = null)
 
 function array_key_flatten($array)
 {
-    //if (!isset($array) || !\is_array($array)) {
+    // if (!isset($array) || !\is_array($array)) {
     $keys = [];
-    //}
+    // }
 
     foreach ($array as $key => $value) {
         $keys[] = $key;
@@ -735,9 +715,9 @@ function array_key_flatten($array)
 }
 function array_value_flatten($array)
 {
-    //if (!isset($array) || !\is_array($array)) {
+    // if (!isset($array) || !\is_array($array)) {
     $values = [];
-    //}
+    // }
 
     foreach ($array as $key => $value) {
         if (\is_array($value)) {
@@ -828,14 +808,19 @@ function day_ago($time) : string
 
 function ago($enddate, $format = '$d day $H:$i:$s')
 {
+    $hour_bun = 60;
+    $min_cho  = 60;
+    $hour_cho = $min_cho  * $hour_bun;
+    $il_cho   = $hour_cho * 24;
+
     if (true === \is_string($enddate)) {
         $enddate = \strtotime($enddate);
     }
     $timediffer = $enddate - \time();
-    $day        = \floor(($timediffer) / (60 * 60 * 24));
-    $hour       = \floor(($timediffer - ($day * 60 * 60 * 24)) / (60 * 60));
-    $minute     = \floor(($timediffer - ($day * 60 * 60 * 24) - ($hour * 60 * 60)) / (60));
-    $second     = $timediffer - ($day * 60 * 60 * 24) - ($hour * 60 * 60) - ($minute * 60);
+    $day        = \floor($timediffer / $il_cho);
+    $hour       = \floor(($timediffer - ($day * $il_cho)) / $hour_cho);
+    $minute     = \floor(($timediffer - ($day * $il_cho) - ($hour * $hour_cho)) / $min_cho);
+    $second     = $timediffer - ($day * $il_cho) - ($hour * $hour_cho) - ($minute * $min_cho);
 
     if (1 === \strlen((string) $minute)) {
         $minute = '0' . $minute;
@@ -850,8 +835,8 @@ function ago($enddate, $format = '$d day $H:$i:$s')
 /**
  * 숫자를 읽기쉬운 문자열로 변환.
  *
- * @param $bytes
- * @param $decimals
+ * @param mixed $bytes
+ * @param mixed $decimals
  */
 function readable_size($bytes, $decimals = 2) : string
 {
@@ -868,7 +853,7 @@ function readable_size($bytes, $decimals = 2) : string
  */
 function iso8601micro(float $float) : string
 {
-    $date = \DateTime::createFromFormat('U.u', $float);
+    $date = \DateTime::createFromFormat('U.u', (string) $float);
     $date->setTimezone(new \DateTimeZone('Asia/Seoul'));
 
     return $date->format('Y-m-d\TH:i:s.uP');
@@ -904,9 +889,9 @@ function is_file_array($array = [], $isMulti = false) : bool
 {
     if (true === \is_array($array)) {
         if (
-            true === isset($array['name'])
+            true    === isset($array['name'])
             && true === isset($array['type'])
-            //&& true === isset($array['tmp_name'])
+            // && true === isset($array['tmp_name'])
             && true === isset($array['error'])
             && true === isset($array['size'])
         ) {
@@ -916,10 +901,10 @@ function is_file_array($array = [], $isMulti = false) : bool
         if (true === $isMulti) {
             foreach ($array as $file) {
                 if (
-                    true === \is_array($file)
+                    true    === \is_array($file)
                     && true === isset($file['name'])
                     && true === isset($file['type'])
-                    //&& true === isset($file['tmp_name'])
+                    // && true === isset($file['tmp_name'])
                     && true === isset($file['error'])
                     && true === isset($file['size'])
                 ) {
@@ -1027,20 +1012,20 @@ function is_enabled($variable)
 function createTree($array)
 {
     switch (count($array)) {
-    case 0:
-        exit('Illegal argument.');
-    case 1:
-        return $array[0];
+        case 0:
+            exit('Illegal argument.');
+        case 1:
+            return $array[0];
 
-    default:
-        $lastArray = \array_pop($array);
-        $subArray  = \Limepie\createTree($array);
+        default:
+            $lastArray = \array_pop($array);
+            $subArray  = \Limepie\createTree($array);
 
-        foreach ($lastArray as $item) {
-            $return[] = [$item, $subArray];
-        }
+            foreach ($lastArray as $item) {
+                $return[] = [$item, $subArray];
+            }
 
-        return $return;
+            return $return;
     }
 }
 
@@ -1073,8 +1058,8 @@ function array_cross($arrays)
         foreach ($result as $resultItem) {
             foreach ($propertyValues as $propertyKey => $propertyValue) {
                 $tmp[] = $resultItem + [$property => $propertyValue];
-                //$tmp[] = \array_merge($resultItem, [$propertyValue]);
-                //$tmp[] = $resultItem + array($propertyKey => $propertyValue);
+                // $tmp[] = \array_merge($resultItem, [$propertyValue]);
+                // $tmp[] = $resultItem + array($propertyKey => $propertyValue);
             }
         }
         $result = $tmp;
@@ -1120,7 +1105,7 @@ function decamelize($word)
     return \str_replace(['(', ')'], ['_(', '_)'], \strtolower(\preg_replace('/(?<!^)[A-Z]/', '_$0', $word)));
 }
 
-function camelize($word)
+function camelize(string $word)
 {
     return \preg_replace_callback(
         '/(^|_|-|:)([a-zA-Z]+)/',
@@ -1388,7 +1373,7 @@ function cidr_match($ip, $cidr)
 
 function url()
 {
-    $request = Di::get('request');
+    $request = Di::getRequest();
 
     return $request->getUrl();
 }
@@ -1438,7 +1423,7 @@ function number_format($number, $int = 0, $zero2null = false)
             return null;
         }
     }
-    //$stripzero = sprintf('%g',$number);
+    // $stripzero = sprintf('%g',$number);
 
     if (0 < \strlen((string) $number)) {
         $parts  = \explode('.', (string) $number);
@@ -1505,7 +1490,7 @@ function seqtoid($seq)
 function seqtokey($seq)
 {
     if (true === \is_numeric($seq)) {
-        return '__-' . \str_pad((string) $seq, 11, '0', \STR_PAD_LEFT) . '-__';
+        return '__' . \str_pad((string) $seq, 13, '0', \STR_PAD_LEFT) . '__';
     }
 
     return $seq;
@@ -1518,7 +1503,7 @@ function seq2key($seq)
 
 function keytoseq($key)
 {
-    if (1 === \preg_match('#^__-([0]+)?(?P<seq>\d+)-__$#', $key, $m)) {
+    if (1 === \preg_match('#^__([0]+)?(?P<seq>\d+)__$#', $key, $m)) {
         return (int) $m['seq'];
     }
 
@@ -1951,13 +1936,13 @@ function get_tree_item(array $data = []) : array
     return $items;
 }
 
-function get_parent_controller_namespace($namespace = null)
+function get_parent_controller_namespace($namespace = null, $depth = 1)
 {
     if (null === $namespace) {
         return null;
     }
 
-    return '\\' . \implode('\\', \array_slice(\explode('\\', $namespace), 0, -1)) . '\\Controller';
+    return '\\' . \implode('\\', \array_slice(\explode('\\', $namespace), 0, $depth * -2 + 1)) . '\\Controller';
 }
 
 function file_get_compressed($url)
@@ -1984,7 +1969,7 @@ function file_get_compressed($url)
     return $content;
 }
 
-function get_exception_message(Throwable $e, $file = null, $line = null)
+function get_exception_message(\Throwable $e, $file = null, $line = null)
 {
     $add = '';
 
@@ -1997,26 +1982,26 @@ function get_exception_message(Throwable $e, $file = null, $line = null)
 
 function classname_to_filepath(string $className, array $maps = [])
 {
-    $pos = \strpos($className, '\\');
+    $parts = explode('\\', $className);
+    $j     = count($parts);
 
-    if ($pos) {
-        $target = \substr($className, 0, $pos) . '\\';
-        $file   = $className;
+    if ($j > 1) {
+        for ($i = 0; $i < $j; --$j) {
+            $partKey = \implode('\\', \array_slice($parts, 0, $j)) . '\\';
 
-        foreach ($maps as $key => $alias) {
-            if (0 === \strpos($key, $target)) {
-                $file = \preg_replace('#^' . \preg_quote($key) . '#', $alias, $file);
+            if (true === isset($maps[$partKey])) {
+                $file = \preg_replace('#^' . \preg_quote($partKey) . '#', $maps[$partKey], $className);
 
                 return \str_replace('\\', '/', $file) . (false === \strpos($file, '.php') ? '.php' : '');
             }
         }
     } else {
-        foreach ($maps as $key => $alias) {
-            if (0 === \strpos($key, $className)) {
-                return $alias;
-            }
+        if (true === isset($maps[$className . '\\'])) {
+            return $maps[$className . '\\'] . \str_replace('\\', '/', $className) . (false === \strpos($className, '.php') ? '.php' : '');
         }
     }
+
+    return null;
 }
 
 function array_reverse(array|ArrayObject $array = []) : array
@@ -2056,7 +2041,7 @@ function qs(string $append = '?') : string
     return \Limepie\getQueystring($append);
 }
 
-function arrays_set(array|ArrayObject $array, Closure|array|string $params)
+function arrays_set(array|ArrayObject $array, \Closure|array|string $params)
 {
     if (true === \is_string($params)) {
         $params = [$params];
@@ -2167,7 +2152,28 @@ function array_key_rename(array $array, $old_key, $new_key)
     return \array_combine($keys, $array);
 }
 
-function array_cleanup(array|ArrayObject $array)
+function array_cleanup(array|ArrayObject $value) : null|array
+{
+    if ($value instanceof \Limepie\ArrayObject) {
+        $value = $value->attributes;
+    }
+
+    foreach ($value as $k => $v) {
+        if (true === \is_array($v)) {
+            $value[$k] = \Limepie\array_cleanup($v);
+
+            if (0 == \count($value[$k])) {
+                unset($value[$k]);
+            }
+        } elseif (0 == \strlen((string) $v)) {
+            unset($value[$k]);
+        }
+    }
+
+    return $value;
+}
+
+function array_cleanup2(array|ArrayObject $array)
 {
     if ($array instanceof \Limepie\ArrayObject) {
         $array = $array->attributes;
@@ -2254,4 +2260,206 @@ function urlencode($url)
     }
 
     return $url;
+}
+
+function explode(string $separator, string $string, int $limit = \PHP_INT_MAX)
+{
+    return \array_map('trim', \explode($separator, $string, $limit));
+}
+
+function array_values_pick_keys($array, $key, $keepKey = false)
+{
+    $return = [];
+    $index  = -1;
+
+    foreach ($array as $arrayKey => $arrayValue) {
+        if (true == $keepKey) {
+            $innerKey = $arrayKey;
+        } else {
+            ++$index;
+            $innerKey = $index;
+        }
+
+        if (true == \is_string($key)) {
+            $return[$innerKey] = $arrayValue[$key];
+        } else {
+            $tmpArray = [];
+
+            foreach ($arrayValue as $valueKey => $valueValue) {
+                if (true == \in_array($valueKey, $key)) {
+                    $tmpArray[$valueKey] = $valueValue;
+                }
+            }
+            $return[$innerKey] = $tmpArray;
+        }
+    }
+
+    return $return;
+}
+
+function array_pick_keys($array, $key)
+{
+    $return = [];
+
+    foreach ($array as $valueKey => $valueValue) {
+        if (true == \in_array($valueKey, $key)) {
+            $return[$valueKey] = $valueValue;
+        }
+    }
+
+    return $return;
+}
+
+function clean_str($string)
+{
+    return \str_replace([
+        '[]', '][', '[', ']',
+    ], [
+        '', '-', '-', '-',
+    ], $string);
+}
+
+function encrypt($str, $key)
+{
+    return \base58_encode(\openssl_encrypt((string) $str, 'aes-256-cbc', (string) $key, \OPENSSL_RAW_DATA, \str_repeat(\chr(0), 16)));
+}
+
+function decrypt($encrypt, $key)
+{
+    return \openssl_decrypt(\base58_decode($encrypt), 'aes-256-cbc', (string) $key, \OPENSSL_RAW_DATA, \str_repeat(\chr(0), 16));
+}
+
+function get_max_number($max = 0)
+{
+    if ($max) {
+        return $max;
+    }
+
+    return 2147483647;
+}
+
+// https://gist.github.com/Rodrigo54/93169db48194d470188f
+function minify_js($input)
+{
+    if ('' === \trim($input)) {
+        return $input;
+    }
+
+    return \preg_replace(
+        [
+            // Remove comment(s)
+            '#\s*("(?:[^"\\\]++|\\\.)*+"|\'(?:[^\'\\\\]++|\\\.)*+\')\s*|\s*\/\*(?!\!|@cc_on)(?>[\s\S]*?\*\/)\s*|\s*(?<![\:\=])\/\/.*(?=[\n\r]|$)|^\s*|\s*$#',
+            // Remove white-space(s) outside the string and regex
+            '#("(?:[^"\\\]++|\\\.)*+"|\'(?:[^\'\\\\]++|\\\.)*+\'|\/\*(?>.*?\*\/)|\/(?!\/)[^\n\r]*?\/(?=[\s.,;]|[gimuy]|$))|\s*([!%&*\(\)\-=+\[\]\{\}|;:,.<>?\/])\s*#s',
+            // Remove the last semicolon
+            '#;+\}#',
+            // Minify object attribute(s) except JSON attribute(s). From `{'foo':'bar'}` to `{foo:'bar'}`
+            '#([\{,])([\'])(\d+|[a-z_][a-z0-9_]*)\2(?=\:)#i',
+            // --ibid. From `foo['bar']` to `foo.bar`
+            '#([a-z0-9_\)\]])\[([\'"])([a-z_][a-z0-9_]*)\2\]#i',
+        ],
+        [
+            '$1',
+            '$1$2',
+            '}',
+            '$1$3',
+            '$1.$3',
+        ],
+        \str_replace('"', '&quot;', $input)
+    );
+}
+
+function date_start_end($start, $end)
+{
+    if (null === $start || null === $end) {
+        return null;
+    }
+    $start = \strtotime($start);
+    $end   = \strtotime($end);
+
+    $startHour = ' ' . \date('H:i', $start) . '';
+    $endtHour  = ' ' . \date('H:i', $end) . '';
+
+    return \date('Y-m-d', $start) . $startHour . ' ~ ' . \date('Y-m-d', $end) . $endtHour;
+    $startYear = \date('Y', $start);
+    $endYear   = \date('Y', $end);
+
+    if ($startYear == $endYear) {
+        $startMonth = \date('m', $start);
+        $endMonth   = \date('m', $end);
+
+        if ($startMonth == $endMonth) {
+            return \date('Y-m-d', $start) . $startHour . ' ~ ' . \date('d', $end) . $endtHour;
+        }
+
+        return \date('Y-m-d', $start) . $startHour . ' ~ ' . \date('m-d', $end) . $endtHour;
+    }
+
+    return \date('Y-m-d', $start) . $startHour . ' ~ ' . \date('Y-m-d', $end) . $endtHour;
+}
+
+function add_string($string, $glue = ' ', $start = '', $end = '')
+{
+    return $string ? $glue . $start . $string . $end : '';
+}
+
+function is_serialized_string($sstr)
+{
+    if (\is_string($sstr)) {
+        return 1 === \preg_match('/^s:\d+:".*";$/s', $sstr);
+    }
+
+    return false;
+}
+
+function sort_seq($a, $b)
+{
+    return $a['seq'] - $b['seq'];
+}
+
+function array_tree1($array, $parent = 0)
+{
+    $ret = [];
+
+    for ($i = 0; $i < count($array); ++$i) {
+        if ($array[$i]['parent_seq'] == $parent) {
+            $a = $array[$i];
+            \array_splice($array, $i--, 1);
+            $a['item'] = array_tree1($array, $a['current_seq']);
+            $ret[]     = $a;
+
+            continue;
+        }
+    }
+
+    \usort($ret, 'sort_seq');
+
+    return $ret;
+}
+
+function array_tree2($array, $parent = 0)
+{
+    $ret = [];
+
+    foreach ($array as $i => $a) {
+        // for ($i = 0; $i < \count($array); ++$i) {
+        // if ($array[$i]['parent_seq'] == $parent) {
+        if ($a['parent_seq'] == $parent) {
+            $sub = array_tree2($array, $a['current_seq']);
+
+            $ret[] = [$a['seq'] => $a];
+            pr($a, $sub);
+            // pr($ret);
+            foreach ($sub as $j => $b) {
+                // for ($j = 0; $j < \count($sub); ++$j) {
+                // \array_unshift($sub[$j], $a);
+                // pr($sub[$j] ?? []);
+                $ret[] = [$a['seq'] => $a] + $b;
+                pr($b);
+                // pr($ret);
+            }
+        }
+    }
+
+    return $ret;
 }

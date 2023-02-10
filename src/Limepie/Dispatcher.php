@@ -14,10 +14,7 @@ class Dispatcher
         $application = clone Di::get('application');
         Di::get('application')->addPrevious($application);
 
-        $r = Di::get('application')->handle($forward);
-
-        //\pr(\get_class($r));
-
-        return $r;
+        return Di::get('application')->handle($forward);
+        // \pr(\get_class($r));
     }
 }

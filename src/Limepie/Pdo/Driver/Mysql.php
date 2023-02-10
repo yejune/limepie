@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie\Pdo\Driver;
 
@@ -9,6 +11,12 @@ class Mysql extends \Limepie\Pdo
     public $info = [];
 
     public $debug = false;
+
+    public $dbname;
+
+    public $host;
+
+    public $charset;
 
     /**
      * @param $descriptor
@@ -41,20 +49,19 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
-     * @param       $statement
      * @param array $bindParameters
      * @param       $mode
      * @param mixed $type           모델에서는 기본적으로 false로 넘겨 배열을 받고 pdo에 직접 접근할때는 true로 ArrayObject를 받음
      *
-     * @throws \PDOException
-     *
      * @return array
+     *
+     * @throws \PDOException
      */
     public function gets($statement, $bindParameters = [], $type = true)
     {
         try {
             // return parent::fetchAll($statement, $mode, $bindParameters) ?: null;
-            //pr(func_get_args());
+            // pr(func_get_args());
             if ($this->debug) {
                 \Limepie\Timer::start();
             }
@@ -81,14 +88,13 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
-     * @param       $statement
      * @param array $bindParameters
      * @param       $mode
      * @param mixed $type           모델에서는 기본적으로 false로 넘겨 배열을 받고 pdo에 직접 접근할때는 true로 ArrayObject를 받음
      *
-     * @throws \PDOException
-     *
      * @return array
+     *
+     * @throws \PDOException
      */
     public function get($statement, $bindParameters = [], $type = true)
     {
@@ -120,17 +126,16 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
-     * @param       $statement
      * @param array $bindParameters
      * @param       $mode
      *
-     * @throws \PDOException
-     *
      * @return string
+     *
+     * @throws \PDOException
      */
     public function get1($statement, $bindParameters = [])
     {
-        //pr(func_get_args());
+        // pr(func_get_args());
 
         try {
             if ($this->debug) {
@@ -160,19 +165,18 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
-     * @param       $statement
      * @param array $bindParameters
      *
-     * @throws \PdoException
-     *
      * @return bool
+     *
+     * @throws \PdoException
      */
     public function set($statement, $bindParameters = [])
     {
         try {
             return $this->execute($statement, $bindParameters, true);
         } catch (\PDOException $e) {
-            //\print_r($statement, $bindParameters);
+            // \print_r($statement, $bindParameters);
             throw new Exception\Execute($e, $statement, $bindParameters);
         }
     }
@@ -259,7 +263,6 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
-     * @param       $statement
      * @param array $bindParameters
      *
      * @return null|int
@@ -371,11 +374,9 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
-     * @param $callback
+     * @return mixed
      *
      * @throws \Exception
-     *
-     * @return mixed
      */
     public function transaction(\Closure $callback)
     {
@@ -398,7 +399,7 @@ class Mysql extends \Limepie\Pdo
             $this->xrollback();
             // 데드락에 의한 실패일 경우 한번더 실행
             if (40001 === $e->errorInfo[0]) {
-                //1초 지연
+                // 1초 지연
                 $cho = 1000000;
                 \usleep($cho / 2);
 
@@ -444,7 +445,7 @@ class Mysql extends \Limepie\Pdo
             $this->xrollback();
             // 데드락에 의한 실패일 경우 한번더 실행
             if (40001 === $e->errorInfo[0]) {
-                //1초 지연
+                // 1초 지연
                 $cho = 1000000;
                 \usleep($cho / 2);
 
@@ -471,7 +472,7 @@ class Mysql extends \Limepie\Pdo
 
     private function execute($statement, $bindParameters = [], $ret = false)
     {
-        //pr($statement, $bindParameters);
+        // pr($statement, $bindParameters);
 
         $stmt  = parent::prepare($statement);
         $binds = [];
@@ -488,7 +489,7 @@ class Mysql extends \Limepie\Pdo
             }
         }
 
-        //pr($statement, $bindParameters);
+        // pr($statement, $bindParameters);
         try {
             $result         = $stmt->execute($binds);
             $this->rowCount = $stmt->rowCount();
@@ -500,12 +501,12 @@ class Mysql extends \Limepie\Pdo
             }
         } catch (\Limepie\Exception $e) {
             throw new Exception\Execute($e, $statement, $bindParameters);
-            //throw ($e)->setDisplayMessage($stmt->errorInfo()[2]);
-            //throw new \Limepie\Exception($e->getMessage(). ' ' .$stmt->errorInfo()[2]);
+            // throw ($e)->setDisplayMessage($stmt->errorInfo()[2]);
+            // throw new \Limepie\Exception($e->getMessage(). ' ' .$stmt->errorInfo()[2]);
         } catch (\Throwable $e) {
             throw new Exception\Execute($e, $statement, $bindParameters);
-            //throw (new \Limepie\Exception($e))->setDisplayMessage($stmt->errorInfo()[2]);
-            //throw new \Limepie\Exception($e->getMessage(). ' ' .$stmt->errorInfo()[2]);
+            // throw (new \Limepie\Exception($e))->setDisplayMessage($stmt->errorInfo()[2]);
+            // throw new \Limepie\Exception($e->getMessage(). ' ' .$stmt->errorInfo()[2]);
         }
 
         return $stmt;
@@ -522,6 +523,18 @@ class Mysql extends \Limepie\Pdo
 
     private function getErrorFormat($statement, array $binds = [])
     {
-        return \trim($statement) . ', [' . \Limepie\http_build_query($binds, '=', ', ') . ']';
+        $fixedBinds = [];
+
+        foreach ($binds as $key => $value) {
+            if (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64|aes)_#', $key, $typeMatch)) {
+                $value = '[binary]';
+            } elseif (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64|aes)$#', $key, $typeMatch)) {
+                $value = '[hidden]';
+            }
+
+            $fixedBinds[$key] = $value;
+        }
+
+        return \trim($statement) . ', [' . \Limepie\http_build_query($fixedBinds, '=', ', ') . ']';
     }
 }

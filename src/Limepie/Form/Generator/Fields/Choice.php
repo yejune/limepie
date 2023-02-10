@@ -1,0 +1,168 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Limepie\Form\Generator\Fields;
+
+class Choice extends \Limepie\Form\Generator\Fields
+{
+    public static function write($key, $property, $value, $ruleName, $propertyName)
+    {
+        if (true === \is_object($value)) {
+            if (true === \property_exists($value, 'property')) {
+                $property = [...$property, ...$value->property];
+            }
+
+            if (true === \property_exists($value, 'value')) {
+                $value = $value->value;
+            }
+        }
+
+        $value = (string) $value;
+
+        // if (0 === \strlen($value) && true === isset($property['default'])) {
+        //     $value = (string) $property['default'];
+        // }
+
+        $default = null;
+
+        if (true === isset($property['default'])) {
+            if (true === \is_array($property['default'])) {
+            } else {
+                $default = (string) $property['default'];
+            }
+        }
+
+        if (true === isset($property['label'])) {
+            if (true === isset($property['label'][static::getLanguage()])) {
+                $title = $property['label'][static::getLanguage()];
+            } else {
+                $title = $property['label'];
+            }
+        } else {
+            $title = '';
+        }
+
+        $onload = false;
+
+        if (true === isset($property['onload']) && $property['onload']) {
+            $onload = true;
+        }
+
+        $onchange = '';
+        // script 테그에 넣으면 dynamic copy시 동작안하므로 inline script 사용
+        if (true === isset($property['onchange'])) {
+            $onchange = ' onchange="' . \Limepie\minify_js($property['onchange']) . '" ';
+            // $onchange .= ' onclick="' . \Limepie\minify_js($property['onchange']) . '" ';
+        }
+        $buttonClass = '';
+
+        if (true === isset($property['button_class'])) {
+            $buttonClass = ' ' . $property['button_class'];
+        }
+
+        $elementClass = '';
+
+        if (true === isset($property['element_class'])) {
+            $elementClass = ' ' . $property['element_class'];
+        }
+        $inputClass = '';
+
+        if (true === isset($property['input_class'])) {
+            $inputClass = ' ' . $property['input_class'];
+        }
+
+        $readonly = '';
+
+        if (true === isset($property['readonly']) && $property['readonly']) {
+            $readonly = ' pe-none';
+        }
+
+        $buttons = '';
+
+        if (true === isset($property['items']) && true === \is_array($property['items'])) {
+            $index   = 0;
+            $prepend = 'choice-' . \Limepie\clean_str($key);
+
+            $defaultId = '';
+            $checkId   = '';
+
+            foreach ($property['items'] as $k1 => $v1) {
+                ++$index;
+                $id = $prepend . $index;
+
+                if (true === \is_array($v1)) {
+                    if (true === isset($v1[\Limepie\get_language()])) {
+                        $v1 = $v1[\Limepie\get_language()];
+                    }
+                }
+                $checkdefault = (string) $default === (string) $k1 ? true : false;
+
+                if ($checkdefault) {
+                    $defaultId = $id;
+                }
+
+                $checked = (string) $value === (string) $k1 ? 'checked' : '';
+
+                // if (1 == $property['default'] && false !== \strpos($key, 'is_yoil_price')) {
+                //     \pr($key, $default, $value, $k1, $checked);
+                // }
+
+                if ($checked) {
+                    $checkId = $id;
+                }
+
+                $buttons .= <<<EOD
+                    <input id="{$id}" class="valid-target btn-check{$inputClass}" type="radio" name="{$key}" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$k1}" data-is-default="{$checkdefault}"{$checked} {$onchange}>
+                    <label for="{$id}" class="btn btn-switch {$elementClass}"><span>{$v1}</span></label>
+                EOD;
+            }
+
+            $script = '';
+
+            // if ($onload) {
+            if ($checkId) {
+                $clickid = $checkId;
+            } else {
+                $clickid = $defaultId;
+            }
+
+            if ($clickid) {
+                $script = <<<SCRIPT
+                    <script>
+                    $(function () {
+                        // var f = $('#'+$.escapeSelector( '{$clickid}'));
+                        // if (f[0].onclick) {
+                        //     console.log('{$clickid}');
+                        //     //f.prop("checked", true);
+                        //     f.trigger("click");
+                        // }
+                    });
+                    </script>
+                    SCRIPT;
+            }
+            // }
+
+            $html = <<<EOT
+                <div class="btn-group btn-group-toggle{$readonly}{$buttonClass}" data-toggle="buttons">
+                {$buttons}
+                </div>
+                {$script}
+                EOT;
+        } else {
+            $html = '<input type="text" class="form-control" value="application에서 설정하세요." />';
+        }
+
+        return $html;
+    }
+
+    public static function read($key, $property, $value)
+    {
+        $value = (bool) $value;
+
+        return <<<EOT
+            {$value}
+
+        EOT;
+    }
+}

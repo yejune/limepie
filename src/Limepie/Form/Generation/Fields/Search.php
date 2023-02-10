@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie\Form\Generation\Fields;
 
@@ -56,43 +58,7 @@ class Search extends \Limepie\Form\Generation\Fields
         $expend  = '';
         $scripts = <<<SCRIPT
             <script>
-                $(function() {
-                    $(document).on('click', '.select2-results__message', function() {
-                      $('#{$id}').val(null).trigger('change');
-                    });
-                    $("#{$id}").select2({
-                        placeholder: "{$placeholder}",
-                        language: {
-                            errorLoading: function () {
-                                return "결과를 읽을수 없습니다."
-                            }, inputTooLong: function (e) {
-                                var t = e.input.length - e.maximum, n = "Please delete " + t + " character";
-                                return t != 1 && (n += "s"), n
-                            }, inputTooShort: function (e) {
-                                var t = e.minimum - e.input.length, n = "Please enter " + t + " or more characters";
-                                return n
-                            }, loadingMore: function () {
-                                return "다음 결과를 읽는 중입니다."
-                            }, maximumSelected: function (e) {
-                                var t = "You can only select " + e.maximum + " item";
-                                return e.maximum != 1 && (t += "s"), t
-                            }, noResults: function () {
-                                return "결과가 없습니다."
-                            }, searching: function () {
-                                return "검색중입니다."
-                            }, removeAllItems: function () {
-                                return "Remove all items"
-                            }
-                        },
-                        ajax: {
-                            url: {$api_server},
-                            method: "post",
-                            dataType: "json",
-                            delay: 250
-                        },
-                        minimumInputLength: 2
-                    });
-                });
+                select2('{$id}');
 
             </script>
         SCRIPT;
@@ -176,7 +142,7 @@ EOD;
         return <<<EOT
         <div class="input-group">
         {$prepend}
-        <select class="form-control{$class}" {$style} name="{$key}" data-rule-name="{$ruleName}" id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>
+        <select class="form-control{$class}" {$style} name="{$key}" data-api-server="{$api_server}" data-rule-name="{$ruleName}" id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>
         {$append}
         </div>
         {$scripts}

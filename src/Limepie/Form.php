@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie;
 
@@ -54,23 +56,30 @@ class Form
         return $this->validation->errors;
     }
 
-    public function write(array | \Limepie\ArrayObject | null $data = [])
+    public function write(array|ArrayObject|null $data = [])
     {
-        $generation = new \Limepie\Form\Generation;
+        $generation = new \Limepie\Form\Generation();
+
+        return $generation->write($this->spec, $data ?? []);
+    }
+
+    public function write2(array|ArrayObject|null $data = [])
+    {
+        $generation = new \Limepie\Form\Generator();
 
         return $generation->write($this->spec, $data ?? []);
     }
 
     public function read(array $data = [])
     {
-        $generation = new \Limepie\Form\Generation;
+        $generation = new \Limepie\Form\Generation();
 
         return $generation->read($this->spec, $data);
     }
 
     public function list(array $data = [])
     {
-        $generation = new \Limepie\Form\Generation;
+        $generation = new \Limepie\Form\Generation();
 
         return $generation->list($this->spec, $data);
     }

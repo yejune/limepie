@@ -1,16 +1,20 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie;
 
 class Request
 {
-    public $requestUri;
-
     public $rawBody;
 
     public $bodies = [];
 
-    public $urlParts = [];
+    public $domain = '';
+
+    public $subDomain = '';
+
+    public $baseDomain = '';
 
     public $url;
 
@@ -20,19 +24,9 @@ class Request
 
     public $path;
 
-    public $originPath;
+    public $endpoint = '';
 
-    public $uri;
-
-    public $segments = [];
-
-    public $originSegments = [];
-
-    public $parameters = [];
-
-    public $originParameters = [];
-
-    public $originBasePath = '';
+    public $targetEndpoint = '';
 
     public $requestId;
 
@@ -44,6 +38,10 @@ class Request
 
     public $locale = 'ko_KR';
 
+    public $query;
+
+    public $pathStore = [];
+
     public $locales = [
         'ko' => 'ko_KR',
         'en' => 'en_US',
@@ -53,8 +51,10 @@ class Request
 
     final public function __construct()
     {
-        $this->rawBody = \file_get_contents('php://input');
-        $this->bodies  = $this->getBodyAll();
+        {
+            $this->rawBody = \file_get_contents('php://input');
+            $this->bodies  = $this->getBodyAll();
+        }
 
         $this->language = $this->getBestLanguage();
 
@@ -62,60 +62,67 @@ class Request
             $this->locale = $this->locales[$this->language];
         }
 
-        if (true === \Limepie\is_cli()) {
-            $this->requestUri = \implode('/', \array_map('rawurlencode', \array_slice($this->getServer('argv'), 2)));
-        } else {
-            $this->requestUri = $this->getServer('REQUEST_URI');
-        }
-        $this->reload();
+        $this->getHost();
 
-        $this->originPath       = $this->path;
-        $this->originBasePath   = $this->path;
-        $this->originSegments   = $this->segments;
-        $this->originParameters = $this->parameters;
+        [$this->subDomain , $this->baseDomain] = \explode('.', $this->host, 2);
     }
 
-    public function setOriginBasePath($path)
+    public function addPath($name, Request\Path $path)
     {
-        $this->originBasePath = $path;
+        $this->pathStore[$name] = $path;
+    }
+
+    public function __call(string $name, array $arguments = [])
+    {
+        if (0 === \strpos($name, 'getPathBy')) {
+            return $this->buildGet(\Limepie\decamelize(\substr($name, 9)), $arguments);
+        }
+
+        throw (new \Limepie\Exception('"' . $name . '" method not found', 404))
+            ->setDisplayMessage('page not found', __FILE__, __LINE__)
+        ;
+    }
+
+    public function buildGet($name, $arguments)
+    {
+        if (false === isset($this->pathStore[$name])) {
+            throw new \Limepie\Exception('"' . $name . '" path not found');
+        }
+
+        if ($arguments) {
+            return $this->pathStore[$name]->slice(...$arguments);
+        }
+
+        return $this->pathStore[$name];
+    }
+
+    public function getEndpoint()
+    {
+        return $this->endpoint;
+    }
+
+    public function setEndpoint($path)
+    {
+        $this->endpoint = \rtrim((string) $path);
 
         return $this;
     }
 
-    public function getOriginBasePath()
+    // public function getPath()
+    // {
+    //     return \rtrim($this->path, '/');
+    // }
+
+    public function setTargetEndpoint($path)
     {
-        return $this->originBasePath;
+        $this->targetEndpoint = \rtrim((string) $path, '/');
+
+        return $this;
     }
 
-    public function reload($requestUri = null)
+    public function getTargetEndpoint()
     {
-        if ($requestUri) {
-            $this->requestUri = $requestUri;
-        }
-        $this->uri      = $this->getRequestUri();
-        $this->url      = $this->getUrl();
-        $this->urlParts = \parse_url($this->url);
-        $this->host     = $this->urlParts['host'];
-
-        $tmp         = \explode('?', $this->uri, 2);
-        $this->path  = $tmp[0] ?? '';
-        $this->query = $tmp[1] ?? '';
-
-        if ($this->path) {
-            $this->segments = [];
-
-            if (true === \Limepie\is_cli()) {
-                $this->segments = \array_map('rawurldecode', \explode('/', \trim($this->path, '/')));
-            } else {
-                $this->segments = \explode('/', \trim($this->path, '/'));
-            }
-
-            $this->parameters = [];
-
-            for ($i = 0, $j = \count($this->segments); $i < $j; $i += 2) {
-                $this->parameters[$this->segments[$i]] = $this->segments[$i + 1] ?? '';
-            }
-        }
+        return $this->targetEndpoint;
     }
 
     public function setLocale($language)
@@ -135,7 +142,7 @@ class Request
         \bindtextdomain($domain, $path);
         \bind_textdomain_codeset($domain, $charset);
         \textdomain($domain);
-        //pr($domain, $path, $domain, "{$locale}.{$charset}");
+        // pr($domain, $path, $domain, "{$locale}.{$charset}");
         return $this->locale . '.' . $charset;
     }
 
@@ -189,87 +196,30 @@ class Request
             }
         }
 
-        return (string) $this->host;
+        return $this->host;
     }
 
     public function getRequestUri()
     {
-        // if ($this->uri) {
-        //     return $this->uri;
-        // }
-
-        $requestUri = $this->requestUri;
-        $parts      = \explode('?', (string) $requestUri, 2);
-        $this->uri  = \trim($parts[0], '/');
-
-        if ($this->uri) {
-            $this->uri = '/' . $this->uri;
-        }
-
-        if (true === isset($parts[1]) && $parts[1]) {
-            $this->uri .= '?' . $parts[1];
-        }
-
-        return $this->uri;
-    }
-
-    public function getPath(?int $step = null, $length = null)
-    {
-        if (null !== $step) {
-            $segments = \array_slice($this->segments, $step, $length);
-
-            if ($segments) {
-                return '/' . \implode('/', $segments);
-            }
-
-            return '';
-        }
-
-        return $this->path;
-    }
-
-    public function getOriginPath(?int $step = null, $length = null)
-    {
-        if (null !== $step) {
-            $segments = \array_slice($this->originSegments, $step, $length);
-
-            if ($segments) {
-                return '/' . \implode('/', $segments);
-            }
-
-            return '';
-        }
-
-        return $this->originPath;
+        return $_SERVER['REQUEST_URI'];
     }
 
     public function getQueryString($append = '')
     {
-        if ($this->query) {
-            return $append . \ltrim($this->query, $append);
+        if ($_SERVER['QUERY_STRING'] ?? false) {
+            return $append . \ltrim($_SERVER['QUERY_STRING'], $append);
         }
 
         return '';
     }
 
-    public function getSegments() : array
+    public function getFixPath($step = null, $length = null)
     {
-        return $this->segments;
-    }
-
-    public function getSegment($index)
-    {
-        return $this->segments[$index] ?? '';
-    }
-
-    public function getParameters() : array
-    {
-        return $this->parameters;
-    }
-
-    public function getParameter($key)
-    {
-        return $this->parameters[$key] ?? '';
+        return \str_replace(
+            $this->getTargetEndpoint(),
+            $this->getEndpoint(),
+            $this->getPathByModule($step, $length)
+        );
     }
 
     public function getUrl()
@@ -295,7 +245,7 @@ class Request
     public function getApplicationProperties()
     {
         if (true === Di::has('application')) {
-            return Di::get('application')->getProperties();
+            return Di::getApplication()->getProperties();
         }
         // ERRORCODE: 20007, service provider not found
         throw new Exception('"application" service provider not found', 20007);
@@ -305,7 +255,7 @@ class Request
     public function getApplicationStore()
     {
         if (true === Di::has('application')) {
-            return Di::get('application')->getStore();
+            return Di::getApplication()->getStore();
         }
         // ERRORCODE: 20007, service provider not found
         throw new Exception('"application" service provider not found', 20007);
@@ -315,7 +265,7 @@ class Request
     public function getApplicationNamespaceName()
     {
         if (true === Di::has('application')) {
-            return Di::get('application')->getNamespaceName();
+            return Di::getApplication()->getNamespaceName();
         }
         // ERRORCODE: 20009, service provider not found
         throw new Exception('"application" service provider not found', 20009);
@@ -325,7 +275,7 @@ class Request
     public function getApplicationControllerName()
     {
         if (true === Di::has('application')) {
-            return Di::get('application')->getControllerName();
+            return Di::getApplication()->getControllerName();
         }
         // ERRORCODE: 20009, service provider not found
         throw new Exception('"application" service provider not found', 20009);
@@ -335,17 +285,17 @@ class Request
     public function getApplicationActionName()
     {
         if (true === Di::has('application')) {
-            return Di::get('application')->getActionName();
+            return Di::getApplication()->getActionName();
         }
         // ERRORCODE: 20009, service provider not found
         throw new Exception('"application" service provider not found', 20010);
     }
 
-    // alias application getPath
+    // alias application getModulePath
     public function getApplicationPath()
     {
         if (true === Di::has('application')) {
-            return Di::get('application')->getPath();
+            return Di::getApplication()->getPathByModule();
         }
         // ERRORCODE: 20009, service provider not found
         throw new Exception('"application" service provider not found', 20009);
@@ -355,38 +305,38 @@ class Request
     {
         $matches = [];
 
-        if (1 === \preg_match('/(?P<domain>[a-z0-9][a-z0-9\\-]{1,63}\\.[a-z\\.]{2,6})$/i', $domain, $matches)) {
-            return $matches['domain'];
-        }
+        $parts = \explode('.', $domain, 2);
 
-        return $domain;
+        return $parts[1];
     }
 
-    public function getDomain($host = null)
+    public function getBaseDomain($host = null)
     {
-        if (null === $host) {
-            $host = $this->getHost();
-        }
+        return $this->baseDomain;
+    }
 
-        return $this->extractDomain($host);
+    public function setSubDomain($subDomain)
+    {
+        $this->subDomain = $subDomain;
+    }
+
+    public function setDomain($domain)
+    {
+        $this->domain = $domain;
     }
 
     public function getDefaultHost()
     {
-        return $this->getScheme() . '://www.' . $this->getDomain();
+        return $this->getScheme() . '://www.' . $this->getBaseDomain();
     }
 
     public function getSubDomain($returnDefault = true)
     {
-        $host      = $this->getHost();
-        $domain    = $this->extractDomain($host);
-        $subDomain = \preg_replace('#(\.)?' . $domain . '#', '', $host);
-
-        if (false === $returnDefault) {
-            return $subDomain;
+        if (\Limepie\is_cli()) {
+            return 'cli';
         }
 
-        return $subDomain ?: (\Limepie\is_cli() ? 'cli' : 'www');
+        return $this->subDomain;
     }
 
     public function getBestAccept() : string
@@ -492,7 +442,7 @@ class Request
             if ('POST' === $returnMethod) {
                 $overridedMethod = $this->getHeader('X-HTTP-METHOD-OVERRIDE');
 
-                if (0 === \strlen($overridedMethod)) { //empty
+                if (0 === \strlen($overridedMethod)) { // empty
                     $returnMethod = \strtoupper($overridedMethod);
                 } elseif ($this->httpMethodParameterOverride) {
                     $returnMethod = \strtoupper($_REQUEST['_method']);
@@ -643,7 +593,7 @@ class Request
             case 'application/xml':
                 throw new Exception('xml content type not support', 415);
 
-            break;
+                break;
 
                 break;
             case 'application/json':
@@ -660,23 +610,23 @@ class Request
                             case \JSON_ERROR_DEPTH:
                                 $message = 'Maximum stack depth exceeded';
 
-                            break;
+                                break;
                             case \JSON_ERROR_CTRL_CHAR:
                                 $message = 'Unexpected control character found';
 
-                            break;
+                                break;
                             case \JSON_ERROR_SYNTAX:
                                 $message = 'Syntax error, malformed JSON';
 
-                            break;
+                                break;
                             case \JSON_ERROR_NONE:
                                 $message = 'No errors';
 
-                            break;
+                                break;
                             case \JSON_ERROR_UTF8:
                                 $message = 'Malformed UTF-8 characters';
 
-                            break;
+                                break;
 
                             default:
                                 $message = 'Invalid JSON syntax';
@@ -819,32 +769,24 @@ class Request
         return 'https' === $this->getScheme();
     }
 
-    /**
-     * Checks if the `Request::getHttpHost` method will be use strict validation of host name or not.
-     */
-    public function isStrictHostCheck() : bool
-    {
-        return $this->strictHostCheck;
-    }
+    // /**
+    //  * Checks whether request has been made using SOAP.
+    //  */
+    // public function isSoap() : bool
+    // {
+    //     $tmp = $this->getServer('HTTP_SOAPACTION');
 
-    /**
-     * Checks whether request has been made using SOAP.
-     */
-    public function isSoap() : bool
-    {
-        $tmp = $this->getServer('HTTP_SOAPACTION');
+    //     if ($tmp) {
+    //         return true;
+    //     }
+    //     $contentType = $this->getContentType();
 
-        if ($tmp) {
-            return true;
-        }
-        $contentType = $this->getContentType();
+    //     if (0 === \strlen($contentType)) {
+    //         return false !== \strpos($contentType, 'application/soap+xml');
+    //     }
 
-        if (0 === \strlen($contentType)) {
-            return false !== \strpos($contentType, 'application/soap+xml');
-        }
-
-        return false;
-    }
+    //     return false;
+    // }
 
     /**
      * Checks whether HTTP method is TRACE. if _SERVER["REQUEST_METHOD"]==="TRACE".
@@ -876,21 +818,11 @@ class Request
         return false;
     }
 
-    /**
-     * Sets if the `Request::getHttpHost` method must be use strict validation of host name or not.
-     */
-    public function setStrictHostCheck(bool $flag = true) : self
-    {
-        $this->strictHostCheck = $flag;
-
-        return $this;
-    }
-
     // multi file일때만 true
     public function isMultiFile($array, $isMulti = true)
     {
         if (
-            true === isset($array['name'])
+            true    === isset($array['name'])
             && true === isset($array['type'])
             && true === isset($array['tmp_name'])
             && true === isset($array['error'])
@@ -908,7 +840,7 @@ class Request
     public function isFile($array)
     {
         if (
-            true === isset($array['name'])
+            true    === isset($array['name'])
             && true === isset($array['type'])
             && true === isset($array['tmp_name'])
             && true === isset($array['error'])
@@ -986,7 +918,7 @@ class Request
     public function getFileAll()
     {
         if (true === isset($_FILES) && $_FILES) {
-            //return $this->normalizeFiles();
+            // return $this->normalizeFiles();
 
             $a = $this->getFixedFilesArray();
 
@@ -1112,73 +1044,5 @@ class Request
         }
 
         return $returnedParts;
-    }
-}
-
-namespace Limepie\Request;
-
-class Url
-{
-    public static $url;
-
-    public static function create($url)
-    {
-        Url::$url = $url;
-    }
-
-    public static function getPort()
-    {
-    }
-
-    /**
-     * 예)  http://localhost:8080/project/list.jsp
-     *  [return]        /project/list.js.
-     */
-    public static function getRequestURI()
-    {
-    }
-
-    public static function getScheme()
-    {
-    }
-
-    public static function getHost()
-    {
-    }
-
-    /**
-     * path 메소드는 request의 URI를 반환합니다.
-     * 따라서 들어오는 request가 http://domain.com/foo/bar/를 대상으로 한다면 path 메소드는 /foo/bar를 반환합니다:.
-     *
-     * @param mixed $removeLeadingSlashes
-     */
-    public static function getPath($removeLeadingSlashes = false)
-    {
-    }
-
-    public static function getQuery()
-    {
-    }
-
-    /**
-     * 전체 경로를 가져옵니다. query string 제외
-     * 예) http://localhost:8080/project/list.jsp?bid=free
-     * [return]   http://localhost:8080/project/list.jsp.
-     */
-    public static function getRequestURL()
-    {
-    }
-
-    public static function getUrl()
-    {
-    }
-
-    /**
-     * Get방식으로 넘어온 쿼리문자열을 구하기 위한 request 객체의 메소드는 getQueryString() 입니다. 이 getQueryString() 메소드는 쿼리문자열이 없을때는 null을 리턴해 줍니다.
-     * http://localhost/community/board.jsp?bid=free&page=1
-     * bid=free&page=1.
-     */
-    public static function getQueryString()
-    {
     }
 }
