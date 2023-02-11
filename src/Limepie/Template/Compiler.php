@@ -337,10 +337,14 @@ class Compiler
 
                     break;
                 case '#':
+                    // scope a b:c => $a, $b = $c;
+
                     if (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
                         $result = [2, $this->compileDefine('#' . $tmp['define'], $line, $tmp['scope'] ?? '')];
                     } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
                         $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
+                    } elseif (1 === \preg_match('`^#([\s+])?(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                        $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
                     } else {
                         $result = [1, $statement];
                     }
