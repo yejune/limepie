@@ -149,7 +149,7 @@ EOD;
 
         if (true === isset($property['items'])) {
             if ($property['items'] instanceof \Resource\Helper\Menu) {
-                $option = '<option value="">select..</option>';
+                $option = '<option value="">선택하세요</option>';
                 // storage of output
 
                 try {
@@ -284,10 +284,11 @@ EOD;
 
     public static function read($key, $property, $value)
     {
-        if (0 === \strlen($value)) {
+        if (true === \is_array($value)) {
+            $value = \key($value);
+        } elseif (0 === \strlen((string) $value)) {
             $value = $property['default'] ?? '';
         }
-
         $value = \htmlspecialchars((string) $value);
 
         $option = '';

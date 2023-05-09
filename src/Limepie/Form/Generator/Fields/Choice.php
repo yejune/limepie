@@ -49,11 +49,11 @@ class Choice extends \Limepie\Form\Generator\Fields
             $onload = true;
         }
 
-        $onchange = '';
+        $onchange = $changeEvent = '';
         // script 테그에 넣으면 dynamic copy시 동작안하므로 inline script 사용
         if (true === isset($property['onchange'])) {
-            $onchange = ' onchange="' . \Limepie\minify_js($property['onchange']) . '" ';
-            // $onchange .= ' onclick="' . \Limepie\minify_js($property['onchange']) . '" ';
+            // $onchange    = ' onchange="' . \Limepie\minify_js($property['onchange']) . '" ';
+            $changeEvent = \Limepie\minify_js($property['onchange']);
         }
         $buttonClass = '';
 
@@ -79,13 +79,14 @@ class Choice extends \Limepie\Form\Generator\Fields
         }
 
         $buttons = '';
+        $script  = '';
 
         if (true === isset($property['items']) && true === \is_array($property['items'])) {
             $index   = 0;
             $prepend = 'choice-' . \Limepie\clean_str($key);
 
             $defaultId = '';
-            $checkId   = '';
+            $checkedId = '';
 
             foreach ($property['items'] as $k1 => $v1) {
                 ++$index;
@@ -109,37 +110,43 @@ class Choice extends \Limepie\Form\Generator\Fields
                 // }
 
                 if ($checked) {
-                    $checkId = $id;
+                    $checkedId = $id;
                 }
 
                 $buttons .= <<<EOD
                     <input id="{$id}" class="valid-target btn-check{$inputClass}" type="radio" name="{$key}" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$k1}" data-is-default="{$checkdefault}"{$checked} {$onchange}>
                     <label for="{$id}" class="btn btn-switch {$elementClass}"><span>{$v1}</span></label>
                 EOD;
+
+                $script .= <<<SCRIPT
+                    <script>
+                    document.querySelector('input[type="radio"][id="{$id}"]').addEventListener('click', function() {
+                        // console.log('click event');
+                        {$changeEvent};
+                    }, true);
+                    </script>
+                SCRIPT;
             }
 
-            $script = '';
+            // $script = '';
 
             // if ($onload) {
-            if ($checkId) {
-                $clickid = $checkId;
+            if ($checkedId) {
+                $clickid = $checkedId;
             } else {
                 $clickid = $defaultId;
             }
 
-            if ($clickid) {
-                $script = <<<SCRIPT
-                    <script>
-                    $(function () {
-                        // var f = $('#'+$.escapeSelector( '{$clickid}'));
-                        // if (f[0].onclick) {
-                        //     console.log('{$clickid}');
-                        //     //f.prop("checked", true);
-                        //     f.trigger("click");
-                        // }
-                    });
-                    </script>
-                    SCRIPT;
+            if ($clickid && $changeEvent) {
+                // $script = <<<SCRIPT
+                //     <script>
+                //     $(function () {
+                //         var f = $('#'+$.escapeSelector( '{$clickid}')).on('click', function() {
+                //             {$changeEvent};
+                //         });
+                //     });
+                //     </script>
+                // SCRIPT;
             }
             // }
 

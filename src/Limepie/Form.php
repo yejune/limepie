@@ -70,6 +70,13 @@ class Form
         return $generation->write($this->spec, $data ?? []);
     }
 
+    public function read2(array|ArrayObject|null $data = [])
+    {
+        $generation = new \Limepie\Form\Generator();
+
+        return $generation->read($this->spec, $data ?? []);
+    }
+
     public function read(array $data = [])
     {
         $generation = new \Limepie\Form\Generation();

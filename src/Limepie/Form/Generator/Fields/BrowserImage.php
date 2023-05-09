@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Limepie\Form\Generator\Fields;
 
-class Image extends \Limepie\Form\Generator\Fields
+class BrowserImage extends \Limepie\Form\Generator\Fields
 {
     public static function write($key, $property, $data, $ruleName, $propertyName)
     {

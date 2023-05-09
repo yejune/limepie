@@ -12,11 +12,19 @@ class Exception extends \Exception
 
     public $displayMessage;
 
-    public $debugLine;
+    public $displayMessageLine;
 
-    public $debugFile;
+    public $displayMessageFile;
 
-    public $debugTraces = [];
+    public $displayMessageTraces = [];
+
+    public $debugMessage;
+
+    public $debugMessageLine;
+
+    public $debugMessageFile;
+
+    public $debugMessageTraces = [];
 
     public $location;
 
@@ -25,6 +33,10 @@ class Exception extends \Exception
     public $function;
 
     public $type;
+
+    public $trace;
+
+    public $payload = [];
 
     public function __construct($e, int $code = 0)
     {
@@ -79,7 +91,7 @@ class Exception extends \Exception
 
     public function __toString()
     {
-        return $this->getMessage(); // . ' in ' . $this->getFile() . ' on line ' . $this->line;
+        return $this->getMessage() . ' in ' . $this->getFile() . ' on line ' . $this->line;
     }
 
     public function getLastTrace()
@@ -102,28 +114,34 @@ class Exception extends \Exception
         return $this;
     }
 
-    public function getLocation()
+    public function getLocation($default = null)
     {
-        return $this->location;
+        if ($this->location) {
+            return $this->location;
+        }
+
+        if ($default) {
+            return $default;
+        }
     }
 
-    public function setDisplayMessage($message, $file = null, $line = null, $description = '')
+    public function setDisplayMessage($message, $file = null, $line = null, $displayMessageDescription = null)
     {
         $this->displayMessage = $message;
 
         if (null !== $file) {
-            $this->debugFile = $file;
+            $this->displayMessageFile = $file;
         }
 
         if (null !== $line) {
-            $this->debugLine = $line;
+            $this->displayMessageLine = $line;
         }
 
-        $this->debugTraces[] = [
+        $this->displayMessageTraces[] = [
             'message'     => $this->displayMessage,
-            'file'        => $this->debugFile,
-            'line'        => $this->debugLine,
-            'description' => $description,
+            'file'        => $this->displayMessageFile,
+            'line'        => $this->displayMessageLine,
+            'description' => $displayMessageDescription,
         ];
 
         return $this;
@@ -134,28 +152,90 @@ class Exception extends \Exception
         return $this->displayMessage ?: $this->getMessage();
     }
 
-    public function setDebugLine($line)
+    public function setDisplayMessageLine($line)
     {
-        $this->debugLine = $line;
+        $this->displayMessageLine = $line;
 
         return $this;
     }
 
-    public function getDebugLine()
+    public function getDisplayMessageLine()
     {
-        return $this->debugLine ?: $this->getLine();
+        return $this->displayMessageLine; // ?: $this->getLine();
     }
 
-    public function setDebugFile($file)
+    public function setDisplayMessageFile($file)
     {
-        $this->debugFile = $file;
+        $this->displayMessageFile = $file;
 
         return $this;
     }
 
-    public function getDebugFile()
+    public function getBestMessage()
     {
-        return $this->debugFile ?: $this->getFile();
+        if ($this->displayMessage) {
+            return $this->displayMessage;
+        }
+
+        if ($this->message) {
+            return $this->message;
+        }
+    }
+
+    public function getDisplayMessageFile()
+    {
+        return $this->displayMessageFile; // ?: $this->getFile();
+    }
+
+    public function setDebugMessage($message, $file = null, $line = null, $debugMessageDescription = '')
+    {
+        $this->debugMessage = $message;
+
+        if (null !== $file) {
+            $this->debugMessageFile = $file;
+        }
+
+        if (null !== $line) {
+            $this->debugMessageLine = $line;
+        }
+
+        $this->debugMessageTraces[] = [
+            'message'     => $this->debugMessage,
+            'file'        => $this->debugMessageFile,
+            'line'        => $this->debugMessageLine,
+            'description' => $debugMessageDescription,
+        ];
+
+        return $this;
+    }
+
+    public function getDebugMessage()
+    {
+        return $this->debugMessage ?: $this->getMessage();
+    }
+
+    public function setDebugMessageLine($line)
+    {
+        $this->debugMessageLine = $line;
+
+        return $this;
+    }
+
+    public function getDebugMessageLine()
+    {
+        return $this->debugMessageLine ?: $this->getLine();
+    }
+
+    public function setDebugMessageFile($file)
+    {
+        $this->debugMessageFile = $file;
+
+        return $this;
+    }
+
+    public function getDebugMessageFile()
+    {
+        return $this->debugMessageFile ?: $this->getFile();
     }
 
     public function setLine(int $line)
@@ -210,6 +290,13 @@ class Exception extends \Exception
     public function setType($type)
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    public function payload($data)
+    {
+        $this->payload = $data;
 
         return $this;
     }
@@ -279,8 +366,13 @@ class Exception extends \Exception
     //     return $rtn;
     // }
 
-    public function throw(): void
+    public function throw() : void
     {
         exit($this->__toString());
+    }
+
+    public function toString() : string
+    {
+        return $this->__toString();
     }
 }

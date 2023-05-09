@@ -271,6 +271,16 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return $attributes;
     }
 
+    public function prepend($array)
+    {
+        return $this->attributes = [...$array, ...$this->attributes];
+    }
+
+    public function apend($array)
+    {
+        return $this->attributes = [...$this->attributes, ...$array];
+    }
+
     public function toJson($option = 0) : string
     {
         $attributes = $this->buildArray($this);

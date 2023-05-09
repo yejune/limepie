@@ -178,7 +178,7 @@ class Generator
                 if ($spec['list_button_text'] ?? false) {
                     $listButtonText = $spec['list_button_text'];
                 }
-                $innerhtml .= '<a href="../" class="btn btn-secondary float-right">' . $listButtonText . '</a>';
+                $innerhtml .= '<a href="../" class="btn btn-secondary float-end">' . $listButtonText . '</a>';
             }
         }
         $innerhtml .= '</div>';

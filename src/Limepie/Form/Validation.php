@@ -198,7 +198,7 @@ class Validation
                         } else {
                             // \pr($v, \Limepie\is_file_array($v));
 
-                            throw (new \Limepie\Exception('error'))->setDisplayMessage('not support datatype', __FILE__, __LINE__);
+                            throw (new \Limepie\Exception('error'))->setDebugMessage('not support datatype', __FILE__, __LINE__);
                         }
                     }
 

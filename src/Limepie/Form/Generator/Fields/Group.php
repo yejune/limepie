@@ -95,7 +95,7 @@ class Group extends \Limepie\Form\Generator\Fields
             ++$elementIndex;
 
             if (false === isset($propertyValue['type'])) {
-                throw (new \Limepie\Exception('group ' . ($elementName ? '"' . $elementName . '" ' : '') . '"' . $propertyKey . '" type not found'))->setDisplayMessage('error', __FILE__, __LINE__);
+                throw (new \Limepie\Exception('group ' . ($elementName ? '"' . $elementName . '" ' : '') . '"' . $propertyKey . '" type not found'))->setDebugMessage('error', __FILE__, __LINE__);
             }
             $method         = __NAMESPACE__ . '\\' . \Limepie\camelize($propertyValue['type']);
             $elements       = '';
@@ -714,7 +714,7 @@ class Group extends \Limepie\Form\Generator\Fields
 
         $innerhtml = '';
 
-        foreach ($specs['properties'] as $propertyKey => $propertyValue) {
+        foreach ($specs['properties'] ?? [] as $propertyKey => $propertyValue) {
             $method   = __NAMESPACE__ . '\\' . \Limepie\camelize($propertyValue['type']);
             $elements = '';
             $index    = 0;

@@ -2,7 +2,7 @@
 
 namespace Limepie\Pdo;
 
-class Mysql extends \Pdo
+class Mysql extends \PDO
 {
     public $info = [];
 
@@ -39,19 +39,17 @@ class Mysql extends \Pdo
     }
 
     /**
-     * @param  $statement
      * @param array $bindParameters
-     * @param  $mode
-     *
-     * @throws \PDOException
      *
      * @return array
+     *
+     * @throws \PDOException
      */
     public function gets($statement, $bindParameters = [], $mode = \PDO::FETCH_ASSOC)
     {
         try {
             // return parent::fetchAll($statement, $mode, $bindParameters) ?: null;
-            //pr(func_get_args());
+            // pr(func_get_args());
             if ($this->debug) {
                 \Limepie\Timer::start();
             }
@@ -72,13 +70,11 @@ class Mysql extends \Pdo
     }
 
     /**
-     * @param  $statement
      * @param array $bindParameters
-     * @param  $mode
-     *
-     * @throws \PDOException
      *
      * @return array
+     *
+     * @throws \PDOException
      */
     public function get($statement, $bindParameters = [], $mode = \PDO::FETCH_ASSOC)
     {
@@ -105,17 +101,15 @@ class Mysql extends \Pdo
     }
 
     /**
-     * @param  $statement
      * @param array $bindParameters
-     * @param  $mode
-     *
-     * @throws \PDOException
      *
      * @return string
+     *
+     * @throws \PDOException
      */
     public function get1($statement, $bindParameters = [], $mode = \PDO::FETCH_ASSOC)
     {
-        //pr(func_get_args());
+        // pr(func_get_args());
 
         try {
             if ($this->debug) {
@@ -144,12 +138,11 @@ class Mysql extends \Pdo
     }
 
     /**
-     * @param  $statement
      * @param array $bindParameters
      *
-     * @throws \PdoException
-     *
      * @return bool
+     *
+     * @throws \PdoException
      */
     public function set($statement, $bindParameters = [])
     {
@@ -163,9 +156,8 @@ class Mysql extends \Pdo
     public function last_row_count()
     {
         return $this->rowCount;
-        $result = self::get1('SELECT FOUND_ROWS()');
 
-        return $result;
+        return self::get1('SELECT FOUND_ROWS()');
     }
 
     /*
@@ -243,10 +235,9 @@ class Mysql extends \Pdo
     }
 
     /**
-     * @param  $statement
      * @param array $bindParameters
      *
-     * @return int|false
+     * @return false|int
      */
     public function setAndGetSequnce($statement, $bindParameters = [])
     {
@@ -357,11 +348,9 @@ class Mysql extends \Pdo
     }
 
     /**
-     * @param  $callback
+     * @return mixed
      *
      * @throws \Exception
-     *
-     * @return mixed
      */
     public function transaction(\Closure $callback)
     {
@@ -384,7 +373,7 @@ class Mysql extends \Pdo
             $this->rollback();
             // 데드락에 의한 실패일 경우 한번더 실행
             if (40001 === $e->errorInfo[0]) {
-                //1초 지연
+                // 1초 지연
                 $cho = 1000000;
                 \usleep($cho / 2);
 
@@ -430,7 +419,7 @@ class Mysql extends \Pdo
             $this->rollback();
             // 데드락에 의한 실패일 경우 한번더 실행
             if (40001 === $e->errorInfo[0]) {
-                //1초 지연
+                // 1초 지연
                 $cho = 1000000;
                 \usleep($cho / 2);
 
@@ -472,7 +461,7 @@ class Mysql extends \Pdo
             }
         }
 
-        //pr($statement, $bindParameters);
+        // pr($statement, $bindParameters);
         try {
             $result         = $stmt->execute($binds);
             $this->rowCount = $stmt->rowCount();
@@ -484,12 +473,12 @@ class Mysql extends \Pdo
             }
         } catch (\Limepie\Exception $e) {
             throw new Exception\Execute($e, $this->getErrorFormat($statement, $bindParameters));
-            //throw ($e)->setDisplayMessage($stmt->errorInfo()[2]);
-            //throw new \Limepie\Exception($e->getMessage(). ' ' .$stmt->errorInfo()[2]);
+            // throw ($e)->setDebugMessage($stmt->errorInfo()[2]);
+            // throw new \Limepie\Exception($e->getMessage(). ' ' .$stmt->errorInfo()[2]);
         } catch (\Throwable $e) {
             throw new Exception\Execute($e, $this->getErrorFormat($statement, $bindParameters));
-            //throw (new \Limepie\Exception($e))->setDisplayMessage($stmt->errorInfo()[2]);
-            //throw new \Limepie\Exception($e->getMessage(). ' ' .$stmt->errorInfo()[2]);
+            // throw (new \Limepie\Exception($e))->setDebugMessage($stmt->errorInfo()[2]);
+            // throw new \Limepie\Exception($e->getMessage(). ' ' .$stmt->errorInfo()[2]);
         }
 
         return $stmt;

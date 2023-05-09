@@ -79,7 +79,8 @@ class Request
         }
 
         throw (new \Limepie\Exception('"' . $name . '" method not found', 404))
-            ->setDisplayMessage('page not found', __FILE__, __LINE__)
+            ->setDebugMessage('error', __FILE__, __LINE__)
+            ->setDebugMessage('유효하지 않은 요청입니다. 잠시후 다시 시도하세요.')
         ;
     }
 
@@ -204,6 +205,11 @@ class Request
         return $_SERVER['REQUEST_URI'];
     }
 
+    public function getDocumentUri()
+    {
+        return $_SERVER['DOCUMENT_URI'];
+    }
+
     public function getQueryString($append = '')
     {
         if ($_SERVER['QUERY_STRING'] ?? false) {
@@ -229,6 +235,14 @@ class Request
         $url .= $this->getRequestUri();
 
         return $url;
+    }
+
+    public function getSelf()
+    {
+        $url = '';
+        $url .= $this->getUrl();
+
+        return \strtok($url, '?');
     }
 
     public function getSchemeHost()

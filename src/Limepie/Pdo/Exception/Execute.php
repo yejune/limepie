@@ -86,9 +86,11 @@ class Execute extends \Limepie\Exception
         $fixedBinds = [];
 
         foreach ($binds as $key => $value) {
-            if (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64|aes)_#', $key, $typeMatch)) {
+            if (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64|aes|iv_aes)_#', $key, $typeMatch)) {
                 $value = '[binary]';
-            } elseif (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64|aes)$#', $key, $typeMatch)) {
+            } elseif (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64|aes|iv_aes)$#', $key, $typeMatch)) {
+                $value = '[hidden]';
+            } elseif (1 === \preg_match('#aes#', $key, $typeMatch)) {
                 $value = '[hidden]';
             }
 

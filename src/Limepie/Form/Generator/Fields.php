@@ -206,7 +206,7 @@ class Fields
                 $dotNameKey = \array_shift($dotNameKeys);
 
                 if (!$dotNameKey) {
-                    throw (new \Limepie\Exception('error'))->setDisplayMessage('fixed error', __FILE__, __LINE__);
+                    throw (new \Limepie\Exception('error'))->setDebugMessage('fixed error', __FILE__, __LINE__);
                 }
                 $targetFixedDotNameKeys[] = $dotNameKey;
             } else {
@@ -252,7 +252,7 @@ class Fields
             } else {
                 // 이전 키가 13자리 배열 키가 아니다. 그런데 배열이다.
                 if (true === $chkArray && false === $prevKey) {
-                    throw (new \Limepie\Exception('error'))->setDisplayMessage($key . ' key not found', __FILE__, __LINE__);
+                    throw (new \Limepie\Exception('error'))->setDebugMessage($key . ' key not found', __FILE__, __LINE__);
                 }
 
                 if (true === isset($property['properties'][$id])) {
@@ -261,7 +261,7 @@ class Fields
 
                     // []가 아닌데 multiple이 있다.
                     if (true === isset($property['multiple']) && $property['multiple']) {
-                        throw (new \Limepie\Exception('multiple spec error'))->setDisplayMessage('multiple spec error', __FILE__, __LINE__);
+                        throw (new \Limepie\Exception('multiple spec error'))->setDebugMessage('multiple spec error', __FILE__, __LINE__);
                     }
                 } elseif (true === isset($property['properties'][$id . '[]'])) {
                     $chkArray = true;
@@ -269,11 +269,11 @@ class Fields
 
                     // []인데 multiple이 없다.
                     if (false === isset($property['multiple']) || !$property['multiple']) {
-                        throw (new \Limepie\Exception('is not multiple ' . $key))->setDisplayMessage('is not multiple ' . $key, __FILE__, __LINE__);
+                        throw (new \Limepie\Exception('is not multiple ' . $key))->setDebugMessage('is not multiple ' . $key, __FILE__, __LINE__);
                     }
                 } else {
                     // $id가 $id or $id[] 둘다 없다.
-                    throw (new \Limepie\Exception('not found key ' . $key))->setDisplayMessage('not found key ' . $key, __FILE__, __LINE__);
+                    throw (new \Limepie\Exception('not found key ' . $key))->setDebugMessage('not found key ' . $key, __FILE__, __LINE__);
                 }
 
                 $prevKey = false;
@@ -302,7 +302,7 @@ class Fields
                 if (true === $chkArray && false === $prevKey) {
                     // \var_dump($chkArray, $prevKey, $key);
 
-                    throw (new \Limepie\Exception('error'))->setDisplayMessage($key . ' key not found', __FILE__, __LINE__);
+                    throw (new \Limepie\Exception('error'))->setDebugMessage($key . ' key not found', __FILE__, __LINE__);
                 }
 
                 if (true === isset($property['properties'][$id])) {
@@ -311,7 +311,7 @@ class Fields
 
                     // []가 아닌데 multiple이 있다.
                     if (true === isset($property['multiple']) && $property['multiple']) {
-                        throw (new \Limepie\Exception('multiple spec error'))->setDisplayMessage('multiple spec error', __FILE__, __LINE__);
+                        throw (new \Limepie\Exception('multiple spec error'))->setDebugMessage('multiple spec error', __FILE__, __LINE__);
                     }
                 } elseif (true === isset($property['properties'][$id . '[]'])) {
                     $chkArray = true;
@@ -319,11 +319,11 @@ class Fields
 
                     // []인데 multiple이 없다.
                     if (false === isset($property['multiple']) || !$property['multiple']) {
-                        throw (new \Limepie\Exception('is not multiple ' . $key))->setDisplayMessage('is not multiple ' . $id, __FILE__, __LINE__);
+                        throw (new \Limepie\Exception('is not multiple ' . $key))->setDebugMessage('is not multiple ' . $id, __FILE__, __LINE__);
                     }
                 } else {
                     // $id가 $id or $id[] 둘다 없다.
-                    throw (new \Limepie\Exception('not found key ' . $key))->setDisplayMessage('not found key ' . $key, __FILE__, __LINE__);
+                    throw (new \Limepie\Exception('not found key ' . $key))->setDebugMessage('not found key ' . $key, __FILE__, __LINE__);
                 }
 
                 $prevKey = false;

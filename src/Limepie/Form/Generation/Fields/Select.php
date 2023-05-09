@@ -288,8 +288,12 @@ EOT;
 
     public static function read($key, $property, $value)
     {
-        if (0 === \strlen($value)) {
+        if (\is_array($value)) {
             $value = $property['default'] ?? '';
+        } else {
+            if (0 === \strlen((string) $value)) {
+                $value = $property['default'] ?? '';
+            }
         }
 
         $value = \htmlspecialchars((string) $value);

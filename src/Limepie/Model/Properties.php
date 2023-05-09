@@ -10,7 +10,7 @@ class Properties
 
     protected $timestamp_fields = [];
 
-    protected $fileds = [];
+    public $fields = [];
 
     public function getTableName() : string
     {
@@ -19,7 +19,7 @@ class Properties
 
     public function getPrimaryKeyName() : string
     {
-        return $this->pk_name;
+        return $this->primary_key_name;
     }
 
     public function getTimestampFields() : array
@@ -27,7 +27,7 @@ class Properties
         return $this->timestamp_fields;
     }
 
-    public function getFields() : string
+    public function getFields() : array
     {
         return $this->fields;
     }

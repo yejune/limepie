@@ -141,23 +141,23 @@ class Pagination
         $html = '<ul class="pagination">';
 
         if ($pagination['prevUrl']) {
-            $html .= '<li class="page-item"><a class="page-link" href="' . $pagination['prevUrl'] . '">&laquo;</a></li>'; // Previous
+            $html .= '<li class="page-item prev"><a class="page-link" href="' . $pagination['prevUrl'] . '"><span class="page-text">&laquo;</span></a></li>'; // Previous
         } else {
-            $html .= '<li class="page-item disabled"><a class="page-link">&laquo;</a></li>';
+            $html .= '<li class="page-item prev disabled"><a class="page-link"><span class="page-text">&laquo;</span></a></li>';
         }
 
         foreach ($pagination['pages'] as $page) {
             if ($page['url']) {
-                $html .= '<li  class="page-item' . ($page['isCurrent'] ? ' active' : '') . '"><a class="page-link" href="' . $page['url'] . '">' . $page['num'] . '</a></li>';
+                $html .= '<li  class="page-item' . ($page['isCurrent'] ? ' active' : '') . '"><a class="page-link" href="' . $page['url'] . '"><span class="page-text">' . $page['num'] . '</span></a></li>';
             } else {
-                $html .= '<li class="page-item disabled"><span class="page-link">' . $page['num'] . '</span></li>';
+                $html .= '<li class="page-item ' . ('...' == $page['num'] ? 'ellipsis ' : '') . 'disabled"><a class="page-link"><span class="page-text">' . $page['num'] . '</span></a></li>';
             }
         }
 
         if ($pagination['nextUrl']) {
-            $html .= '<li class="page-item"><a class="page-link" href="' . $pagination['nextUrl'] . '">&raquo;</a></li>'; // Next
+            $html .= '<li class="page-item next"><a class="page-link" href="' . $pagination['nextUrl'] . '"><span class="page-text">&raquo;</span></a></li>'; // Next
         } else {
-            $html .= '<li class="page-item disabled"><a class="page-link">&raquo;</a></li>';
+            $html .= '<li class="page-item next disabled"><a class="page-link"><span class="page-text">&raquo;</span></a></li>';
         }
         $html .= '</ul>';
 
@@ -191,8 +191,14 @@ class Pagination
         ];
     }
 
-    public static function getList($countModel, $listModel = null, int $recordsPerPage = 10, int $pagesPerBlock = 9): array
-    {
+    public static function getList(
+        $countModel,
+        $listModel = null,
+        int $recordsPerPage = 10,
+        int $pagesPerBlock = 9,
+        $hash = null,
+        $currentPage = null
+    ) : array {
         if (!$listModel) {
             $listModel = clone $countModel;
         }
@@ -210,13 +216,21 @@ class Pagination
         } else {
             $query = $qs . (0 < \strlen($qs) ? '&' : '?') . 'page={=page}';
         }
-        $urlPattern  = $query;
-        $currentPage = $_GET['page'] ?? 1;
-        $totalPages  = (0 === $recordsPerPage ? 0 : (int) \ceil($totalCount / $recordsPerPage));
+        $urlPattern = $query;
 
-        if ($totalPages && $currentPage > $totalPages) {
-            $currentPage = $totalPages;
+        if ($hash) {
+            $urlPattern .= $hash;
         }
+
+        if ($currentPage) {
+        } else {
+            $currentPage = $_GET['page'] ?? 1;
+        }
+        $totalPages = (0 === $recordsPerPage ? 0 : (int) \ceil($totalCount / $recordsPerPage));
+
+        // if ($totalPages && $currentPage > $totalPages) {
+        //     $currentPage = $totalPages;
+        // }
         $offset     = ($currentPage - 1) * $recordsPerPage;
         $pagination = \Limepie\Pagination::getHtml($totalCount, $currentPage, $recordsPerPage, $pagesPerBlock, $urlPattern);
         $listModels = $listModel->limit($offset, $recordsPerPage)->gets();
@@ -224,7 +238,7 @@ class Pagination
         return [$listModels, $pagination, $totalCount, $totalPages];
     }
 
-    public static function getNav($totalCount, int $recordsPerPage = 10, int $pagesPerBlock = 9): array
+    public static function getNav($totalCount, int $recordsPerPage = 10, int $pagesPerBlock = 9) : array
     {
         $qs = $_SERVER['QUERY_STRING'] ?? '';
 
@@ -247,7 +261,7 @@ class Pagination
         $offset     = ($currentPage - 1) * $recordsPerPage;
         $pagination = \Limepie\Pagination::getHtml($totalCount, $currentPage, $recordsPerPage, $pagesPerBlock, $urlPattern);
 
-        return [$pagination, $offset, $recordsPerPage];
+        return [$pagination, $offset, $recordsPerPage, $totalPages];
     }
 }
 

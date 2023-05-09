@@ -52,6 +52,7 @@ class Mysql extends \Limepie\Pdo
      * @param array $bindParameters
      * @param       $mode
      * @param mixed $type           모델에서는 기본적으로 false로 넘겨 배열을 받고 pdo에 직접 접근할때는 true로 ArrayObject를 받음
+     * @param mixed $statement
      *
      * @return array
      *
@@ -91,6 +92,7 @@ class Mysql extends \Limepie\Pdo
      * @param array $bindParameters
      * @param       $mode
      * @param mixed $type           모델에서는 기본적으로 false로 넘겨 배열을 받고 pdo에 직접 접근할때는 true로 ArrayObject를 받음
+     * @param mixed $statement
      *
      * @return array
      *
@@ -128,6 +130,7 @@ class Mysql extends \Limepie\Pdo
     /**
      * @param array $bindParameters
      * @param       $mode
+     * @param mixed $statement
      *
      * @return string
      *
@@ -166,6 +169,7 @@ class Mysql extends \Limepie\Pdo
 
     /**
      * @param array $bindParameters
+     * @param mixed $statement
      *
      * @return bool
      *
@@ -264,6 +268,7 @@ class Mysql extends \Limepie\Pdo
 
     /**
      * @param array $bindParameters
+     * @param mixed $statement
      *
      * @return null|int
      */
@@ -501,11 +506,11 @@ class Mysql extends \Limepie\Pdo
             }
         } catch (\Limepie\Exception $e) {
             throw new Exception\Execute($e, $statement, $bindParameters);
-            // throw ($e)->setDisplayMessage($stmt->errorInfo()[2]);
+            // throw ($e)->setDebugMessage($stmt->errorInfo()[2]);
             // throw new \Limepie\Exception($e->getMessage(). ' ' .$stmt->errorInfo()[2]);
         } catch (\Throwable $e) {
             throw new Exception\Execute($e, $statement, $bindParameters);
-            // throw (new \Limepie\Exception($e))->setDisplayMessage($stmt->errorInfo()[2]);
+            // throw (new \Limepie\Exception($e))->setDebugMessage($stmt->errorInfo()[2]);
             // throw new \Limepie\Exception($e->getMessage(). ' ' .$stmt->errorInfo()[2]);
         }
 
@@ -529,6 +534,8 @@ class Mysql extends \Limepie\Pdo
             if (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64|aes)_#', $key, $typeMatch)) {
                 $value = '[binary]';
             } elseif (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64|aes)$#', $key, $typeMatch)) {
+                $value = '[hidden]';
+            } elseif (1 === \preg_match('#aes#', $key, $typeMatch)) {
                 $value = '[hidden]';
             }
 

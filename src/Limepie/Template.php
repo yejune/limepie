@@ -258,7 +258,7 @@ class Template
 
         if (false === $tplPath2) {
             throw (new Exception('cannot find defined template "' . $tplPath . '"', 404))
-                ->setDisplayMessage('page not found', __FILE__, __LINE__)
+                ->setDebugMessage('page not found', __FILE__, __LINE__)
             ;
         }
 
@@ -327,7 +327,7 @@ class Template
 
         if (false === $tplPath) {
             throw (new Exception('cannot find defined template "' . $tplPath . '"', 404))
-                ->setDisplayMessage('page not found', __FILE__, __LINE__)
+                ->setDebugMessage('page not found', __FILE__, __LINE__)
             ;
         }
         // ( 24 + 1 + 40 + 1 ) + ( 11 + 1 )
@@ -354,7 +354,7 @@ class Template
 
         if (false === $cplPath2) {
             throw (new Exception('cannot find defined template compile "' . $cplPath . '"', 404))
-                ->setDisplayMessage('page not found', __FILE__, __LINE__)
+                ->setDebugMessage('page not found', __FILE__, __LINE__)
             ;
         }
 

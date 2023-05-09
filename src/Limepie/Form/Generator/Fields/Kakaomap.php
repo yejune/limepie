@@ -129,10 +129,12 @@ class Kakaomap extends \Limepie\Form\Generator\Fields
 
         $apikey = '';
 
-        if (\Limepie\Di::getResponse()->private('kakao')) {
-            $apikey = \Limepie\Di::getResponse()->private('kakao')->getClientId();
-        } elseif (isset($property['apikey']) && $property['apikey']) {
-            $apikey = $property['apikey'];
+        if (\Limepie\Di::getResponse()->getPrivate()->getKakaoLogin(null)?->getClientId(null)) {
+            $apikey = \Limepie\Di::getResponse()->getPrivate()?->getKakaoLogin(null)?->getClientId(null);
+        }
+
+        if (!$apikey) {
+            throw new \Limepie\Exception('kakao api key가 없습니다.');
         }
 
         $marker_draggable = 'false';
@@ -201,7 +203,7 @@ function kakao_map_init{$geometryId}() {
     var map_results = {$encodeValueOrNull};
     var map_status = null;
     var address_callback = function(result, status) {
-        map_results[0]['fixed_address'] = result[0];
+        map_results['fixed_address'] = result[0];
         if(result && result.length > 0) {
             if(result[0].road_address) {
                 {$comment}$('#address{$geometryId}').val(result[0].road_address.address_name);
@@ -212,7 +214,7 @@ function kakao_map_init{$geometryId}() {
             }
         }
         if(map_results && map_results.length > 0) {
-            $("#geometry{$geometryId}").val(JSON.stringify(map_results[0])).trigger('change');
+            $("#geometry{$geometryId}").val(JSON.stringify(map_results)).trigger('change');
         }
     };
     var dragend_event_callback = function() {
@@ -223,13 +225,13 @@ function kakao_map_init{$geometryId}() {
         geocoder.coord2Address(coords.getLng(), coords.getLat(), address_callback);
         //map.setCenter(coords);
         map.panTo(coords);
-
-        map_results[0]['fixed'] = {
+console.log('map_results', map_results);
+        map_results['fixed'] = {
             x: latlng.getLng(),
             y: latlng.getLat()
         };
 
-        $("#geometry{$geometryId}").val(JSON.stringify(map_results[0])).trigger('change');
+        $("#geometry{$geometryId}").val(JSON.stringify(map_results)).trigger('change');
     };
 
     var click_event_callback = function(mouseEvent) {
@@ -244,19 +246,19 @@ function kakao_map_init{$geometryId}() {
         // 마커 위치를 클릭한 위치로 옮깁니다
         marker.setPosition(latlng);
 
-        map_results[0]['fixed'] = {
+        map_results['fixed'] = {
             x: latlng.getLng(),
             y: latlng.getLat()
         };
 
-        $("#geometry{$geometryId}").val(JSON.stringify(map_results[0])).trigger('change');
+        $("#geometry{$geometryId}").val(JSON.stringify(map_results)).trigger('change');
     };
     var zoom = function() {
         // 지도의 현재 레벨을 얻어옵니다
         var level = map.getLevel();
 
-        map_results[0]['zoom_level'] = level;
-        $("#geometry{$geometryId}").val(JSON.stringify(map_results[0])).trigger('change');
+        map_results['zoom_level'] = level;
+        $("#geometry{$geometryId}").val(JSON.stringify(map_results)).trigger('change');
     };
 
     // 일반 지도와 스카이뷰로 지도 타입을 전환할 수 있는 지도타입 컨트롤을 생성합니다
@@ -277,6 +279,11 @@ function kakao_map_init{$geometryId}() {
 
     var mapinit = function() {
         // 주소로 좌표를 검색합니다
+        if(!$('#address{$geometryId}').val()) {
+            alert('장소명, 도로명, 건물명 또는 지번을 입력하세요.');
+            $('#address{$geometryId}').focus();
+            return false;
+        }
         {$method}($('#address{$geometryId}').val(), function(result, status) {
             // 정상적으로 검색이 완료됐으면
             map_status = status;
@@ -294,10 +301,10 @@ function kakao_map_init{$geometryId}() {
                     position: coords
                 });
 
-                map_results = result;
+                map_results = result[0];
 
                 geocoder.coord2Address(coords.getLng(), coords.getLat(), address_callback);
-                map_results[0]['keyword'] = $('#address{$geometryId}').val();
+                map_results['keyword'] = $('#address{$geometryId}').val();
                 kakao.maps.event.addListener(marker, 'dragend',  dragend_event_callback);
                 marker.setDraggable({$marker_draggable});
 

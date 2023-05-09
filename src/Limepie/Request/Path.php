@@ -77,4 +77,25 @@ class Path
     {
         return $this->parameters[$key] ?? '';
     }
+
+    public function getPath($abs = null)
+    {
+        if ($abs) {
+            // Count the number of ".." in $abs
+            $upCount = \substr_count($abs, '..');
+
+            // Split $path by "/"
+            $directories = \explode('/', $this->pathString);
+
+            // Remove directories from the end of $path
+            for ($i = 0; $i < $upCount; ++$i) {
+                \array_pop($directories);
+            }
+
+            // Rejoin the remaining directories into a path string
+            return '/' . \implode('/', $directories);
+        }
+
+        return '/' . $this->pathString;
+    }
 }

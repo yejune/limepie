@@ -40,6 +40,8 @@ class Connector
     /**
      * #[username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN].
      *
+     * @param mixed $url
+     *
      * @return array
      */
     public function setDsn($url)
@@ -105,7 +107,7 @@ class Connector
             return new $class($this->dsn, $this->username, $this->password, $options);
         } catch (\Throwable $e) {
             throw (new \Limepie\Exception($e, 500))
-                ->setDisplayMessage('database connect error.', __FILE__, __LINE__)
+                ->setDebugMessage('database connect error.', __FILE__, __LINE__)
             ;
         }
     }

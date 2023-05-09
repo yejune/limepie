@@ -60,19 +60,28 @@ class Text extends \Limepie\Form\Generator\Fields
             $elementClass = ' ' . $property['element_class'];
         }
 
-        $prepend = '';
 
-        if (isset($property['prepend']) && $property['prepend']) {
+        $prepend = $prependClass = '';
+
+        if (true === isset($property['prepend_class']) && $property['prepend_class']) {
+            $prependClass = ' ' . $property['prepend_class'];
+        }
+
+        if (true === isset($property['prepend']) && $property['prepend']) {
             $prepend = <<<EOD
-            <span class="input-group-text">{$property['prepend']}</span>
+            <span class="input-group-text{$prependClass}">{$property['prepend']}</span>
             EOD;
         }
 
-        $append = '';
+        $append = $appendClass = '';
 
-        if (isset($property['append']) && $property['append']) {
+        if (true === isset($property['append_class']) && $property['append_class']) {
+            $appendClass = ' ' . $property['append_class'];
+        }
+
+        if (true === isset($property['append']) && $property['append']) {
             $append = <<<EOD
-            <span class="input-group-text">{$property['append']}</span>
+            <span class="input-group-text{$appendClass}">{$property['append']}</span>
             EOD;
         }
 

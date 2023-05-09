@@ -16,8 +16,31 @@ function ___($domain, $string, $a, $b)
 {
     return \dngettext($domain, $string, $a, $b);
 }
+// 테그를 그대로 보여줌
+function bprint($content, $nl2br = false)
+{
+    $content = \trim((string) $content);
+
+    if ($content) {
+        if (true) {
+            $content = \str_replace(['<', '>'], ['&lt;', '&gt;'], $content);
+        }
+
+        if ($nl2br) {
+            $content = \nl2br($content);
+        }
+
+        return $content;
+    }
+
+    return '';
+}
+
+// 테그를 삭제하고 보여줌. <테그아님>도 strip_tags에 의해 삭제됨
 function cprint($content, $nl2br = false)
 {
+    $content = \trim((string) $content);
+
     if ($content) {
         $content = \strip_tags($content);
 
@@ -30,8 +53,11 @@ function cprint($content, $nl2br = false)
 
     return '';
 }
+
 function cprint_tags($content, array|string|null $allowTags = null)
 {
+    $content = \trim((string) $content);
+
     if ($content) {
         return \strip_tags($content, $allowTags);
     }
@@ -53,7 +79,13 @@ function per1($point, $step)
 
     return 0;
 }
+function get_yoil($i)
+{
+    // 월요일이 0부터 시작
+    $week = ['월', '화', '수', '목', '금', '토', '일'];
 
+    return $week[$i];
+}
 function date_format(string $date, $format)
 {
     $time = \strtotime($date);
@@ -1102,7 +1134,11 @@ function genRandomString($length = 5)
 
 function decamelize($word)
 {
-    return \str_replace(['(', ')'], ['_(', '_)'], \strtolower(\preg_replace('/(?<!^)[A-Z]/', '_$0', $word)));
+    if (false === \strpos($word, ' ')) {
+        return \str_replace(['(', ')'], ['_(', '_)'], \strtolower(\preg_replace('/(?<!^)[A-Z]/', '_$0', $word)));
+    }
+
+    return $word;
 }
 
 function camelize(string $word)
@@ -1547,17 +1583,21 @@ function cartesian_product(array $input)
     return $result;
 }
 
-function http_build_query($data = [], $glue = '=', $separator = '&')
+function http_build_query($data = [], $glue = '=', $separator = '&', $encode = false)
 {
     $results = [];
     $isAssoc = \Limepie\is_assoc($data);
 
     foreach ($data as $k => $v) {
         if (true === \is_array($v)) {
-            $results[] = $k . $glue . '[' . http_build_query($v, $glue, $separator) . ']';
+            $results[] = ($k ? $k . $glue : '') . '[' . http_build_query($v, $glue, $separator, $encode) . ']';
         } else {
+            if (true === $encode) {
+                $v = \htmlspecialchars($v);
+            }
+
             if ($isAssoc) {
-                $results[] = $k . $glue . $v;
+                $results[] = ($k ? $k . $glue : '') . $v;
             } else {
                 $results[] = $v;
             }
@@ -2365,7 +2405,7 @@ function minify_js($input)
             '$1$3',
             '$1.$3',
         ],
-        \str_replace('"', '&quot;', $input)
+        $input// \str_replace('"', '&quot;', $input)
     );
 }
 
@@ -2402,11 +2442,70 @@ function add_string($string, $glue = ' ', $start = '', $end = '')
 {
     return $string ? $glue . $start . $string . $end : '';
 }
-
-function is_serialized_string($sstr)
+function is_serialized_string($data, $strict = true)
 {
-    if (\is_string($sstr)) {
-        return 1 === \preg_match('/^s:\d+:".*";$/s', $sstr);
+    // if it isn't a string, it isn't serialized.
+    if (!\is_string($data)) {
+        return false;
+    }
+    $data = \trim($data);
+
+    if ('N;' == $data) {
+        return true;
+    }
+
+    if (\strlen($data) < 4) {
+        return false;
+    }
+
+    if (':' !== $data[1]) {
+        return false;
+    }
+
+    if ($strict) {
+        $lastc = \substr($data, -1);
+
+        if (';' !== $lastc && '}' !== $lastc) {
+            return false;
+        }
+    } else {
+        $semicolon = \strpos($data, ';');
+        $brace     = \strpos($data, '}');
+        // Either ; or } must exist.
+        if (false === $semicolon && false === $brace) {
+            return false;
+        }
+        // But neither must be in the first X characters.
+        if (false !== $semicolon && $semicolon < 3) {
+            return false;
+        }
+
+        if (false !== $brace && $brace < 4) {
+            return false;
+        }
+    }
+    $token = $data[0];
+
+    switch ($token) {
+        case 's':
+            if ($strict) {
+                if ('"' !== \substr($data, -2, 1)) {
+                    return false;
+                }
+            } elseif (false === \strpos($data, '"')) {
+                return false;
+            }
+            // or else fall through
+            // no break
+        case 'a':
+        case 'O':
+            return (bool) \preg_match("/^{$token}:[0-9]+:/s", $data);
+        case 'b':
+        case 'i':
+        case 'd':
+            $end = $strict ? '$' : '';
+
+            return (bool) \preg_match("/^{$token}:[0-9.E-]+;{$end}/", $data);
     }
 
     return false;
@@ -2462,4 +2561,241 @@ function array_tree2($array, $parent = 0)
     }
 
     return $ret;
+}
+
+function get_redirect_code($code = 301)
+{
+    if (\Limepie\is_ajax()) {
+        return 201;
+    }
+
+    return $code;
+}
+
+function get_return_url($default = '/')
+{
+    if (isset($_GET['return_url'])) {
+        $urlRequestUrl = \rawurldecode($_GET['return_url']);
+    } elseif ($default) {
+        $urlRequestUrl = \rawurldecode($default);
+    }
+
+    return $urlRequestUrl;
+}
+
+function get_daum_postcode(array $raw = null)
+{
+    $addr      = ''; // 주소 변수
+    $extraAddr = ''; // 참고항목 변수
+    $zonecode  = ''; // 우편번호
+
+    if ($raw) {
+        // 사용자가 선택한 주소 타입에 따라 해당 주소 값을 가져온다.
+        if ('R' === $raw['userSelectedType']) {
+            // 사용자가 도로명 주소를 선택했을 경우
+            $addr = $raw['roadAddress'];
+        } else {
+            // 사용자가 지번 주소를 선택했을 경우(J)
+            $addr = $raw['jibunAddress'];
+        }
+
+        // 사용자가 선택한 주소가 도로명 타입일때 참고항목을 조합한다.
+        if ('R' === $raw['userSelectedType']) {
+            // 법정동명이 있을 경우 추가한다. (법정리는 제외)
+            // 법정동의 경우 마지막 문자가 "동/로/가"로 끝난다.
+            if ('' !== $raw['bname'] && \preg_match('#[동|로|가]$#', $raw['bname'])) {
+                $extraAddr .= $raw['bname'];
+            }
+            // 건물명이 있고, 공동주택일 경우 추가한다.
+            if ('' !== $raw['buildingName'] && 'Y' === $raw['apartment']) {
+                $extraAddr .= '' !== $extraAddr ? ', ' + $raw['buildingName'] : $raw['buildingName'];
+            }
+            // 표시할 참고항목이 있을 경우, 괄호까지 추가한 최종 문자열을 만든다.
+            if ('' !== $extraAddr) {
+                $extraAddr = ' (' . $extraAddr . ')';
+            }
+        }
+        $zonecode = $raw['zonecode'];
+    }
+
+    return [
+        $addr,
+        $extraAddr,
+        $zonecode,
+    ];
+}
+
+// query string append
+function gsa($key, $value = null)
+{
+    $queryString = parse_str($_SERVER['QUERY_STRING']);
+
+    if (\is_array($key)) {
+        $queryString = [...$queryString, ...$key];
+    } else {
+        $queryString[$key] = $value;
+    }
+    $query = http_build_query($queryString);
+
+    return $query ? '?' . $query : '';
+}
+
+function circle_distance($lat1, $lon1, $lat2, $lon2)
+{
+    $rad = M_PI / 180;
+
+    return \acos(\sin($lat2 * $rad) * \sin($lat1 * $rad) + \cos($lat2 * $rad) * \cos($lat1 * $rad) * \cos($lon2 * $rad - $lon1 * $rad)) * 6371; // Kilometers
+}
+
+function calculate_discount_rate($originalPrice, $currentPrice, $append = false)
+{
+    $percent = ($append ? '%' : '');
+
+    // 현재가격이 원래 가격보다 클 경우에만 할인율 계산
+    if ($currentPrice < $originalPrice) {
+        $discount     = $originalPrice - $currentPrice;
+        $discountRate = \round($discount / $originalPrice * 100);
+
+        return $discountRate . $percent;
+    }
+
+    return '0' . $percent; // 할인율 없음
+}
+
+function trim_values($values)
+{
+    if (\is_array($values)) {
+        foreach ($values as &$value) {
+            $value = trim_values($value);
+        }
+
+        return $values;
+    }
+
+    return \trim($values);
+}
+
+function image_type($mime_type)
+{
+    return 'image' == \substr($mime_type, 0, 5);
+}
+function generator($array)
+{
+    foreach ($array as $value) {
+        yield $value;
+    }
+}
+function removeDirectoriesFromPath($path, $abs)
+{
+    // Count the number of ".." in $abs
+    $upCount = \substr_count($abs, '..');
+
+    // Split $path by "/"
+    $directories = explode('/', $path);
+
+    // Remove directories from the end of $path
+    for ($i = 0; $i < $upCount; ++$i) {
+        \array_pop($directories);
+    }
+
+    // Rejoin the remaining directories into a path string
+    return \implode('/', $directories);
+}
+
+function generateRandomString($length)
+{
+    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $string     = '';
+
+    for ($i = 0; $i < $length; ++$i) {
+        $string .= $characters[\rand(0, \strlen($characters) - 1)];
+    }
+
+    return $string;
+}
+
+function getDayOfWeek($date)
+{
+    // $date는 'YYYY-MM-DD' 형식의 문자열이어야 합니다.
+    $timestamp = \strtotime($date);
+    $dayOfWeek = \date('w', $timestamp); // 0 (일요일)에서 6 (토요일)까지의 정수 값을 반환합니다.
+
+    $days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+
+    return $days[$dayOfWeek];
+}
+
+function getTimeRemaining($date, $showHours = true, $showMinutes = true, $showSeconds = false)
+{
+    // $date는 'YYYY-MM-DD' 형식의 문자열이어야 합니다.
+    $targetDate       = $date . ' 23:59:59';
+    $targetTimestamp  = \strtotime($targetDate);
+    $currentTimestamp = \time();
+
+    $timeDifference = $targetTimestamp - $currentTimestamp;
+
+    if ($timeDifference < 0) {
+        return '날짜가 이미 지났습니다.';
+    }
+
+    $daysRemaining = \floor($timeDifference / 86400); // 1일은 86400초입니다.
+    $timeDifference %= 86400;
+
+    $hoursRemaining = \floor($timeDifference / 3600); // 1시간은 3600초입니다.
+    $timeDifference %= 3600;
+
+    $minutesRemaining = \floor($timeDifference / 60); // 1분은 60초입니다.
+    $secondsRemaining = $timeDifference % 60;
+
+    $result = "{$daysRemaining}일";
+
+    if ($showHours) {
+        $result .= " {$hoursRemaining}시간";
+    }
+
+    if ($showMinutes) {
+        $result .= " {$minutesRemaining}분";
+    }
+
+    if ($showSeconds) {
+        $result .= " {$secondsRemaining}초";
+    }
+
+    $result .= ' 남았습니다.';
+
+    return $result;
+}
+
+// 기준일로부터 x주 간격으로 반복되는 일정의 가장 가까운 다음 일정을 계산
+// 기준일이 미래 날짜인 경우 그 기준일 자체가 가장 가까운 다음 일정이 됨
+// 최소 minDaysAfterToday일 이후 날짜를 반환하도록 설정
+function getClosestNextEvent($baseDate, $intervalWeeks, $minDaysAfterToday = 7)
+{
+    if ($intervalWeeks < 1) {
+        throw new \InvalidArgumentException('intervalWeeks는 1 이상의 정수여야 합니다.');
+    }
+    $baseDateTimestamp = \strtotime($baseDate);
+    $currentTimestamp  = \time();
+    $minDaysTimestamp  = \strtotime("+{$minDaysAfterToday} days", $currentTimestamp);
+
+    if ($baseDateTimestamp >= $minDaysTimestamp) {
+        return \date('Y-m-d', $baseDateTimestamp);
+    }
+
+    $nextEventTimestamp = $baseDateTimestamp;
+
+    while ($nextEventTimestamp < $minDaysTimestamp) {
+        $nextEventTimestamp = \strtotime("+{$intervalWeeks} weeks", $nextEventTimestamp);
+    }
+
+    return \date('Y-m-d', $nextEventTimestamp);
+}
+
+// 주어진 날짜에 일(day) 단위의 숫자를 더하거나 뺀 날짜를 반환
+function adjustDate($date, $days)
+{
+    $dateTimestamp     = \strtotime($date);
+    $adjustedTimestamp = \strtotime("{$days} days", $dateTimestamp);
+
+    return \date('Y-m-d', $adjustedTimestamp);
 }
