@@ -197,7 +197,8 @@ class Pagination
         int $recordsPerPage = 10,
         int $pagesPerBlock = 9,
         $hash = null,
-        $currentPage = null
+        $currentPage = null,
+        $urlPattern = null
     ) : array {
         if (!$listModel) {
             $listModel = clone $countModel;
@@ -205,26 +206,33 @@ class Pagination
 
         $totalCount = $countModel->getCount();
 
-        $qs = $_SERVER['QUERY_STRING'] ?? '';
+        if (!$urlPattern) {
+            $qs = $_SERVER['QUERY_STRING'] ?? '';
 
-        if (0 < \strlen($qs)) {
-            $qs = '?' . $qs;
-        }
+            if (0 < \strlen($qs)) {
+                $qs = '?' . $qs;
+            }
 
-        if (1 === \preg_match('#(\?|&)page=(\d+)#', $qs, $m)) {
-            $query = \preg_replace('#(\?|&)page=(\d+)#', '$1page={=page}', $qs);
-        } else {
-            $query = $qs . (0 < \strlen($qs) ? '&' : '?') . 'page={=page}';
-        }
-        $urlPattern = $query;
+            if (1 === \preg_match('#(\?|&)page=(\d+)#', $qs, $m)) {
+                $query = \preg_replace('#(\?|&)page=(\d+)#', '$1page={=page}', $qs);
+            } else {
+                $query = $qs . (0 < \strlen($qs) ? '&' : '?') . 'page={=page}';
+            }
+            $urlPattern = $query;
 
-        if ($hash) {
-            $urlPattern .= $hash;
+            if ($hash) {
+                $urlPattern .= $hash;
+            }
         }
 
         if ($currentPage) {
+            $currentPage = (int) $currentPage;
         } else {
-            $currentPage = $_GET['page'] ?? 1;
+            $currentPage = (int) ($_REQUEST['page'] ?? 1);
+        }
+
+        if ($currentPage < 1) {
+            $currentPage = 1;
         }
         $totalPages = (0 === $recordsPerPage ? 0 : (int) \ceil($totalCount / $recordsPerPage));
 
@@ -252,7 +260,7 @@ class Pagination
             $query = $qs . (0 < \strlen($qs) ? '&' : '?') . 'page={=page}';
         }
         $urlPattern  = $query;
-        $currentPage = $_GET['page'] ?? 1;
+        $currentPage = $_REQUEST['page'] ?? 1;
         $totalPages  = (0 === $recordsPerPage ? 0 : (int) \ceil($totalCount / $recordsPerPage));
 
         if ($totalPages && $currentPage > $totalPages) {

@@ -1448,6 +1448,21 @@ function decimal($number, $zero2null = false) : float|int|null
 
     return (int) 0;
 }
+// number comma
+function nc($number)
+{
+    $parts       = \explode('.', (string) $number); // 정수 부분과 소수 부분으로 분리합니다.
+    $integerPart = $parts[0];
+    $decimalPart = isset($parts[1]) ? $parts[1] : '';
+
+    $formattedInteger = \number_format((int) $integerPart); // 정수 부분을 천 단위로 구분하여 형식화합니다.
+
+    // 소수 부분이 있으면서 소수 부분이 0으로만 구성되어 있지 않을 경우, 소수 부분을 trim 합니다.
+    $formattedDecimal = !empty($decimalPart) && !\preg_match('/^0+$/', $decimalPart) ? \rtrim($decimalPart, '0') : '';
+
+    // 형식화된 정수 부분과 소수 부분을 조합하여 최종 결과를 반환합니다.
+    return $formattedDecimal ? $formattedInteger . '.' . $formattedDecimal : $formattedInteger;
+}
 function nf($number)
 {
     return \Limepie\number_format($number);
@@ -1811,8 +1826,6 @@ function mysql_aes_key($key)
  * Programmatically mimic a MySQL AES_ENCRYPT() action as a way of avoiding unnecessary database calls.
  *
  * @param string     $decrypted
- * @param string     $cypher
- * @param bool       $mySqlKey
  * @param null|mixed $salt
  *
  * @return string
@@ -1836,8 +1849,6 @@ function aes_encrypt($decrypted, $salt = null)
  * Programmatically mimic a MySQL AES_DECRYPT() action as a way of avoiding unnecessary database calls.
  *
  * @param string     $encrypted
- * @param string     $cypher
- * @param bool       $mySqlKey
  * @param null|mixed $salt
  *
  * @return string
@@ -2626,14 +2637,18 @@ function get_daum_postcode(array $raw = null)
 }
 
 // query string append
-function gsa($key, $value = null)
+function qsa($key, $value = null)
 {
     $queryString = parse_str($_SERVER['QUERY_STRING']);
 
     if (\is_array($key)) {
         $queryString = [...$queryString, ...$key];
     } else {
-        $queryString[$key] = $value;
+        if (null === $value) {
+            unset($queryString[$key]);
+        } else {
+            $queryString[$key] = $value;
+        }
     }
     $query = http_build_query($queryString);
 
@@ -2798,4 +2813,71 @@ function adjustDate($date, $days)
     $adjustedTimestamp = \strtotime("{$days} days", $dateTimestamp);
 
     return \date('Y-m-d', $adjustedTimestamp);
+}
+
+function is_date_greater($input_date, $comparison_date = null)
+{
+    $timestamp_input = \strtotime($input_date);
+
+    if (null === $comparison_date) {
+        $timestamp_comparison = \time(); // 현재 Unix 타임스탬프를 가져옵니다.
+    } else {
+        $timestamp_comparison = \strtotime($comparison_date);
+    }
+
+    if ($timestamp_input > $timestamp_comparison) {
+        return true;
+    }
+
+    return false;
+}
+
+function _get($name, $default = null)
+{
+    return isset($_GET[$name]) ? $_GET[$name] : $default;
+}
+
+function _getbool($name)
+{
+    return isset($_GET[$name]) ? true : false;
+}
+
+function convertToFraction($number)
+{
+    $epsilon = 1.0e-6; // 정밀도
+
+    if (1 == $number) {
+        return 1;
+    }
+
+    $numerator   = 1;
+    $denominator = 1;
+
+    while (\abs($number - ($numerator / $denominator)) > $epsilon) {
+        if ($number > ($numerator / $denominator)) {
+            ++$numerator;
+        } else {
+            ++$denominator;
+        }
+    }
+
+    return $numerator . '/' . $denominator;
+}
+
+function splitSeparator($inputString, $separator = ',')
+{
+    // 마지막 쉼표(,)로 문자열을 분할
+    $parts = explode($separator, $inputString);
+
+    // 배열의 마지막 요소 제거
+    $lastPart = \array_pop($parts);
+
+    // 이름과 수량 추출
+    $nameAndQuantity = \implode($separator, $parts);
+
+    // 이름과 수량 반환
+    $name     = \trim($nameAndQuantity);
+    $quantity = \trim($lastPart);
+
+    return ['name' => $name, 'quantity' => $quantity];
 }

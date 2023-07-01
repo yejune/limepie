@@ -209,7 +209,7 @@ class Compiler
 
         $phpTag .= '|';
 
-        $tokens = \preg_split('/(' . $phpTag . '<!--{(?!`)|{{!--|"{{|\'{{|\/\*{(?!`)|(?<!`)}-->|(?<!`)}\*\/|}}"|--}}|}}\'|{(?!`)|(?<!`)})/i', $source, -1, \PREG_SPLIT_DELIM_CAPTURE);
+        $tokens = \preg_split('/(' . $phpTag . '<!--{(?!`)|{{!--|"{{|\'{{|\/\*{(?!`)|(?<!`)}-->|(?<!`)}\*\/|}}"|--}}|}}\'|(?:\.\.\.\.)*{|{(?!`)|(?<!`)})/i', $source, -1, \PREG_SPLIT_DELIM_CAPTURE);
 
         $line      = 0;
         $isOpen    = 0;
@@ -284,6 +284,9 @@ class Compiler
                     break;
 
                 default:
+                    if (\preg_match('/(\.\.\.\.)*\{/', $tokens[$_index])) {
+                        $isOpen = $_index;
+                    }
             }
         }
 
@@ -316,7 +319,7 @@ class Compiler
         if ($match[1]) {
             // escape
             $result = [1, \substr($org, 1)];
-        // pr($match, $result);
+            // pr($match, $result);
         } else {
             switch ($match[2]) {
                 case '@':
@@ -340,10 +343,19 @@ class Compiler
                     // scope a b:c => $a, $b = $c;
 
                     if (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                        // #define_id scope variable
                         $result = [2, $this->compileDefine('#' . $tmp['define'], $line, $tmp['scope'] ?? '')];
-                    } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                    } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?:\'|")(?P<filename>[^ ]+)(?:\'|")(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                        // #define_id "a.tpl" scope variable
                         $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
+                    } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                        // #define_id a.tpl scope variable
+                        $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
+                    } elseif (1 === \preg_match('`^#([\s+])?(?:\'|")(?P<filename>[^"\']+)(?:\'|")(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                        // #"a.tpl" scope variable
+                        $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
                     } elseif (1 === \preg_match('`^#([\s+])?(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                        // #a.tpl scope variable
                         $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
                     } else {
                         $result = [1, $statement];
@@ -728,7 +740,7 @@ class Compiler
                         $xpr .= $current['value'];
                     } elseif ('new' === $current['value'] && 'namespace_sigh' === $next['name']) {
                         $xpr .= 'new ';
-                    // 클로저를 허용하지 않음. 그래서 string_concat 비교 보다 우선순위가 높음
+                        // 클로저를 허용하지 않음. 그래서 string_concat 비교 보다 우선순위가 높음
                     } elseif (true === \in_array($next['name'], ['left_parenthesis', 'static_object_sign', 'namespace_sigh'], true)) {
                         if ('string_concat' === $prev['name']) {
                             if (true === $this->debug) {

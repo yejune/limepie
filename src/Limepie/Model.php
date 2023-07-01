@@ -273,7 +273,7 @@ class Model extends ArrayObject
         }
 
         throw (new \Limepie\Exception('"' . $name . '" method not found', 404))
-            ->setDebugMessage('page not found', __FILE__, __LINE__)
+            ->setDisplayMessage('page not found', __FILE__, __LINE__)
         ;
     }
 
@@ -547,6 +547,12 @@ class Model extends ArrayObject
 
     public function getRelationData($class, $attribute, $functionName, $parentTableName = '', $isSingle = true)
     {
+        if ($class->pdo) {
+            $connect = $class->pdo;
+        } else {
+            $connect = $this->getConnect();
+        }
+
         if ($class->leftKeyName) {
             $leftKeyName = $class->leftKeyName;
         } else {
@@ -586,7 +592,7 @@ class Model extends ArrayObject
 
         $functionName .= \Limepie\camelize($rightKeyName);
 
-        $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
+        $data = \call_user_func_array([$class($connect), $functionName], $args);
 
         if ($data) {
             $data->deleteLock = $class->deleteLock;
@@ -636,6 +642,12 @@ class Model extends ArrayObject
             $class->keyName = $leftKeyName;
         }
 
+        if ($class->pdo) {
+            $connect = $class->pdo;
+        } else {
+            $connect = $this->getConnect();
+        }
+
         foreach ($attributes as $attribute) {
             if ($parentTableName) {
                 $row = $attribute[$parentTableName];
@@ -666,7 +678,7 @@ class Model extends ArrayObject
                 $args[] = $value;
             }
 
-            $data = \call_user_func_array([$class($this->getConnect()), $functionName], $args);
+            $data = \call_user_func_array([$class($connect), $functionName], $args);
         }
 
         if ($class->newTableName) {
@@ -714,7 +726,7 @@ class Model extends ArrayObject
 
                 if ($attr && true === isset($group[$attr])) {
                     if ($class->keyName === $remapKey) {
-                        $instance             = new $class($this->getConnect(), $group[$attr]);
+                        $instance             = new $class($connect, $group[$attr]);
                         $instance->deleteLock = $class->deleteLock;
 
                         if ($parentTableName) {
@@ -741,7 +753,7 @@ class Model extends ArrayObject
                             }
                         }
 
-                        $instance             = new $class($this->getConnect(), $new);
+                        $instance             = new $class($connect, $new);
                         $instance->deleteLock = $class->deleteLock;
 
                         if ($parentTableName) {
@@ -2105,6 +2117,8 @@ class Model extends ArrayObject
             }
             $forceIndex = \implode(', ', $this->forceIndexes);
 
+            $groupBy = $this->getGroupBy();
+
             $sql = <<<SQL
                 SELECT
                     {$selectColumns}
@@ -2113,6 +2127,7 @@ class Model extends ArrayObject
                 {$forceIndex}
                 {$join}
                 {$condition}
+                {$groupBy}
                 {$orderBy}
                 {$limit}
             SQL;
@@ -2818,7 +2833,7 @@ class Model extends ArrayObject
                     // string 자체를 query로 사용하므로 bind변수가 없다.
                     $queryString = $key;
 
-                // throw new \Limepie\Exception($key . ': numbers of columns of arguments do not match');
+                    // throw new \Limepie\Exception($key . ': numbers of columns of arguments do not match');
                 } elseif (0 === \strpos($key, 'between_')) {
                     $fixedKey = \substr($key, 8);
 
@@ -2920,7 +2935,9 @@ class Model extends ArrayObject
                                         $queryString = "`{$this->tableAliasName}`." . '`' . $key . '` = :' . $bindKeyname;
                                     }
                                 } else {
-                                    throw new \Limepie\Exception($key . ': Undefined');
+                                    throw (new \Limepie\Exception($key . ': Undefined'))
+                                        ->setDebugMessage($this->tableName . ' undefined column ' . $key, __FILE__, __LINE__)
+                                    ;
                                 }
                             }
                         }
@@ -2942,9 +2959,9 @@ class Model extends ArrayObject
                 $conds[]  = \substr($name, $offset);
                 $operator = \substr($name, 0, $offset);
 
-            // if ('condition' != $operator) {
-            //     $conds[] = $operator;
-            // }
+                // if ('condition' != $operator) {
+                //     $conds[] = $operator;
+                // }
             } else {
                 // join시 table명을 넣은 조건을 alias table 명으로 바꿔줌.
                 // ->and('DATE_ADD(service_coupon.created_ts, INTERVAL service_coupon.expire_date_count DAY) > now()')

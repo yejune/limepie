@@ -119,6 +119,14 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             throw new \Limepie\Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #2', 500);
         }
 
+        // if ('cartItems' == $name) {
+        //     \print_r([
+        //         $name,
+        //         $this->attributes[$fieldName] ?? '',
+        //         \array_key_exists(0, $arguments),
+        //     ]);
+        // }
+
         if (
             (
                 false   === isset($this->attributes[$fieldName])
@@ -126,7 +134,8 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             )
             && true === \array_key_exists(0, $arguments)
         ) {
-            $default = $arguments[0];
+            $default = $arguments[0]; // 디폴트가 []로 들어올 경우에도 허용.
+            // \var_dump([$name, $default]);
 
             if (true === \is_array($default)) {
                 return new \Limepie\Model();
@@ -138,7 +147,8 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         if (
             true === \array_key_exists($fieldName, $this->attributes)
         ) {
-            // 배열일 경우에는 arrayobject에 담아 리턴
+            // 배열일 경우에는 arrayobject에 담아 리턴,
+            // 빈 배열일 경우는 null로 취급, default가 들어와야 허용
             if (true === \is_array($this->attributes[$fieldName])) {
                 return new self($this->attributes[$fieldName]);
             }
@@ -161,7 +171,10 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
         if (false === $isOrNull && false === $isOrEmpty) {
             // unknown column
-            throw new \Limepie\Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #1', 500);
+            throw (new \Limepie\Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #1', 500))
+                ->setDebugMessage(\get_called_class() . ': Column "' . $fieldName . '" not found #1', __FILE__, __LINE__)
+                ->setDisplayMessage('Column "' . $fieldName . '" not found')
+            ;
         }
 
         return null;

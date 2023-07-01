@@ -19,7 +19,7 @@ class Mysql extends \Limepie\Pdo
     public $charset;
 
     /**
-     * @param $descriptor
+     * @param       $descriptor
      * @param mixed $connect
      * @param mixed $statement
      * @param mixed $bindParameters
@@ -50,7 +50,6 @@ class Mysql extends \Limepie\Pdo
 
     /**
      * @param array $bindParameters
-     * @param       $mode
      * @param mixed $type           모델에서는 기본적으로 false로 넘겨 배열을 받고 pdo에 직접 접근할때는 true로 ArrayObject를 받음
      * @param mixed $statement
      *
@@ -63,6 +62,7 @@ class Mysql extends \Limepie\Pdo
         try {
             // return parent::fetchAll($statement, $mode, $bindParameters) ?: null;
             // pr(func_get_args());
+
             if ($this->debug) {
                 \Limepie\Timer::start();
             }
@@ -90,7 +90,6 @@ class Mysql extends \Limepie\Pdo
 
     /**
      * @param array $bindParameters
-     * @param       $mode
      * @param mixed $type           모델에서는 기본적으로 false로 넘겨 배열을 받고 pdo에 직접 접근할때는 true로 ArrayObject를 받음
      * @param mixed $statement
      *
@@ -129,7 +128,6 @@ class Mysql extends \Limepie\Pdo
 
     /**
      * @param array $bindParameters
-     * @param       $mode
      * @param mixed $statement
      *
      * @return string

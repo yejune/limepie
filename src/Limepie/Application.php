@@ -262,7 +262,7 @@ class Application
             // $current = $e->getTrace()[0];
 
             // if ($current['file'] ?? false) {
-            //     throw $e->setDebugMessage($e->getDisplayMessage(), $current['file'], $current['line']);
+            //     throw $e->setDisplayMessage($e->getDisplayMessage(), $current['file'], $current['line']);
             // }
 
             // throw $e;
@@ -287,7 +287,7 @@ class Application
 
         if (false === \class_exists($className)) {
             throw (new \Limepie\Exception('Class "' . $className . '" not found', 404))
-                ->setDebugMessage('page not found', __FILE__, __LINE__)
+                ->setDisplayMessage('page not found', __FILE__, __LINE__)
             ;
         }
 
@@ -301,7 +301,7 @@ class Application
 
         if (null === $methods) {
             throw (new \Limepie\Exception('Class "' . $className . '" name error', 404))
-                ->setDebugMessage('page not found', __FILE__, __LINE__)
+                ->setDisplayMessage('page not found', __FILE__, __LINE__)
             ;
         }
         $methodNames = \preg_grep('/^' . $actionName . '/', $methods);
@@ -330,7 +330,7 @@ class Application
 
         // ERRORCODE: 40002, method not found
         throw (new \Limepie\Exception('"' . \implode('" or "', \array_unique($likely)) . '" method not found in ' . $className . '" class', 404))
-            ->setDebugMessage('page not found', __FILE__, __LINE__)
+            ->setDisplayMessage('page not found', __FILE__, __LINE__)
         ;
     }
 }
