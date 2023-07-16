@@ -207,8 +207,12 @@ class Model extends ArrayObject
             return $this->buildGetBy($name, $arguments, 5);
         }
 
+        if (0 === \strpos($name, 'getsCount')) {
+            return $this->buildCount($name, $arguments, 8, true);
+        }
+
         if (0 === \strpos($name, 'getCount')) {
-            return $this->buildGetCount($name, $arguments, 8);
+            return $this->buildCount($name, $arguments, 8);
         }
 
         if (0 === \strpos($name, 'getSum')) {
@@ -1750,7 +1754,7 @@ class Model extends ArrayObject
         // exit;
     }
 
-    private function buildGetCount(string $name, array $arguments, int $offset)
+    private function buildCount(string $name, array $arguments, int $offset, $isGroup = false)
     {
         $this->attributes = [];
 
@@ -1787,7 +1791,7 @@ class Model extends ArrayObject
             $condition = ' WHERE ' . $condition;
         }
 
-        if ($this->groupBy) {
+        if (true === $isGroup) {
             $sql = <<<SQL
                 SELECT
                     {$this->groupBy},
@@ -1799,7 +1803,17 @@ class Model extends ArrayObject
                 group by {$this->groupBy}
             SQL;
         } else {
-            $sql = <<<SQL
+            if ($this->groupBy) {
+                $sql = <<<SQL
+                SELECT
+                    COUNT(distinct({$this->groupBy}))
+                FROM
+                    `{$this->tableName}` AS `{$this->tableAliasName}`
+                {$join}
+                {$condition}
+            SQL;
+            } else {
+                $sql = <<<SQL
                 SELECT
                     COUNT(*)
                 FROM
@@ -1807,6 +1821,7 @@ class Model extends ArrayObject
                 {$join}
                 {$condition}
             SQL;
+            }
         }
 
         $this->condition = $condition;
@@ -1819,7 +1834,7 @@ class Model extends ArrayObject
         }
 
         if ($this->getConnect() instanceof \PDO) {
-            if ($this->groupBy) {
+            if (true === $isGroup) {
                 $data = $this->getConnect()->gets($sql, $binds, false);
 
                 $attributes = [];
