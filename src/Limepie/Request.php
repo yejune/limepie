@@ -143,6 +143,7 @@ class Request
         \bindtextdomain($domain, $path);
         \bind_textdomain_codeset($domain, $charset);
         \textdomain($domain);
+
         // pr($domain, $path, $domain, "{$locale}.{$charset}");
         return $this->locale . '.' . $charset;
     }
@@ -261,6 +262,7 @@ class Request
         if (true === Di::has('application')) {
             return Di::getApplication()->getProperties();
         }
+
         // ERRORCODE: 20007, service provider not found
         throw new Exception('"application" service provider not found', 20007);
     }
@@ -271,6 +273,7 @@ class Request
         if (true === Di::has('application')) {
             return Di::getApplication()->getStore();
         }
+
         // ERRORCODE: 20007, service provider not found
         throw new Exception('"application" service provider not found', 20007);
     }
@@ -281,6 +284,7 @@ class Request
         if (true === Di::has('application')) {
             return Di::getApplication()->getNamespaceName();
         }
+
         // ERRORCODE: 20009, service provider not found
         throw new Exception('"application" service provider not found', 20009);
     }
@@ -291,6 +295,7 @@ class Request
         if (true === Di::has('application')) {
             return Di::getApplication()->getControllerName();
         }
+
         // ERRORCODE: 20009, service provider not found
         throw new Exception('"application" service provider not found', 20009);
     }
@@ -301,6 +306,7 @@ class Request
         if (true === Di::has('application')) {
             return Di::getApplication()->getActionName();
         }
+
         // ERRORCODE: 20009, service provider not found
         throw new Exception('"application" service provider not found', 20010);
     }
@@ -311,6 +317,7 @@ class Request
         if (true === Di::has('application')) {
             return Di::getApplication()->getPathByModule();
         }
+
         // ERRORCODE: 20009, service provider not found
         throw new Exception('"application" service provider not found', 20009);
     }
@@ -591,7 +598,7 @@ class Request
                         (empty($_POST) && empty($_FILES))
                         && 0 < $_SERVER['CONTENT_LENGTH']
                     ) {
-                        throw new Exception(\sprintf('The server was unable to handle that much POST data (%s bytes) due to its current configuration', $_SERVER['CONTENT_LENGTH']), 20012);
+                        // throw new Exception(\sprintf('The server was unable to handle that much POST data (%s bytes) due to its current configuration', $_SERVER['CONTENT_LENGTH']), 20012);
                     }
                     $this->bodies = $_POST;
                 } elseif (

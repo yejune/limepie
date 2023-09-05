@@ -1343,6 +1343,7 @@ function parse_raw_http_request($appends = [])
     \array_pop($boundaryBlocks);
 
     $keyValueStr = '';
+
     // loop data blocks
     foreach ($boundaryBlocks as $id => $block) {
         if (empty($block)) {
@@ -2482,10 +2483,12 @@ function is_serialized_string($data, $strict = true)
     } else {
         $semicolon = \strpos($data, ';');
         $brace     = \strpos($data, '}');
+
         // Either ; or } must exist.
         if (false === $semicolon && false === $brace) {
             return false;
         }
+
         // But neither must be in the first X characters.
         if (false !== $semicolon && $semicolon < 3) {
             return false;
@@ -2559,6 +2562,7 @@ function array_tree2($array, $parent = 0)
 
             $ret[] = [$a['seq'] => $a];
             pr($a, $sub);
+
             // pr($ret);
             foreach ($sub as $j => $b) {
                 // for ($j = 0; $j < \count($sub); ++$j) {
@@ -2581,6 +2585,23 @@ function get_redirect_code($code = 301)
     }
 
     return $code;
+}
+
+function get_encode_return_url($default = '/')
+{
+    if (isset($_GET['return_url'])) {
+        $urlRequestUrl = \rawurldecode($_GET['return_url']);
+    } elseif ($default) {
+        $urlRequestUrl = \rawurldecode($default);
+    } else {
+        $urlRequestUrl = $_SERVER['REQUEST_URI'];
+    }
+
+    if ($urlRequestUrl) {
+        return '?return_url=' . \rawurlencode($urlRequestUrl);
+    }
+
+    return '';
 }
 
 function get_return_url($default = '/')
@@ -2617,10 +2638,12 @@ function get_daum_postcode(array $raw = null)
             if ('' !== $raw['bname'] && \preg_match('#[동|로|가]$#', $raw['bname'])) {
                 $extraAddr .= $raw['bname'];
             }
+
             // 건물명이 있고, 공동주택일 경우 추가한다.
             if ('' !== $raw['buildingName'] && 'Y' === $raw['apartment']) {
                 $extraAddr .= '' !== $extraAddr ? ', ' + $raw['buildingName'] : $raw['buildingName'];
             }
+
             // 표시할 참고항목이 있을 경우, 괄호까지 추가한 최종 문자열을 만든다.
             if ('' !== $extraAddr) {
                 $extraAddr = ' (' . $extraAddr . ')';
@@ -2880,4 +2903,51 @@ function splitSeparator($inputString, $separator = ',')
     $quantity = \trim($lastPart);
 
     return ['name' => $name, 'quantity' => $quantity];
+}
+
+/**
+ * Undocumented function
+ * $extracted1 = extractKeys($data['standard']['image'], ['url', 'seq']);
+ * print_r($extracted1);  // 배열로 키를 전달
+ * $extracted2 = extractKeys($data['standard']['image'], 'url');
+ * print_r($extracted2);  // 문자열로 키를 전달.
+ *
+ * @param array $array
+ * @param mixed $isAll
+ */
+function extractKeys(?array $array, array|string $keysToExtract, $isAll = true)
+{
+    if (null === $array) {
+        return null;
+    }
+
+    $result = [];
+
+    if (\is_string($keysToExtract)) {
+        return isset($array[$keysToExtract]) ? $array[$keysToExtract] : null;
+    }
+
+    foreach ($keysToExtract as $key => $value) {
+        if (\is_numeric($key)) {  // 숫자 인덱스인 경우
+            $actualKey = $value;
+            $aliasKey  = $value;
+        } else {                 // 문자열 인덱스인 경우 (alias 사용)
+            $actualKey = $key;
+            $aliasKey  = $value;
+        }
+
+        if ($isAll) {
+            $result[$aliasKey] = $array[$actualKey] ?? null;
+        } else {
+            if (isset($array[$actualKey]) && ('' !== $array[$actualKey] && null !== $array[$actualKey])) {
+                $result[$aliasKey] = $array[$actualKey];
+            }
+        }
+    }
+
+    if ('' !== $result && !([] === $result)) {
+        return $result;
+    }
+
+    return null;
 }

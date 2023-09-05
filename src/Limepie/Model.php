@@ -208,7 +208,7 @@ class Model extends ArrayObject
         }
 
         if (0 === \strpos($name, 'getsCount')) {
-            return $this->buildCount($name, $arguments, 8, true);
+            return $this->buildCount($name, $arguments, 9, true);
         }
 
         if (0 === \strpos($name, 'getCount')) {
@@ -936,7 +936,7 @@ class Model extends ArrayObject
     {
     }
 
-    public function create()
+    public function create($on_duplicate_key_update = null)
     {
         $columns = [];
         $binds   = [];
@@ -1058,6 +1058,9 @@ class Model extends ArrayObject
             ({$values})
         SQL;
 
+        if ($on_duplicate_key_update) {
+            $sql .= ' ' . $on_duplicate_key_update;
+        }
         $primaryKey = '';
 
         if (static::$debug) {
@@ -1106,8 +1109,18 @@ class Model extends ArrayObject
                 true === isset($this->originAttributes[$column])
                 && false == isset($this->rawAttributes[$column])
             ) {
-                if ($this->attributes[$column] == $this->originAttributes[$column]) {
-                    continue;
+                // null일 경우에는 0과 비교할 가능성이 있으므로
+                if (
+                    null    === $this->attributes[$column]
+                    || null === $this->originAttributes[$column]
+                ) {
+                    if ($this->attributes[$column] === $this->originAttributes[$column]) {
+                        continue;
+                    }
+                } else {
+                    if ($this->attributes[$column] == $this->originAttributes[$column]) {
+                        continue;
+                    }
                 }
             }
 
@@ -1301,7 +1314,10 @@ class Model extends ArrayObject
     {
         if (true === isset($this->attributes[$this->primaryKeyName])) { // 단일 row
             $this->iteratorToDelete($this->attributes);
-            $this->doDelete();
+
+            if (false === $this->getDeleteLock()) {
+                $this->doDelete();
+            }
 
             return true;
         }
@@ -1309,9 +1325,11 @@ class Model extends ArrayObject
         foreach ($this->attributes as $index => $attribute) { // multi rows
             if (true === isset($attribute[$attribute->primaryKeyName])) {
                 $this->iteratorToDelete($attribute);
-                $attribute($this->getConnect())->doDelete();
 
-                unset($this->attributes[$index]);
+                if (false === $this->getDeleteLock()) {
+                    $attribute($this->getConnect())->doDelete();
+                    unset($this->attributes[$index]);
+                }
             }
         }
 
@@ -1468,6 +1486,7 @@ class Model extends ArrayObject
                         }
                     } elseif (true === \is_array($alias)) {
                         $aliasString = (true === isset($alias[0]) && $alias[0] ? ' AS `' . ($prefix ? $prefix : '') . $alias[0] . '`' : '');
+
                         /*
                         $targetCategorySeqModels = (new ServiceModuleCategoryItemModel)($slave1)
                             ->addColumnServiceModuleSeqWithCurrentSeqAliasChildSeqs('super.GetFamilyTree(%s, %s)')
@@ -2242,9 +2261,11 @@ class Model extends ArrayObject
             $attributes             = $this->getRelations($attributes);
             $this->attributes       = $attributes;
             $this->originAttributes = $this->attributes;
+
+            return $this;
         }
 
-        return $this;
+        return $this->empty();
     }
 
     public static function function($bind, $extraCondition, $extraBinds = [])

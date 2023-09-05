@@ -118,14 +118,16 @@ class Choice extends \Limepie\Form\Generator\Fields
                     <label for="{$id}" class="btn btn-switch {$elementClass}"><span>{$v1}</span></label>
                 EOD;
 
-                $script .= <<<SCRIPT
-                    <script>
-                    document.querySelector('input[type="radio"][id="{$id}"]').addEventListener('click', function() {
-                        // console.log('click event');
-                        {$changeEvent};
-                    }, true);
-                    </script>
-                SCRIPT;
+                if ($changeEvent) {
+                    $script .= <<<SCRIPT
+                        <script>
+                        document.querySelector('input[type="radio"][id="{$id}"]').addEventListener('click', function() {
+                            console.log('click event');
+                            {$changeEvent};
+                        }, true);
+                        </script>
+                    SCRIPT;
+                }
             }
 
             // $script = '';

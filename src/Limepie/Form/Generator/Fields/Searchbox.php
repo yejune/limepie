@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Limepie\Form\Generator\Fields;
 
-class Search extends \Limepie\Form\Generator\Fields
+class Searchbox extends \Limepie\Form\Generator\Fields
 {
     public static function write($key, $property, $value, $ruleName, $propertyName)
     {

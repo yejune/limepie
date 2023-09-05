@@ -91,6 +91,14 @@ class Group extends \Limepie\Form\Generator\Fields
             $data  = $data->value;
         }
 
+        if ($data) {
+        } else {
+            if (true === isset($specs['blank_message'])) {
+                // $specs['properties'] = null;
+                $specs['properties'] = null;
+            }
+        }
+
         foreach ($specs['properties'] ?? [] as $propertyKey => $propertyValue) {
             ++$elementIndex;
 
@@ -620,7 +628,7 @@ class Group extends \Limepie\Form\Generator\Fields
 
             if ('hidden' === $propertyValue['type']) {
                 $innerhtml .= <<<EOT
-                    <div class="x-hidden" name="{$nextLineName}-layer">
+                    <div class="x-hidden {$addClassString}" name="{$nextLineName}-layer">
                         {$elements}
                     </div>
                 EOT;
@@ -685,6 +693,22 @@ class Group extends \Limepie\Form\Generator\Fields
                 }
             }
         }
+        $styleTag = '';
+
+        if ($data) {
+        } else {
+            if (true === isset($specs['blank_message'])) {
+                $groupId      = 'blank_' . \Limepie\uniqid();
+                $groupClass[] = $groupId;
+                $styleTag     = <<<STYLE
+                    <style>
+                    .form-container .{$groupId}::after {
+                        content: "{$specs['blank_message']}";
+                    }
+                    </style>
+                STYLE;
+            }
+        }
 
         $groupClassString = '';
 
@@ -699,6 +723,7 @@ class Group extends \Limepie\Form\Generator\Fields
         }
 
         $html = <<<EOT
+            {$styleTag}
             <div class='{$groupClassString}'{$groupStyle}>
             {$innerhtml}
             </div>
