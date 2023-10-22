@@ -170,6 +170,7 @@ EOD;
 
                         // store the difference in depths
                         $diff = \abs($curDepth - $depth);
+
                         // close previous nested levels
                         if ($curDepth < $depth) {
                             $output->append(\str_repeat('</optgroup>', $diff));
@@ -266,10 +267,11 @@ EOD;
         $onchange = '';
 
         if (true === isset($property['readonly']) && $property['readonly']) {
-            $onchange = "readonly onFocus='this.initialSelect = this.selectedIndex;' onChange='this.selectedIndex = this.initialSelect;'";
+            $onchange = " readonly onFocus='this.initialSelect = this.selectedIndex;' onChange='this.selectedIndex = this.initialSelect;' ";
         } elseif (true === isset($property['onchange'])) {
-            $onchange = 'onchange="' . \Limepie\minify_js($property['onchange']) . '"';
+            $onchange = ' onchange="' . \Limepie\minify_js($property['onchange']) . ';" ';
         }
+
         $html = <<<EOT
             <div class="input-group">
             {$prepend}

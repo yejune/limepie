@@ -6,9 +6,7 @@ namespace Limepie\Form;
 
 class Generator
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public static function getValue($data, $key)
     {
@@ -278,7 +276,7 @@ class Generator
 
                 $innerhtml .= '<a href="" data-method="delete" data-value="' . $string . '" ' . \str_replace('{=string}', $string, $description) . ' class="btn ' . $class . '">' . $text . '</a>';
             } elseif ('a' === $button['type']) {
-                $innerhtml .= '<a href="' . $href . '" class="btn ' . $class . '">' . $text . '</a>';
+                $innerhtml .= '<a data-href="' . $button['href'] . '" href="' . $href . '" class="btn ' . $class . '">' . $text . '</a>';
             } elseif ('open' === $button['type']) {
                 if (isset($button['name'])) {
                     $name = $button['name'];

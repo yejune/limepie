@@ -258,14 +258,15 @@ class Application
                 Di::getResponse()
             );
         } catch (\Limepie\Exception $e) {
-            throw $e;
-            // $current = $e->getTrace()[0];
-
-            // if ($current['file'] ?? false) {
-            //     throw $e->setDisplayMessage($e->getDisplayMessage(), $current['file'], $current['line']);
-            // }
-
             // throw $e;
+            // \pr($e);
+            $current = $e->getTrace()[0];
+
+            if ($current['file'] ?? false) {
+                throw $e->setDebugMessage($e->getMessage(), $current['file'], $current['line']);
+            }
+
+            throw $e;
         }
     }
 

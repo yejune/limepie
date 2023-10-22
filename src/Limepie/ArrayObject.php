@@ -99,6 +99,20 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return new static(\array_reverse($this->attributes, $preserveKeys));
     }
 
+    public function modify($attributes, $value = null)
+    {
+        if (true === \is_array($attributes)) {
+            $this->attributes = \array_replace_recursive($this->attributes, $attributes);
+        } else {
+            if (null === $value) {
+                return new \Limepie\ArrayObject($this->attributes[$attributes] ?? []);
+            }
+            $this->attributes[$attributes] = $value;
+        }
+
+        return $this;
+    }
+
     public function buildSetColumn($name, $arguments)
     {
         $fieldName = \Limepie\decamelize(\substr($name, 3));
@@ -171,6 +185,9 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
         if (false === $isOrNull && false === $isOrEmpty) {
             // unknown column
+
+            // \pr($this->attributes);
+
             throw (new \Limepie\Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #1', 500))
                 ->setDebugMessage(\get_called_class() . ': Column "' . $fieldName . '" not found #1', __FILE__, __LINE__)
                 ->setDisplayMessage('Column "' . $fieldName . '" not found')

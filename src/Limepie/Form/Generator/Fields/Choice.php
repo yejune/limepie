@@ -49,11 +49,17 @@ class Choice extends \Limepie\Form\Generator\Fields
             $onload = true;
         }
 
-        $onchange = $changeEvent = '';
+        $onchange = $onclick = $changeEvent = '';
+
         // script 테그에 넣으면 dynamic copy시 동작안하므로 inline script 사용
         if (true === isset($property['onchange'])) {
-            // $onchange    = ' onchange="' . \Limepie\minify_js($property['onchange']) . '" ';
-            $changeEvent = \Limepie\minify_js($property['onchange']);
+            $onchange = ' onchange="' . \Limepie\minify_js($property['onchange']) . '" ';
+            // $changeEvent = \Limepie\minify_js($property['onchange']);
+        }
+
+        if (true === isset($property['onclick'])) {
+            $onclick = ' onclick="' . \Limepie\minify_js($property['onclick']) . '" ';
+            // $changeEvent = \Limepie\minify_js($property['onchange']);
         }
         $buttonClass = '';
 
@@ -114,20 +120,20 @@ class Choice extends \Limepie\Form\Generator\Fields
                 }
 
                 $buttons .= <<<EOD
-                    <input id="{$id}" class="valid-target btn-check{$inputClass}" type="radio" name="{$key}" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$k1}" data-is-default="{$checkdefault}"{$checked} {$onchange}>
+                    <input id="{$id}" class="valid-target btn-check{$inputClass}" type="radio" name="{$key}" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$k1}" data-is-default="{$checkdefault}" {$checked} {$onchange} {$onclick}>
                     <label for="{$id}" class="btn btn-switch {$elementClass}"><span>{$v1}</span></label>
                 EOD;
 
-                if ($changeEvent) {
-                    $script .= <<<SCRIPT
-                        <script>
-                        document.querySelector('input[type="radio"][id="{$id}"]').addEventListener('click', function() {
-                            console.log('click event');
-                            {$changeEvent};
-                        }, true);
-                        </script>
-                    SCRIPT;
-                }
+                // if ($changeEvent) {
+                //     $script .= <<<SCRIPT
+                //         <script>
+                //         document.querySelector('input[type="radio"][id="{$id}"]').addEventListener('click', function() {
+                //             console.log('click event');
+                //             {$changeEvent};
+                //         }, true);
+                //         </script>
+                //     SCRIPT;
+                // }
             }
 
             // $script = '';

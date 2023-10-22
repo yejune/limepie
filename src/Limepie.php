@@ -415,7 +415,7 @@ function ceil(float $val, int $precision = 0)
     $x = 1;
 
     for ($i = 0; $i < $precision; ++$i) {
-        $x = $x * 10;
+        $x *= 10;
     }
 
     return \ceil($val * $x) / $x;
@@ -1141,12 +1141,22 @@ function decamelize($word)
     return $word;
 }
 
-function camelize(string $word)
+// function camelize(string $word)
+// {
+//     return \preg_replace_callback(
+//         '/(^|_|-|:|\/)([a-zA-Z]+)/',
+//         function ($m) {
+//             return \ucfirst(\strtolower("{$m[2]}"));
+//         },
+//         $word
+//     );
+// }
+function camelize(string $word, string $delimiters = '')
 {
     return \preg_replace_callback(
-        '/(^|_|-|:)([a-zA-Z]+)/',
-        function ($m) {
-            return \ucfirst(\strtolower("{$m[2]}"));
+        '/(^|_|-|:|\/|\\\\)([a-zA-Z]+)/',
+        function ($m) use ($delimiters) {
+            return ($delimiters && \in_array($m[1], \str_split($delimiters)) ? $m[1] : '') . \ucfirst(\strtolower("{$m[2]}"));
         },
         $word
     );
@@ -1201,7 +1211,7 @@ function file_array_flatten($list, $prefix = '')
             if (true === \Limepie\is_file_array($value, false)) {
                 $result[$newPrefix] = $value;
             } else {
-                $result = $result + \Limepie\file_array_flatten($value, $newPrefix);
+                $result += \Limepie\file_array_flatten($value, $newPrefix);
             }
         }
     }
@@ -1449,6 +1459,37 @@ function decimal($number, $zero2null = false) : float|int|null
 
     return (int) 0;
 }
+
+function ffc($number)
+{
+    return \Limepie\float_format($number, true, false, true);
+}
+
+function float_format($number, $int = true, $zero2null = false, $comma = true)
+{
+    if ($zero2null && (\is_null($number) || 0.0 === (float) $number)) {
+        return null;
+    }
+
+    $parts       = explode('.', (string) $number);
+    $integerPart = $parts[0];
+    $decimalPart = isset($parts[1]) ? $parts[1] : '';
+
+    if (true === $int) {
+        $decimalPart = \rtrim($decimalPart, '0');
+    } elseif (\is_numeric($int)) {
+        $decimalPart = \rtrim(\substr($decimalPart, 0, $int), '0');
+    } else {
+        $decimalPart = '';
+    }
+
+    if ($comma) {
+        $integerPart = number_format($integerPart, 0, '.', ',');
+    }
+
+    return $decimalPart ? "{$integerPart}.{$decimalPart}" : $integerPart;
+}
+
 // number comma
 function nc($number)
 {
@@ -1815,8 +1856,8 @@ function mysql_aes_key($key)
     $length = \strlen($key);
 
     for ($i = 0; $i < $length; ++$i) {
-        $index          = $i % $bytes;
-        $newKey[$index] = $newKey[$index] ^ $key[$i];
+        $index = $i % $bytes;
+        $newKey[$index] ^= $key[$i];
     }
 
     return $newKey;
@@ -2454,6 +2495,12 @@ function add_string($string, $glue = ' ', $start = '', $end = '')
 {
     return $string ? $glue . $start . $string . $end : '';
 }
+
+function append_string($string, $glue = ' ', $append = '')
+{
+    return $string . ($append ? $glue . $append : '');
+}
+
 function is_serialized_string($data, $strict = true)
 {
     // if it isn't a string, it isn't serialized.
@@ -2641,7 +2688,7 @@ function get_daum_postcode(array $raw = null)
 
             // 건물명이 있고, 공동주택일 경우 추가한다.
             if ('' !== $raw['buildingName'] && 'Y' === $raw['apartment']) {
-                $extraAddr .= '' !== $extraAddr ? ', ' + $raw['buildingName'] : $raw['buildingName'];
+                $extraAddr .= '' !== $extraAddr ? ', ' . $raw['buildingName'] : $raw['buildingName'];
             }
 
             // 표시할 참고항목이 있을 경우, 괄호까지 추가한 최종 문자열을 만든다.
@@ -2865,6 +2912,7 @@ function _getbool($name)
     return isset($_GET[$name]) ? true : false;
 }
 
+// 실수를 분수형태로 변경하기
 function convertToFraction($number)
 {
     $epsilon = 1.0e-6; // 정밀도
@@ -2912,7 +2960,6 @@ function splitSeparator($inputString, $separator = ',')
  * $extracted2 = extractKeys($data['standard']['image'], 'url');
  * print_r($extracted2);  // 문자열로 키를 전달.
  *
- * @param array $array
  * @param mixed $isAll
  */
 function extractKeys(?array $array, array|string $keysToExtract, $isAll = true)
@@ -2950,4 +2997,36 @@ function extractKeys(?array $array, array|string $keysToExtract, $isAll = true)
     }
 
     return null;
+}
+
+function key_sort(&$array, $path)
+{
+    $paths = explode('.', $path);
+
+    \usort($array, function ($a, $b) use ($paths) {
+        $valA = $a;
+        $valB = $b;
+
+        foreach ($paths as $key) {
+            if (isset($valA[$key])) {
+                $valA = $valA[$key];
+            } else {
+                return -1; // 또는 적절한 기본값
+            }
+
+            if (isset($valB[$key])) {
+                $valB = $valB[$key];
+            } else {
+                return 1; // 또는 적절한 기본값
+            }
+        }
+
+        if ($valA == $valB) {
+            return 0;
+        }
+
+        return ($valA < $valB) ? -1 : 1;
+    });
+
+    return $array;
 }

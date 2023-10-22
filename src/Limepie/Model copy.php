@@ -92,12 +92,12 @@ class Model extends ArrayObject
 
     public $callbackColumns = [];
 
-    public static function newInstance(\PDO $pdo = null, array|ArrayObject $attributes = []) : self
+    public static function newInstance(\PDO $pdo = null, ArrayObject|array $attributes = []) : self
     {
         return new self($pdo, $attributes);
     }
 
-    public function __construct(\PDO $pdo = null, array|ArrayObject $attributes = [])
+    public function __construct(\PDO $pdo = null, ArrayObject|array $attributes = [])
     {
         if ($pdo) {
             $this->setConnect($pdo);
@@ -110,7 +110,7 @@ class Model extends ArrayObject
         $this->keyName = $this->primaryKeyName;
     }
 
-    public function __invoke(\PDO $pdo = null, array|ArrayObject $attributes = [])
+    public function __invoke(\PDO $pdo = null, ArrayObject|array $attributes = [])
     {
         if ($pdo) {
             $this->setConnect($pdo);
@@ -772,15 +772,8 @@ class Model extends ArrayObject
         } else {
             $group = [];
 
-            try {
-                foreach ($data ?? [] as $key => $row) {
-                    $group[$row[$rightKeyName]][$key] = $row;
-                }
-            } catch (\Throwable $e) {
-                // \pr($this->tableName, $rightKeyName);
-                // \pr($data);
-
-                throw $e;
+            foreach ($data ?? [] as $key => $row) {
+                $group[$row[$rightKeyName]][$key] = $row;
             }
             // \pr($rightKeyName, $group);
 
@@ -1422,7 +1415,7 @@ class Model extends ArrayObject
         return true;
     }
 
-    public function doDelete() : bool|self
+    public function doDelete() : self|bool
     {
         if (true == $this->deleteLock) {
             return true;
@@ -1983,7 +1976,7 @@ class Model extends ArrayObject
         throw new \Limepie\Exception('lost connection');
     }
 
-    private function buildGetSum(string $name, array $arguments, int $offset) : float|int
+    private function buildGetSum(string $name, array $arguments, int $offset) : int|float
     {
         $this->attributes = [];
 
@@ -2056,7 +2049,7 @@ class Model extends ArrayObject
         throw new \Limepie\Exception('lost connection');
     }
 
-    private function buildGetAvg(string $name, array $arguments, int $offset) : float|int
+    private function buildGetAvg(string $name, array $arguments, int $offset) : int|float
     {
         $this->attributes = [];
 
@@ -2196,7 +2189,7 @@ class Model extends ArrayObject
         ];
     }
 
-    public function gets(null|array|string $sql = null, array $binds = []) : ?self
+    public function gets(array|string|null $sql = null, array $binds = []) : ?self
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -2408,12 +2401,12 @@ class Model extends ArrayObject
         };
     }
 
-    public function get1(null|array|string $sql = null, array $binds = []) : ?self
+    public function get1(string|array|null $sql = null, array $binds = []) : ?self
     {
         throw new \Limepie\Exception('not support get1');
     }
 
-    public function get(null|array|string $sql = null, array $binds = []) : ?self
+    public function get(string|array|null $sql = null, array $binds = []) : ?self
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -3247,7 +3240,7 @@ class Model extends ArrayObject
         return $this;
     }
 
-    private function buildGetBy(string $name, array $arguments, int $offset) : null|self
+    private function buildGetBy(string $name, array $arguments, int $offset) : self|null
     {
         $this->attributes = [];
 
@@ -3374,7 +3367,7 @@ class Model extends ArrayObject
         return $this->empty();
     }
 
-    private function buildGetsBy(string $name, array $arguments, int $offset) : null|self
+    private function buildGetsBy(string $name, array $arguments, int $offset) : self|null
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -3606,7 +3599,7 @@ class Model extends ArrayObject
 
     public static function debug(
         ?string $filename = null,
-        null|int|string $line = null
+        string|int|null $line = null
     ) {
         static::$debug = true;
 
