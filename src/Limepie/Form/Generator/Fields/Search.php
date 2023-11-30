@@ -52,6 +52,22 @@ class Search extends \Limepie\Form\Generator\Fields
             $placeholder = $property['placeholder'];
         }
 
+        $keyword_min_length = 2;
+
+        if (isset($property['keyword_min_length']) && $property['keyword_min_length']) {
+            $keyword_min_length = $property['keyword_min_length'];
+        }
+        $hide_searching = 2;
+
+        if (isset($property['hide_searching']) && $property['hide_searching']) {
+            $hide_searching = $property['hide_searching'];
+        }
+        $delay = 250;
+
+        if (isset($property['delay']) && $property['delay']) {
+            $delay = $property['delay'];
+        }
+
         // \pr($dotKey, $key, $property);
         $class = '';
 
@@ -70,7 +86,7 @@ class Search extends \Limepie\Form\Generator\Fields
         $expend  = '';
         $scripts = <<<SCRIPT
             <script>
-                select2('{$id}');
+                select2('{$id}', '{$keyword_min_length}', '{$delay}');
                 {$callback}
             </script>
         SCRIPT;
@@ -147,7 +163,14 @@ class Search extends \Limepie\Form\Generator\Fields
             $onchange = "readonly onFocus='this.initialSelect = this.selectedIndex;' onChange='this.selectedIndex = this.initialSelect;'";
         }
 
+        $styleText = '';
+
+        if ($hide_searching) {
+            $styleText = "<style>.{$id}_select2 .loading-results { display: none; }</style>";
+        }
+
         return <<<EOT
+        {$styleText}
         <div class="input-group">
         {$prepend}
         <select class="valid-target form-control{$class}" {$style} name="{$key}" data-api-server="{$api_server}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>

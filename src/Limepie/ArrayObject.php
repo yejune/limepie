@@ -8,7 +8,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 {
     public $attributes = [];
 
-    public function __construct(ArrayObject|array|\stdClass|null $array)
+    public function __construct(null|array|ArrayObject|\stdClass $array)
     {
         if ($array instanceof \Limepie\ArrayObject) {
             $this->attributes = $array->attributes;
@@ -301,12 +301,17 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return $attributes;
     }
 
+    public function toKeys()
+    {
+        return \array_keys($this->attributes);
+    }
+
     public function prepend($array)
     {
         return $this->attributes = [...$array, ...$this->attributes];
     }
 
-    public function apend($array)
+    public function append($array)
     {
         return $this->attributes = [...$this->attributes, ...$array];
     }

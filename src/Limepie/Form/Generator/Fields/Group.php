@@ -8,6 +8,69 @@ namespace Limepie\Form\Generator\Fields;
 
 class Group extends \Limepie\Form\Generator\Fields
 {
+    public static function getValueFromData($pattern, $map)
+    {
+        $patterns = \explode('.', \str_replace(['[', ']'], ['.', '*'], $pattern));
+        $maps     = \explode('.', \str_replace(['[', ']'], ['.', ''], $map));
+
+        $new = [];
+
+        $currentData = static::$allData;
+        $currentSpec = static::$specs;
+
+        foreach ($patterns as $index => $d) {
+            if (isset($maps[$index]) && 1 === \preg_match('#__([^_]{13})__#', $maps[$index])) {
+                $key = $new[] = $maps[$index];
+            } else {
+                $key = $new[] = $d;
+            }
+
+            if (isset($currentSpec['properties'][$key])) {
+                $currentSpec = $currentSpec['properties'][$key];
+            } elseif (isset($currentSpec['properties'][$key . '[]'])) {
+                $currentSpec = $currentSpec['properties'][$key . '[]'];
+            }
+
+            if (isset($currentData[$key])) {
+                $currentData = $currentData[$key];
+            } else {
+                $currentData = null;
+            }
+        }
+
+        if (null === $currentData && $currentSpec['default']) {
+            $currentData = $currentSpec['default'];
+        }
+
+        return $currentData;
+    }
+
+    public static function checkCondition($condition, $map)
+    {
+        // \pr($condition);
+        // 조건문 내의 {path}를 실제 데이터 값으로 대체
+        $interpolatedCondition = \preg_replace_callback('/\{([^}]+)\}/', function ($matches) use ($map) {
+            $path  = $matches[1];
+            $value = null;
+
+            if (false === \strpos($path, '.')) {
+                $path = $map . '.' . $path;
+            }
+            $value = static::getValueFromData($path, $map);
+            // \pr($path, $base, $value);
+
+            if (\is_null($value)) {
+                return 0;
+            }
+
+            return \is_string($value) ? "'{$value}'" : $value;
+        }, $condition);
+        // \pr($interpolatedCondition, eval("return {$interpolatedCondition};"));
+
+        // 조건문 평가
+        return eval("return {$interpolatedCondition};");
+    }
+
     public static function getVVV($targetElementDotName, $nextDotName, $elementDotName)
     {
         if (false !== \strpos((string) $targetElementDotName, '*')) { // 참
@@ -323,6 +386,28 @@ class Group extends \Limepie\Form\Generator\Fields
 
             if (true === isset($propertyValue['style'])) {
                 $addStyle[] = \trim($propertyValue['style'], ';');
+            }
+
+            if (true === isset($propertyValue['switch'])) {
+                $else = $propertyValue['switch']['default'];
+                // unset($propertyValue['switch']['default']);
+                $fixedStyle = $else['style'] ?? '';
+                $fixedClass = $else['class'] ?? '';
+
+                foreach ($propertyValue['switch']['cases'] as $innerCondition => $innerStyle) {
+                    $result = static::checkCondition($innerCondition, $elementName, static::$allData, static::$specs);
+                    // \pr($innerCondition, $prevKey, $result, $innerStyle);
+
+                    if ($result) {
+                        $fixedStyle = $innerStyle['style'] ?? '';
+                        $fixedClass = $innerStyle['class'] ?? '';
+
+                        break;
+                    }
+                }
+
+                $addStyle[] = $fixedStyle;
+                $addClass[] = $fixedClass;
             }
 
             // display_target: ../is_extra_people

@@ -51,10 +51,8 @@ class Request
 
     final public function __construct()
     {
-        {
-            $this->rawBody = \file_get_contents('php://input');
-            $this->bodies  = $this->getBodyAll();
-        }
+        $this->rawBody = \file_get_contents('php://input');
+        $this->bodies  = $this->getBodyAll();
 
         $this->language = $this->getBestLanguage();
 
@@ -458,12 +456,12 @@ class Request
         $requestMethod = $this->getServer('REQUEST_METHOD');
 
         if ($requestMethod) {
-            $returnMethod = \strtoupper($returnMethod);
+            $returnMethod = \strtoupper($requestMethod);
 
             if ('POST' === $returnMethod) {
                 $overridedMethod = $this->getHeader('X-HTTP-METHOD-OVERRIDE');
 
-                if (0 === \strlen($overridedMethod)) { // empty
+                if ($overridedMethod) {
                     $returnMethod = \strtoupper($overridedMethod);
                 } elseif ($this->httpMethodParameterOverride) {
                     $returnMethod = \strtoupper($_REQUEST['_method']);
@@ -478,7 +476,7 @@ class Request
         return $returnMethod;
     }
 
-    public function getHeader($key) : string
+    public function getHeader($key) : null|string
     {
         return $this->getServer($key);
     }
@@ -521,7 +519,7 @@ class Request
         return $this->getServer('REQUEST_URI');
     }
 
-    public function getServer($key) : string|array|null
+    public function getServer($key) : null|array|string
     {
         return $_SERVER[$key] ?? null;
     }
@@ -533,9 +531,7 @@ class Request
     }
 
     // get $_PUT[$key]
-    public function getPut()
-    {
-    }
+    public function getPut() {}
 
     // get $_GET[$key]
     public function getQuery($key)

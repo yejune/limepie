@@ -236,9 +236,23 @@ class Pagination
         }
         $totalPages = (0 === $recordsPerPage ? 0 : (int) \ceil($totalCount / $recordsPerPage));
 
-        // if ($totalPages && $currentPage > $totalPages) {
-        //     $currentPage = $totalPages;
-        // }
+        if ($totalPages && $currentPage > $totalPages) {
+            // $currentPage = $totalPages;
+
+            $fixUrl = \str_replace('{=page}', (string) $totalPages, $urlPattern);
+
+            if (!\headers_sent()) {
+                // 헤더가 아직 전송되지 않았으므로 header()를 사용하여 리디렉션
+                \header('Location: ' . $fixUrl);
+            } else {
+                // 이미 출력이 시작되었으므로 JavaScript를 사용하여 리디렉션
+                echo '<script type="text/javascript">';
+                echo 'window.location.href="' . $fixUrl . '";';
+                echo '</script>';
+            }
+
+            exit;
+        }
         $offset     = ($currentPage - 1) * $recordsPerPage;
         $pagination = \Limepie\Pagination::getHtml($totalCount, $currentPage, $recordsPerPage, $pagesPerBlock, $urlPattern);
         $listModels = $listModel->limit($offset, $recordsPerPage)->gets();

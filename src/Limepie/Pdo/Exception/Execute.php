@@ -99,6 +99,10 @@ class Execute extends \Limepie\Exception
 
         $this->binds = $fixedBinds;
 
-        return $this->getMessage() . ",\n" . $query . ', [' . \Limepie\http_build_query($fixedBinds, '=', ', ') . ']';
+        try {
+            return $this->getMessage() . ",\n" . $query . ', [' . \Limepie\http_build_query($fixedBinds, '=', ', ') . ']';
+        } catch (\Error $e) {
+            return $this->getMessage();
+        }
     }
 }

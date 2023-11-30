@@ -319,7 +319,7 @@ class Compiler
         if ($match[1]) {
             // escape
             $result = [1, \substr($org, 1)];
-            // pr($match, $result);
+        // pr($match, $result);
         } else {
             switch ($match[2]) {
                 case '@':
@@ -477,6 +477,7 @@ class Compiler
             $scopeDefines = '';
             $scopeVars    = '';
             $parts        = [];
+
             /*
              * {order = payload.order} {#row Row.tpl scope order}
              * =>
@@ -704,6 +705,7 @@ class Compiler
             } else {
                 $next = ['org' => '', 'name' => '', 'value' => ''];
             }
+
             // 마지막이 종결되지 않음
             if (!$next['name'] && false === \in_array($current['name'], ['string', 'number', 'string_number', 'right_bracket', 'right_parenthesis', 'double_operator', 'quote'], true)) {
                 if ('sam' === $current['name']) {
@@ -711,6 +713,7 @@ class Compiler
 
                     continue;
                 }
+
                 // pr($current);
                 if (true === $this->debug) {
                     \pr($xpr, $prev, $current, __LINE__);
@@ -740,7 +743,7 @@ class Compiler
                         $xpr .= $current['value'];
                     } elseif ('new' === $current['value'] && 'namespace_sigh' === $next['name']) {
                         $xpr .= 'new ';
-                        // 클로저를 허용하지 않음. 그래서 string_concat 비교 보다 우선순위가 높음
+                    // 클로저를 허용하지 않음. 그래서 string_concat 비교 보다 우선순위가 높음
                     } elseif (true === \in_array($next['name'], ['left_parenthesis', 'static_object_sign', 'namespace_sigh'], true)) {
                         if ('string_concat' === $prev['name']) {
                             if (true === $this->debug) {
@@ -1033,6 +1036,7 @@ class Compiler
                         // exit;
                         throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
+
                     // = 앞에는 일부의 연산자만 허용된다. +=, -=...
                     if ('operator' === $prev['name'] && false === \in_array($prev['value'], ['+', '-', '*', '/', '%', '^', '!'], true)) {
                         throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);

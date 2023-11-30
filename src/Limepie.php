@@ -54,7 +54,7 @@ function cprint($content, $nl2br = false)
     return '';
 }
 
-function cprint_tags($content, array|string|null $allowTags = null)
+function cprint_tags($content, null|array|string $allowTags = null)
 {
     $content = \trim((string) $content);
 
@@ -580,11 +580,24 @@ function refparse($arr = [], $basepath = '') : array
             if (true === \is_array($value)) {
                 foreach ($value as $k => $v) {
                     if (true === isset($return[$k])) {
+                        /**
+                         * $remove:
+                         *     choice_yoil_price:
+                         *       items:
+                         *           0:
+                         */
                         if (true === \is_array($v)) {
                             $return[$k] = \Limepie\array_remove($return[$k], $v);
                         } else {
                             unset($return[$k]);
                         }
+                    } else if(true === isset($return[$v])) {
+                        /**
+                         * $remove:
+                         *     - key1
+                         *     - key2
+                         */
+                        unset($return[$v]);
                     }
                     // $remove $change ...
                     // pr($return, $key, $k, $v);
@@ -1154,7 +1167,7 @@ function decamelize($word)
 function camelize(string $word, string $delimiters = '')
 {
     return \preg_replace_callback(
-        '/(^|_|-|:|\/|\\\\)([a-zA-Z]+)/',
+        '/(^|\||_|-|:|\/|\\\\)([a-zA-Z]+)/',
         function ($m) use ($delimiters) {
             return ($delimiters && \in_array($m[1], \str_split($delimiters)) ? $m[1] : '') . \ucfirst(\strtolower("{$m[2]}"));
         },
@@ -1163,7 +1176,7 @@ function camelize(string $word, string $delimiters = '')
 }
 
 function array_extract(
-    array|object|null $arrays = [],
+    null|array|object $arrays = [],
     array|string $key = [],
     $index = null
 ) {
@@ -1434,7 +1447,7 @@ function is_binary(string $string) : bool
     return false;
 }
 
-function decimal($number, $zero2null = false) : float|int|null
+function decimal($number, $zero2null = false) : null|float|int
 {
     if (true === $zero2null) {
         if (null === $number || 0 === (float) $number) {
@@ -2134,7 +2147,7 @@ function qs(string $append = '?') : string
     return \Limepie\getQueystring($append);
 }
 
-function arrays_set(array|ArrayObject $array, \Closure|array|string $params)
+function arrays_set(array|ArrayObject $array, array|\Closure|string $params)
 {
     if (true === \is_string($params)) {
         $params = [$params];
@@ -3029,4 +3042,87 @@ function key_sort(&$array, $path)
     });
 
     return $array;
+}
+
+/*
+
+주어진 기준 날짜부터 현재까지의 월수에 따라 특정 가격에 할인을 적용합니다. 함수는 네 개의 매개변수를 받습니다:
+
+$baseDate: 할인 계산의 기준이 되는 날짜입니다.
+$currentPrice: 할인 전의 가격입니다.
+$discountRates: 월별 할인율을 담은 연관 배열로, 각 월수에 해당하는 할인율을 정의합니다 (예: 1개월 이내 1.8% 할인).
+
+함수는 기준 날짜로부터 현재까지의 월수를 계산하고, 이에 따라 해당 월에 적용되는 할인율을 찾아 가격에 적용합니다. 지정된 최대 월수를 초과하는 경우, 함수는 예외를 발생시켜 사용자에게 할인 기간이 초과되었음을 알립니다.
+
+
+// 할인율 설정: [월 => 할인율(%)]
+$discountRates = [
+    1 => 1.8, // 1개월 이내
+    2 => 1.2, // 2개월 이내
+    3 => 0.6  // 3개월 이내
+];
+
+$maxMonths = 3; // 최대 할인 적용 가능 월
+
+// 예시 사용
+$baseDate = '2023-01-01'; // 기준 날짜 예시
+$currentPrice = 10000; // 현재 가격 예시
+
+try {
+    $discountedPrice = calculateDiscountedPrice($baseDate, $currentPrice, $discountRates, $maxMonths);
+    echo "할인된 가격: " . $discountedPrice;
+} catch (Exception $e) {
+    echo "오류: " . $e->getMessage();
+}
+ */
+function calculateDiscountedPrice($baseDate, $currentPrice, $discountRates)
+{
+    // 할인율 배열이 비어있는 경우 확인
+    if (empty($discountRates)) {
+        return ['amount' => $currentPrice, 'discount' => 0, 'rate' => 1, 'month' => null];
+    }
+
+    $now      = new DateTime();
+    $baseDate = new DateTime($baseDate);
+    $interval = $now->diff($baseDate);
+
+    $months = $interval->m + ($interval->y * 12); // 연도를 월로 변환
+
+    // 할인 기간 초과 확인
+    if ($months > \max(\array_keys($discountRates))) {
+        throw new \Limepie\Exception('할인 기간이 초과되었습니다.');
+    }
+
+    // 할인율 적용
+    foreach ($discountRates as $month => $rate) {
+        if ($months <= $month) {
+            $discount         = ($currentPrice * $rate) / 100;
+            $discountedAmount = $currentPrice - $discount;
+
+            return [
+                'amount'   => \round($discountedAmount), // 반올림 적용
+                'discount' => \round($discount), // 반올림 적용
+                'month'    => $month,
+                'rate'     => $rate,
+            ];
+        }
+    }
+}
+
+// 예제 사용
+// $exampleString = "payple|billing|card";
+// echo str_process($exampleString, '|', '/', true); // 출력: Payple/Billing/Card
+function str_process($inputString, $originalDelimiter = '|', $newDelimiter = '/', $capitalizeFirstLetter = true)
+{
+    $processedString = \str_replace($originalDelimiter, $newDelimiter, $inputString);
+
+    if ($capitalizeFirstLetter) {
+        $words          = explode($newDelimiter, $processedString);
+        $processedWords = \array_map(function ($word) {
+            return \ucfirst(\strtolower($word));
+        }, $words);
+        $processedString = \implode($newDelimiter, $processedWords);
+    }
+
+    return $processedString;
 }

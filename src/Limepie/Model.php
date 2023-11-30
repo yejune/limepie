@@ -763,7 +763,7 @@ class Model extends ArrayObject
                                 $attribute[$key] = $value;
                             }
                         }
-                        // $attribute->offsetSet($moduleName, $data[$attr] ?? null);
+                    // $attribute->offsetSet($moduleName, $data[$attr] ?? null);
                     } else {
                         $attribute->offsetSet($moduleName, $data[$attr] ?? null);
                     }
@@ -809,7 +809,7 @@ class Model extends ArrayObject
                                         $attribute[$key] = $value;
                                     }
                                 }
-                                // $attribute->offsetSet($moduleName, $data[$attr] ?? null);
+                            // $attribute->offsetSet($moduleName, $data[$attr] ?? null);
                             } else {
                                 $attribute->offsetSet($moduleName, $instance);
                             }
@@ -1519,6 +1519,10 @@ class Model extends ArrayObject
                 $rand = \Limepie\genRandomString();
 
                 if (true === \is_numeric($column)) {
+                    if (false == isset($this->dataStyles[$alias])) {
+                        \pr($this->tableName, $alias, $this->selectColumns);
+                    }
+
                     if ('ip' === $alias) {
                         $columns[] = "inet6_ntoa(`{$this->tableAliasName}`." . '`' . $alias . '`) AS `' . $prefix . $alias . '`';
                     } elseif ('aes_serialize' === $this->dataStyles[$alias]) {
@@ -2193,6 +2197,7 @@ class Model extends ArrayObject
             'selectColumns' => $selectColumns,
             'sumColumn'     => $class->sumColumn,
             'avgColumn'     => $class->avgColumn,
+            'orderBy'       => $class->orderBy,
         ];
     }
 
@@ -2243,6 +2248,14 @@ class Model extends ArrayObject
                         $condition .= ' ' . $joinInfomation['condition'];
                     } else {
                         $condition = $joinInfomation['condition'];
+                    }
+                }
+
+                if ($joinInfomation['orderBy']) {
+                    if ($orderBy) {
+                        $orderBy .= ', ' . $joinInfomation['orderBy'];
+                    } else {
+                        $orderBy = $this->getOrderBy($joinInfomation['orderBy']);
                     }
                 }
 
@@ -2991,7 +3004,13 @@ class Model extends ArrayObject
                     // string 자체를 query로 사용하므로 bind변수가 없다.
                     $queryString = $key;
 
-                    // throw new \Limepie\Exception($key . ': numbers of columns of arguments do not match');
+                // throw new \Limepie\Exception($key . ': numbers of columns of arguments do not match');
+                } elseif (0 === \strpos($key, 'fulltext_')) {
+                    $fixedKey = \substr($key, 9);
+
+                    $queryString = "MATCH(`{$this->tableAliasName}`." . '`' . $fixedKey . '` ) AGAINST(CONCAT("+", :' . $bindKeyname . ', "*") IN BOOLEAN MODE)';
+
+                    $binds[':' . $bindKeyname] = $arguments[$index];
                 } elseif (0 === \strpos($key, 'between_')) {
                     $fixedKey = \substr($key, 8);
 
@@ -3117,9 +3136,9 @@ class Model extends ArrayObject
                 $conds[]  = \substr($name, $offset);
                 $operator = \substr($name, 0, $offset);
 
-                // if ('condition' != $operator) {
-                //     $conds[] = $operator;
-                // }
+            // if ('condition' != $operator) {
+            //     $conds[] = $operator;
+            // }
             } else {
                 // join시 table명을 넣은 조건을 alias table 명으로 바꿔줌.
                 // ->and('DATE_ADD(service_coupon.created_ts, INTERVAL service_coupon.expire_date_count DAY) > now()')
@@ -3405,6 +3424,13 @@ class Model extends ArrayObject
                 }
             }
 
+            if ($joinInfomation['orderBy']) {
+                if ($orderBy) {
+                    $orderBy .= ', ' . $joinInfomation['orderBy'];
+                } else {
+                    $orderBy = $this->getOrderBy($joinInfomation['orderBy']);
+                }
+            }
             // $keyName = '';
         }
 
