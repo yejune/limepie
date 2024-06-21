@@ -1,6 +1,12 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie;
+
+use Limepie\Form\Generation;
+use Limepie\Form\Generator;
+use Limepie\Form\Validation;
 
 class Form
 {
@@ -42,7 +48,7 @@ class Form
 
     public function validation(array $data = [], $language = '')
     {
-        $this->validation                    = new \Limepie\Form\Validation($data, $language);
+        $this->validation                    = new Validation($data, $language);
         $this->validation->strictMode        = $this->strictMode;
         $this->validation->reverseConditions = $this->reverseConditions;
 
@@ -54,23 +60,37 @@ class Form
         return $this->validation->errors;
     }
 
-    public function write(array | \Limepie\ArrayObject | null $data = [])
+    public function write(null|array|ArrayObject $data = [])
     {
-        $generation = new \Limepie\Form\Generation;
+        $generation = new Generation();
 
         return $generation->write($this->spec, $data ?? []);
     }
 
+    public function write2(null|array|ArrayObject $data = [])
+    {
+        $generation = new Generator();
+
+        return $generation->write($this->spec, $data ?? []);
+    }
+
+    public function read2(null|array|ArrayObject $data = [])
+    {
+        $generation = new Generator();
+
+        return $generation->read($this->spec, $data ?? []);
+    }
+
     public function read(array $data = [])
     {
-        $generation = new \Limepie\Form\Generation;
+        $generation = new Generation();
 
         return $generation->read($this->spec, $data);
     }
 
     public function list(array $data = [])
     {
-        $generation = new \Limepie\Form\Generation;
+        $generation = new Generation();
 
         return $generation->list($this->spec, $data);
     }

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie\Form\Generation\Fields;
 
@@ -12,7 +14,8 @@ class Select extends \Limepie\Form\Generation\Fields
             $value = $property['default'] ?? '';
         }
 
-        $value    = \htmlspecialchars((string) $value);
+        $value = \htmlspecialchars((string) $value);
+
         $default  = $property['default']  ?? '';
         $disabled = $property['disabled'] ?? '';
         $disables = $property['disables'] ?? [];
@@ -49,17 +52,17 @@ class Select extends \Limepie\Form\Generation\Fields
             $dotKey = \str_replace(['[', ']'], ['.', ''], $key);
 
             $parts = \explode('.', $dotKey);
-            //$dotParts   = [];
+            // $dotParts   = [];
             $keyAsArray = [];
 
             foreach ($parts as $part) {
                 if (1 === \preg_match('#__([^_]{13,})__#', $part)) {
                     $keyAsArray[] = $part;
-                    //$dotParts[]   = '*';
+                    // $dotParts[]   = '*';
                 }
-                //$dotParts[] = $part;
+                // $dotParts[] = $part;
             }
-            //$dotKey2 = \implode('.', $dotParts);
+            // $dotKey2 = \implode('.', $dotParts);
 
             $keyName = \addcslashes($key, '[]');
 
@@ -77,7 +80,7 @@ class Select extends \Limepie\Form\Generation\Fields
             }
             $keyAsUnderbar     = \implode('_', $dot2);
             $targetElementName = \addcslashes(static::getNameByArray($dot2), '[]');
-            //\pr($property['childs']);
+            // \pr($property['childs']);
 
             $childs = \json_encode($property['childs'], \JSON_UNESCAPED_UNICODE);
             $scripts .= <<<EOD
@@ -119,9 +122,9 @@ $(function() {
 </script>
 EOD;
 
-            //\pr($key, $dotKey2, static::getNameByArray($dot2));
+            // \pr($key, $dotKey2, static::getNameByArray($dot2));
 
-            //exit;
+            // exit;
 
             $expend = <<<'EOD'
 
@@ -190,7 +193,7 @@ EOD;
 
                         // either add a subnav or close the optionst item
                         if ($its->hasChildren()) {
-                            $output->append('<optgroup label="' . \str_repeat('&nbsp;', ($curDepth) * 4) . $it['name'] . '">');
+                            $output->append('<optgroup label="' . \str_repeat('&nbsp;', $curDepth * 4) . $it['name'] . '">');
                         } else {
                             $selected = '';
 
@@ -285,8 +288,12 @@ EOT;
 
     public static function read($key, $property, $value)
     {
-        if (0 === \strlen($value)) {
+        if (\is_array($value)) {
             $value = $property['default'] ?? '';
+        } else {
+            if (0 === \strlen((string) $value)) {
+                $value = $property['default'] ?? '';
+            }
         }
 
         $value = \htmlspecialchars((string) $value);

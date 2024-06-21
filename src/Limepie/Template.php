@@ -32,7 +32,7 @@ class Template
     /**
      * @var array
      */
-    //public $var_ = [];
+    // public $var_ = [];
     public $var_ = ['' => []];
 
     /**
@@ -112,8 +112,8 @@ class Template
 
     /**
      * @param $fid
-     * @param $path
      * @param mixed $fids
+     * @param mixed $path
      */
     public function define($fids, $path = false)
     {
@@ -127,8 +127,8 @@ class Template
     }
 
     /**
-     * @param $fid
-     * @param $print
+     * @param mixed $fid
+     * @param mixed $print
      *
      * @return mixed
      */
@@ -148,7 +148,7 @@ class Template
     }
 
     /**
-     * @param $fid
+     * @param mixed $fid
      *
      * @return mixed
      */
@@ -170,9 +170,9 @@ class Template
     }
 
     /**
-     * @param       $fid
      * @param mixed $addAssign
      * @param mixed $scope
+     * @param mixed $fid
      */
     public function printContents($fid, array $addAssign = [], $scope = '') : void
     {
@@ -194,7 +194,7 @@ class Template
     }
 
     /**
-     * @param $fid
+     * @param mixed $fid
      *
      * @return mixed
      */
@@ -234,7 +234,7 @@ class Template
     }
 
     /**
-     * @param $fid
+     * @param mixed $fid
      *
      * @return mixed
      */
@@ -245,7 +245,7 @@ class Template
         if (true === isset($this->tpl_[$fid])) {
             $path = $this->tpl_[$fid];
         } else {
-            throw new Exception\Http('template id "' . $fid . '" is not defined', 404100);
+            throw new Exception('template id "' . $fid . '" is not defined', 500);
         }
 
         if (0 === \strpos($path, '/')) {
@@ -257,7 +257,9 @@ class Template
         $tplPath2 = \Limepie\stream_resolve_include_path($tplPath);
 
         if (false === $tplPath2) {
-            throw (new Exception('cannot find defined template "' . $tplPath . '"', 404))->setDisplayMessage('page not found');
+            throw (new Exception('cannot find defined template "' . $tplPath . '"', 404))
+                ->setDebugMessage('page not found', __FILE__, __LINE__)
+            ;
         }
 
         $this->cpl_[$fid] = $tplPath2;
@@ -303,18 +305,14 @@ class Template
         return isset($this->tpl_[$fid]);
     }
 
-    /**
-     * @param $fid
-     * @param $path
-     */
     private function _define($fid, $path)
     {
-        //pr($path);
-        $this->tpl_[$fid] = $path; //ltrim($path, $this->templateRoot);
+        // pr($path);
+        $this->tpl_[$fid] = $path; // ltrim($path, $this->templateRoot);
     }
 
     /**
-     * @param $fid
+     * @param mixed $fid
      *
      * @return mixed
      */
@@ -328,9 +326,11 @@ class Template
         }
 
         if (false === $tplPath) {
-            throw (new Exception('cannot find defined template "' . $tplPath . '"', 404))->setDisplayMessage('page not found');
+            throw (new Exception('cannot find defined template "' . $tplPath . '"', 404))
+                ->setDebugMessage('page not found', __FILE__, __LINE__)
+            ;
         }
-        //( 24 + 1 + 40 + 1 ) + ( 11 + 1 )
+        // ( 24 + 1 + 40 + 1 ) + ( 11 + 1 )
         $cplHead = '<?php /* Peanut\\Template ' . \sha1_file($tplPath, false) . ' ' . \date('Y/m/d H:i:s', \filemtime($tplPath)) . ' ' . $tplPath . ' ';
 
         if ('dev' !== $this->compileCheck && false !== $cplPath) {
@@ -350,19 +350,21 @@ class Template
         $compiler->execute($this, $fid, $tplPath, $cplPath, $cplHead);
 
         $cplPath2 = $cplPath;
-        //\pr($cplPath2);
+        // \pr($cplPath2);
 
         if (false === $cplPath2) {
-            throw (new Exception('cannot find defined template compile "' . $cplPath . '"', 404))->setDisplayMessage('page not found');
+            throw (new Exception('cannot find defined template compile "' . $cplPath . '"', 404))
+                ->setDebugMessage('page not found', __FILE__, __LINE__)
+            ;
         }
 
         return $cplPath2;
     }
 
     /**
-     * @param $tplPath
      * @param mixed $addAssign
      * @param mixed $TPL_SCP
+     * @param mixed $tplPath
      */
     private function requireFile($tplPath, array $addAssign, $TPL_SCP = '')
     {
@@ -377,9 +379,17 @@ class Template
         //         ${$k} = $v;
         //     }
         // }
-        //unset ($k);  unset ($v);  unset ($V);
-        if (true === isset($this->var_[$TPL_SCP])) {
-            ${$TPL_SCP} = $this->var_[$TPL_SCP];
+        // unset ($k);  unset ($v);  unset ($V);
+        if (true === \is_array($TPL_SCP)) {
+            foreach ($TPL_SCP as $k => $v) {
+                if (true === isset($this->var_[$v])) {
+                    ${$v} = $this->var_[$v];
+                }
+            }
+        } else {
+            if (true === isset($this->var_[$TPL_SCP])) {
+                ${$TPL_SCP} = $this->var_[$TPL_SCP];
+            }
         }
         \extract($addAssign);
 

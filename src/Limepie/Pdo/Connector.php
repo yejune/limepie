@@ -1,6 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie\Pdo;
+
+use Limepie\Exception;
 
 class Connector
 {
@@ -24,6 +28,8 @@ class Connector
 
     public $options = [];
 
+    public $readonly = false;
+
     public function __construct()
     {
         $this->charset  = 'utf8mb4';
@@ -35,10 +41,15 @@ class Connector
         return ['properties' => '#hidden'];
     }
 
+    public function setReadonly($flag = false)
+    {
+        $this->readonly = $flag;
+    }
+
     /**
-     * #[username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
+     * #[username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN].
      *
-     * @param $url
+     * @param mixed $url
      *
      * @return array
      */
@@ -61,7 +72,6 @@ class Connector
                 $this->persistent = $query['persistent'];
             }
         }
-
         $this->scheme   = $dbSource['scheme'];
         $this->host     = $dbSource['host'];
         $this->dbname   = \trim($dbSource['path'], '/');
@@ -99,12 +109,16 @@ class Connector
             }
 
             if ($this->persistent) {
-                $options[\Pdo::ATTR_PERSISTENT] = $this->persistent;
+                $options[\PDO::ATTR_PERSISTENT] = $this->persistent;
             }
 
-            return new $class($this->dsn, $this->username, $this->password, $options);
+            return (new $class($this->dsn, $this->username, $this->password, $options))
+                ->setReadonly($this->readonly)
+            ;
         } catch (\Throwable $e) {
-            throw $e;
+            throw (new Exception($e, 500))
+                ->setDebugMessage('database connect error.', __FILE__, __LINE__)
+            ;
         }
     }
 

@@ -43,12 +43,12 @@ class Translate implements \Iterator, \ArrayAccess, \Countable
         throw new \Limepie\Exception('"' . $property . '" function not found', 999);
     }
 
-    public function count()
+    public function count() : int
     {
         return \count($this->language);
     }
 
-    public function offsetSet($offset, $value)
+    public function offsetSet($offset, $value) : void
     {
         if (null === $offset) {
             $this->language[] = $value;
@@ -57,24 +57,24 @@ class Translate implements \Iterator, \ArrayAccess, \Countable
         }
     }
 
-    public function offsetExists($offset)
+    public function offsetExists($offset) : bool
     {
         return isset($this->language[$offset]);
     }
 
-    public function offsetUnset($offset)
+    public function offsetUnset($offset) : void
     {
         unset($this->language[$offset]);
     }
 
-    public function offsetGet($offset)
+    public function offsetGet($offset) : mixed
     {
         return $this->language[$offset];
 
         return $this->language[$offset] ?? null;
     }
 
-    //iterator_to_array
+    // iterator_to_array
     public function toArray()
     {
         if (true === \Limepie\is_assoc($this->language)) {
@@ -83,37 +83,37 @@ class Translate implements \Iterator, \ArrayAccess, \Countable
         $language = [];
 
         foreach ($this->language as $index => $property) {
-            //index에서 seq로 변경
+            // index에서 seq로 변경
             $language[] = $property->toArray();
         }
 
         return $language;
     }
 
-    public function rewind()
+    public function rewind() : void
     {
         \reset($this->language);
     }
 
-    public function current()
+    public function current() : mixed
     {
         return \current($this->language);
     }
 
-    public function key()
+    public function key() : mixed
     {
         return \key($this->language);
     }
 
-    public function next()
+    public function next() : void
     {
-        return \next($this->language);
+        \next($this->language);
     }
 
-    public function valid()
+    public function valid() : bool
     {
         $key = \key($this->language);
 
-        return (null !== $key && false !== $key);
+        return null !== $key && false !== $key;
     }
 }

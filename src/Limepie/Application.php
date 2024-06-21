@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie;
 
@@ -33,6 +35,8 @@ class Application
     public $previous = [];
 
     public $extension = 'php';
+
+    public $store = [];
 
     public function __construct($extension = null)
     {
@@ -178,15 +182,15 @@ class Application
 
         if (true === \is_array($arguments)) {
             if (true === isset($arguments['namespace'])) {
-                $namespaceName = $arguments['namespace'];
+                $namespaceName = \rawurldecode($arguments['namespace']);
             }
 
             if (true === isset($arguments['controller'])) {
-                $controllerName = $arguments['controller'];
+                $controllerName = \rawurldecode($arguments['controller']);
             }
 
             if (true === isset($arguments['action'])) {
-                $actionName = $arguments['action'];
+                $actionName = \rawurldecode($arguments['action']);
             }
 
             if (true === isset($arguments['path'])) {
@@ -238,22 +242,30 @@ class Application
         $classFile = \str_replace('\\', '/', \strtr($this->className, ['\\App\\' => __BASE_DIR__ . '/app/'])) . '.' . $this->extension;
 
         if (false === \file_exists($classFile)) {
-            //throw new \Limepie\Exception('"' . $classFile . '" file not found');
+            // throw new \Limepie\Exception('"' . $classFile . '" file not found');
         }
 
         try {
             if (false === $isStatic) {
-                return (new $this->className)->{$this->methodName}(
-                    Di::get('request'),
-                    Di::get('response')
+                return (new $this->className())->{$this->methodName}(
+                    Di::getRequest(),
+                    Di::getResponse()
                 );
             }
 
             return $this->className::{$this->methodName}(
-                Di::get('request'),
-                Di::get('response')
+                Di::getRequest(),
+                Di::getResponse()
             );
-        } catch (\Exception $e) {
+        } catch (\Limepie\Exception $e) {
+            // throw $e;
+            // \pr($e);
+            $current = $e->getTrace()[0];
+
+            if ($current['file'] ?? false) {
+                throw $e->setDebugMessage($e->getMessage(), $current['file'], $current['line']);
+            }
+
             throw $e;
         }
     }
@@ -275,7 +287,9 @@ class Application
         }
 
         if (false === \class_exists($className)) {
-            throw (new \Limepie\Exception('Class "' . $className . '" not found', 404))->setDisplayMessage('page not found');
+            throw (new \Limepie\Exception('Class "' . $className . '" not found', 404))
+                ->setDisplayMessage('page not found', __FILE__, __LINE__)
+            ;
         }
 
         try {
@@ -287,7 +301,9 @@ class Application
         }
 
         if (null === $methods) {
-            throw (new \Limepie\Exception('Class "' . $className . '" name error', 404))->setDisplayMessage('page not found');
+            throw (new \Limepie\Exception('Class "' . $className . '" name error', 404))
+                ->setDisplayMessage('page not found', __FILE__, __LINE__)
+            ;
         }
         $methodNames = \preg_grep('/^' . $actionName . '/', $methods);
 
@@ -314,6 +330,8 @@ class Application
         \rsort($likely);
 
         // ERRORCODE: 40002, method not found
-        throw (new \Limepie\Exception('"' . \implode('" or "', \array_unique($likely)) . '" method not found in ' . $className . '" class', 404))->setDisplayMessage('page not found');
+        throw (new \Limepie\Exception('"' . \implode('" or "', \array_unique($likely)) . '" method not found in ' . $className . '" class', 404))
+            ->setDisplayMessage('page not found', __FILE__, __LINE__)
+        ;
     }
 }

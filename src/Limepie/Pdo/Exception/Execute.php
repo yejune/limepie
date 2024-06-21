@@ -83,18 +83,26 @@ class Execute extends \Limepie\Exception
         $query = $this->getStatement();
         $binds = $this->getBinds();
 
-        $newBinds = [];
+        $fixedBinds = [];
 
         foreach ($binds as $key => $value) {
-            $isBinary = false;
-
-            if (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64|aes)_#', $key, $typeMatch)) {
-                $isBinary = true;
+            if (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64|aes|iv_aes)_#', $key, $typeMatch)) {
+                $value = '[binary]';
+            } elseif (1 === \preg_match('#^:?(?P<type>gz|json|yaml|serialize|base64|aes|iv_aes)$#', $key, $typeMatch)) {
+                $value = '[hidden]';
+            } elseif (1 === \preg_match('#aes#', $key, $typeMatch)) {
+                $value = '[hidden]';
             }
 
-            $newBinds[] = $key . ' => ' . ($isBinary ? '[binary]' : \print_r($value, true));
+            $fixedBinds[$key] = $value;
         }
 
-        return $this->getMessage() . ",\n" . $query . ($newBinds ? ', [' . \implode(', ', $newBinds) . ']' : '');
+        $this->binds = $fixedBinds;
+
+        try {
+            return $this->getMessage() . ",\n" . $query . ', [' . \Limepie\http_build_query($fixedBinds, '=', ', ') . ']';
+        } catch (\Error $e) {
+            return $this->getMessage();
+        }
     }
 }

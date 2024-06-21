@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie;
 
@@ -9,6 +11,10 @@ class Pagination
     private $totalPages = 0;
 
     private $currentPage = 1;
+
+    private $nextPage;
+
+    private $prevPage;
 
     private $recordsPerPage = 10;
 
@@ -135,23 +141,23 @@ class Pagination
         $html = '<ul class="pagination">';
 
         if ($pagination['prevUrl']) {
-            $html .= '<li class="page-item"><a class="page-link" href="' . $pagination['prevUrl'] . '">&laquo;</a></li>'; //Previous
+            $html .= '<li class="page-item prev"><a class="page-link" href="' . $pagination['prevUrl'] . '"><span class="page-text">&laquo;</span></a></li>'; // Previous
         } else {
-            $html .= '<li class="page-item disabled"><a class="page-link">&laquo;</a></li>';
+            $html .= '<li class="page-item prev disabled"><a class="page-link"><span class="page-text">&laquo;</span></a></li>';
         }
 
         foreach ($pagination['pages'] as $page) {
             if ($page['url']) {
-                $html .= '<li  class="page-item' . ($page['isCurrent'] ? ' active' : '') . '"><a class="page-link" href="' . $page['url'] . '">' . $page['num'] . '</a></li>';
+                $html .= '<li  class="page-item' . ($page['isCurrent'] ? ' active' : '') . '"><a class="page-link" href="' . $page['url'] . '"><span class="page-text">' . $page['num'] . '</span></a></li>';
             } else {
-                $html .= '<li class="page-item disabled"><span class="page-link">' . $page['num'] . '</span></li>';
+                $html .= '<li class="page-item ' . ('...' == $page['num'] ? 'ellipsis ' : '') . 'disabled"><a class="page-link"><span class="page-text">' . $page['num'] . '</span></a></li>';
             }
         }
 
         if ($pagination['nextUrl']) {
-            $html .= '<li class="page-item"><a class="page-link" href="' . $pagination['nextUrl'] . '">&raquo;</a></li>'; //Next
+            $html .= '<li class="page-item next"><a class="page-link" href="' . $pagination['nextUrl'] . '"><span class="page-text">&raquo;</span></a></li>'; // Next
         } else {
-            $html .= '<li class="page-item disabled"><a class="page-link">&raquo;</a></li>';
+            $html .= '<li class="page-item next disabled"><a class="page-link"><span class="page-text">&raquo;</span></a></li>';
         }
         $html .= '</ul>';
 
@@ -185,25 +191,95 @@ class Pagination
         ];
     }
 
-    public static function getList($countModel, $listModel = null, int $recordsPerPage = 10, int $pagesPerBlock = 9) : array
-    {
+    public static function getList(
+        $countModel,
+        $listModel = null,
+        int $recordsPerPage = 10,
+        int $pagesPerBlock = 9,
+        $hash = null,
+        $currentPage = null,
+        $urlPattern = null,
+        $returnTypeNull = null
+    ) : array {
         if (!$listModel) {
             $listModel = clone $countModel;
         }
 
         $totalCount = $countModel->getCount();
 
+        if (!$urlPattern) {
+
+            $qs = $_SERVER['QUERY_STRING'] ?? '';
+
+            if (0 < \strlen($qs)) {
+                $qs = '?' . $qs;
+            }
+
+            if (1 === \preg_match('#(\?|&)page=(\d+)#', $qs, $m)) {
+                $query = \preg_replace('#(\?|&)page=(\d+)#', '$1page={=page}', $qs);
+            } else {
+                $query = $qs . (0 < \strlen($qs) ? '&' : '?') . 'page={=page}';
+            }
+            $urlPattern = $query;
+
+            if ($hash) {
+                $urlPattern .= $hash;
+            }
+        }
+
+        if ($currentPage) {
+            $currentPage = (int) $currentPage;
+        } else {
+            $currentPage = (int) ($_REQUEST['page'] ?? 1);
+        }
+
+        if ($currentPage < 1) {
+            $currentPage = 1;
+        }
+        $totalPages = (0 === $recordsPerPage ? 0 : (int) \ceil($totalCount / $recordsPerPage));
+
+        if ($totalPages && $currentPage > $totalPages) {
+            if($returnTypeNull) {
+                return [null, null];
+            }
+            // $currentPage = $totalPages;
+
+            $fixUrl = \str_replace('{=page}', (string) $totalPages, $urlPattern);
+
+            if (!\headers_sent()) {
+                // 헤더가 아직 전송되지 않았으므로 header()를 사용하여 리디렉션
+                \header('Location: ' . $fixUrl);
+            } else {
+                // 이미 출력이 시작되었으므로 JavaScript를 사용하여 리디렉션
+                echo '<script type="text/javascript">';
+                echo 'window.location.href="' . $fixUrl . '";';
+                echo '</script>';
+            }
+
+            exit;
+        }
+        $offset     = ($currentPage - 1) * $recordsPerPage;
+        $pagination = \Limepie\Pagination::getHtml($totalCount, $currentPage, $recordsPerPage, $pagesPerBlock, $urlPattern);
+        $listModels = $listModel->limit($offset, $recordsPerPage)->gets();
+
+        return [$listModels, $pagination, $totalCount, $totalPages];
+    }
+
+    public static function getNav($totalCount, int $recordsPerPage = 10, int $pagesPerBlock = 9) : array
+    {
         $qs = $_SERVER['QUERY_STRING'] ?? '';
-        if(0 < strlen($qs)) {
+
+        if (0 < \strlen($qs)) {
             $qs = '?' . $qs;
         }
+
         if (1 === \preg_match('#(\?|&)page=(\d+)#', $qs, $m)) {
             $query = \preg_replace('#(\?|&)page=(\d+)#', '$1page={=page}', $qs);
         } else {
-            $query = $qs . (0 < strlen($qs) ? '&' : '?') . 'page={=page}';
+            $query = $qs . (0 < \strlen($qs) ? '&' : '?') . 'page={=page}';
         }
         $urlPattern  = $query;
-        $currentPage = $_GET['page'] ?? 1;
+        $currentPage = $_REQUEST['page'] ?? 1;
         $totalPages  = (0 === $recordsPerPage ? 0 : (int) \ceil($totalCount / $recordsPerPage));
 
         if ($totalPages && $currentPage > $totalPages) {
@@ -211,9 +287,8 @@ class Pagination
         }
         $offset     = ($currentPage - 1) * $recordsPerPage;
         $pagination = \Limepie\Pagination::getHtml($totalCount, $currentPage, $recordsPerPage, $pagesPerBlock, $urlPattern);
-        $listModels = $listModel->limit($offset, $recordsPerPage)->gets();
 
-        return [$listModels, $pagination, $totalCount, $totalPages];
+        return [$pagination, $offset, $recordsPerPage, $totalPages];
     }
 }
 

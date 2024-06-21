@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie\Form;
 
@@ -13,6 +15,8 @@ class Validation
     public $data = [];
 
     public $errors = [];
+
+    public $reverseConditions = [];
 
     public $defaultMessages = [
         'required'     => 'This field is required.',
@@ -33,6 +37,7 @@ class Validation
         'maxcount'     => 'Please enter a value less than or equal to {0}.',
         'mincount'     => 'Please enter a value greater than or equal to {0}.',
         'minformcount' => 'Please enter a value greater than or equal to {0}.',
+        'maxformcount' => 'Please enter a value less than or equal to {0}.',
         'step'         => 'Please enter a multiple of {0}.',
         'unique'       => 'unique',
         'accept'       => 'Please enter a value with a valid mimetype.',
@@ -71,6 +76,7 @@ class Validation
             if (false === \Limepie\is_boolean_type($param)) {
                 return true;
             }
+
             // require = false일 경우 true
             if (false === $param) {
                 return true;
@@ -112,7 +118,7 @@ class Validation
         Validation::addMethod('match', function ($value, $name, $param) {
             return $this->optional($value, $name) || \preg_match('~^' . $param . '$~', (string) $value, $m);
             // \pr($m);
-            //pr(Validation::getMethod('required')($value,'',''),$value, $name, $param, $this->optional($value), \preg_match('/^' . $param . '$/', $value));
+            // pr(Validation::getMethod('required')($value,'',''),$value, $name, $param, $this->optional($value), \preg_match('/^' . $param . '$/', $value));
         });
 
         Validation::addMethod('maxlength', function ($value, $name, $param) {
@@ -148,7 +154,7 @@ class Validation
         // required일때 동작
         Validation::addMethod('mincount', function ($value, $name, $param) {
             $elements = $this->getValue($name);
-            $count = 0;
+            $count    = 0;
 
             if (true === \is_array($elements)) {
                 foreach ($elements as $val) {
@@ -165,7 +171,7 @@ class Validation
 
         Validation::addMethod('maxcount', function ($value, $name, $param) {
             $elements = $this->getValue($name);
-            $count = 0;
+            $count    = 0;
 
             if (true === \is_array($elements)) {
                 foreach ($elements as $val) {
@@ -182,28 +188,43 @@ class Validation
 
         Validation::addMethod('unique', function ($value, $name, $param) {
             $unique = [];
-            $check = false;
-            $name = \preg_replace('#\[__([0-9a-z\*]{13,})__\]$#', '', $name);
-            $data = $this->getValue($name);
+            $name   = \preg_replace('#\[__([0-9a-z\*]{13,})__\]$#', '', $name);
+            $data   = $this->getValue($name);
 
             if (true === \is_array($data)) {
                 foreach ($data as $v) {
-                    if (true === isset($unique[$v])) {
-                        $check = true;
+                    if (true === \is_array($v)) {
+                        if (true === \Limepie\is_file_array($v)) {
+                            $v = $v['name'];
+                            // $v = $v['file_name_alias_seq'];
+                        } else {
+                            // \pr($v, \Limepie\is_file_array($v));
+
+                            throw (new \Limepie\Exception('error'))->setDebugMessage('not support datatype', __FILE__, __LINE__);
+                        }
                     }
+
                     $unique[$v] = 1;
                 }
 
-                return $this->optional($value) || !$check; //$length == $unique;
+                return $this->optional($value) || \count($data) == \count($unique); // $length == $unique;
             }
 
             return true;
         });
 
         Validation::addMethod('minformcount', function ($value, $name, $param) {
+            $name     = \preg_replace('#\[__([0-9a-z\*]{13,})__\]$#', '', $name);
             $elements = $this->getValue($name);
 
             return $this->optional($value) || \count($elements) >= $param;
+        });
+
+        Validation::addMethod('maxformcount', function ($value, $name, $param) {
+            $name     = \preg_replace('#\[__([0-9a-z\*]{13,})__\]$#', '', $name);
+            $elements = $this->getValue($name);
+
+            return $this->optional($value) || \count($elements) <= $param;
         });
 
         Validation::addMethod('accept', function ($value, $name, $pattern) {
@@ -287,6 +308,7 @@ class Validation
     public function validate(array $specs, ?array $data = [], string $name = '')
     {
         $valid = true;
+
         // if(false === isset($specs['properties'])) {
         // \pr($specs,$data, $name);
         // }
@@ -308,9 +330,13 @@ class Validation
 
             $values = $data[$fixPropertyKey] ?? null;
 
+            if (false === isset($propertyValue['type'])) {
+                throw new \Exception('type not found');
+            }
+
             if ('group' === $propertyValue['type']) {
                 if (false === $isArray) {
-                    //\pr($propertyValue, $values, $propertyName);
+                    // \pr($propertyValue, $values, $propertyName);
                     $result = $this->validate($propertyValue, $values, $propertyName);
 
                     if (false === $result) {
@@ -331,24 +357,22 @@ class Validation
                         if (!$data[$fixPropertyKey]) {
                             unset($data[$fixPropertyKey]);
                         }
-                    } else {
-                        {
-                        // false 가 아닌 error임. 디폴트 form struct가 있어서 property spec이 배열이면 배열로 넘어와야 함.
-                        // -> 폼이 생성되어있지만 필수가아니라 비어있는 채로 넘어오는 키가 있는 빈배열들이있다. 이것을 정리하면 빈 값이 되므로 에러 처리 할 필요 없다.
-                        //throw new \Exception($fixPropertyKey . ' data not found.');
-                        }
                     }
+
+                    // false 가 아닌 error임. 디폴트 form struct가 있어서 property spec이 배열이면 배열로 넘어와야 함.
+                    // -> 폼이 생성되어있지만 필수가아니라 비어있는 채로 넘어오는 키가 있는 빈배열들이있다. 이것을 정리하면 빈 값이 되므로 에러 처리 할 필요 없다.
+                    // throw new \Exception($fixPropertyKey . ' data not found.');
                 }
             } else {
-                //\pr($propertyName, $propertyValue, $values);
+                // \pr($propertyName, $propertyValue, $values);
                 // valid check
-                //var dotName = preg_replace('/\[/g', '.').replace(/\]/g, '');
+                // var dotName = preg_replace('/\[/g', '.').replace(/\]/g, '');
 
                 $dotName = \str_replace(['[', ']'], ['.', ''], $propertyName);
-                //\pr($dotName);
+                // \pr($dotName);
 
                 if (true === isset($this->reverseConditions[$dotName])) {
-                    //console.log('aaaaatttt',dotName, this.reverseConditions[dotName]);
+                    // console.log('aaaaatttt',dotName, this.reverseConditions[dotName]);
                     $condition     = $this->reverseConditions[$dotName];
                     $continueLevel = false;
 
@@ -361,15 +385,15 @@ class Validation
                             continue;
                         }
                         // alert(0);
-                            // return false;
+                        // return false;
                     }
 
                     if ($continueLevel) {
-                        //delete data[fixPropertyKey];
+                        // delete data[fixPropertyKey];
 
                         continue;
                     }
-                    //dd
+                    // dd
                 }
 
                 if (false === $isArray) {
@@ -408,7 +432,8 @@ class Validation
         if ($data && $this->strictMode) {
             throw new \Exception('spec, element not equal.');
         }
-        //pr($this->errors);
+
+        // pr($this->errors);
         return $valid;
     }
 
@@ -477,6 +502,7 @@ class Validation
     public function optional($value, $name = '')
     {
         $callback = $this->getMethod('required');
+
         // 값이 있으면 false로 보내서 다음 check를 하게 한다.
         return !$callback($value, $name, '');
     }
@@ -490,18 +516,18 @@ class Validation
         //         // tmp
         //     }
         // }
-        //\pr($name, $property, $value);
+        // \pr($name, $property, $value);
         $messages = $property['messages'] ?? [];
         $language = $this->language;
-        //\pr($property);
+        // \pr($property);
 
         if (true === isset($property['rules'])) {
             foreach ($property['rules'] as $ruleName => $ruleParam) {
                 if ($callback = $this->getMethod($ruleName)) {
-                    //\pr([$name, $property, $ruleName, $value,  $ruleParam]);
+                    // \pr([$name, $property, $ruleName, $value,  $ruleParam]);
 
                     if ($callback($value, $name, $ruleParam)) {
-                        //\pr($ruleName, $value, $name, $ruleParam);
+                        // \pr($ruleName, $value, $name, $ruleParam);
                     } else {
                         if ($messages[$ruleName][$language] ?? false) {
                             $message = $messages[$ruleName][$language];
@@ -524,7 +550,7 @@ class Validation
                         ];
                         $this->errors[] = $error;
 
-                        //return false;
+                        // return false;
                     }
                 } else {
                     $this->errors[] = [
@@ -535,7 +561,7 @@ class Validation
                         'message' => 'not support',
                     ];
 
-                    //return false;
+                    // return false;
                 }
             }
         }

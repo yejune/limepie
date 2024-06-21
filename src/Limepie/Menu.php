@@ -30,10 +30,10 @@ class Menu
 
         // url에 ?가 있을 경우 querystring까지 확인한다.
         if (false !== \strpos($url, '?')) {
-            $query       = \Limepie\Di::get('request')->getQueryString();
+            $query       = \Limepie\Di::getRequest()->getQueryString();
             $this->query = '?' . \trim($query, '/');
         }
-        $this->fullpath = \rtrim(\Limepie\Di::get('request')->getPath(), '/') . $this->query;
+        $this->fullpath = \rtrim(\Limepie\Di::getRequest()->getPathByUrl(0), '/') . $this->query;
     }
 
     public function __invoke($name, $link = '', $parent = 0)
@@ -56,7 +56,7 @@ class Menu
             'params' => $params,
         ];
 
-        $target = \rtrim(\Limepie\Di::get('request')->getPath(0, \substr_count($this->prefix . $url, '/')), '/') . $this->query;
+        $target = \rtrim(\Limepie\Di::getRequest()->getPathByUrl(0, \substr_count($this->prefix . $url, '/')), '/') . $this->query;
 
         if ($this->prefix . $url) {
             if ($this->prefix . $url === $target) {
@@ -92,7 +92,7 @@ class Menu
             'params' => $params,
         ];
 
-        $target = \rtrim(\Limepie\Di::get('request')->getPath(0, \substr_count($this->prefix . $url, '/')), '/') . $this->query;
+        $target = \rtrim(\Limepie\Di::getRequest()->getPathByUrl(0, \substr_count($this->prefix . $url, '/')), '/') . $this->query;
 
         if ($this->prefix . $url) {
             if ($this->prefix . $url === $target) {
@@ -213,7 +213,7 @@ class Menu
                     'params' => $value['params'],
                 ];
                 $item['children'] = $this->parseTree($tree, $child, $depth);
-                //$item['depth']    = $depth;
+                // $item['depth']    = $depth;
                 $return[$value['url']] = $item;
             }
         }
@@ -290,22 +290,22 @@ class TabRecursiveIteratorIterator extends \RecursiveIteratorIterator
 {
     public function beginIteration() : void
     {
-        //echo '<ul>', \PHP_EOL;
+        // echo '<ul>', \PHP_EOL;
     }
 
     public function endIteration() : void
     {
-        //echo '</ul>', \PHP_EOL;
+        // echo '</ul>', \PHP_EOL;
     }
 
     public function beginChildren() : void
     {
-        //echo \str_repeat("\t", $this->getDepth()), '<ul>', \PHP_EOL;
+        // echo \str_repeat("\t", $this->getDepth()), '<ul>', \PHP_EOL;
     }
 
     public function endChildren() : void
     {
-        //echo \str_repeat("\t", $this->getDepth()), '</ul>', \PHP_EOL;
-        //echo \str_repeat("\t", $this->getDepth()), '</li>', \PHP_EOL;
+        // echo \str_repeat("\t", $this->getDepth()), '</ul>', \PHP_EOL;
+        // echo \str_repeat("\t", $this->getDepth()), '</li>', \PHP_EOL;
     }
 }

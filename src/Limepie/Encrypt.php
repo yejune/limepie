@@ -9,14 +9,14 @@ namespace Limepie;
  *
  * @param mixed $key
  */
-function encrypt($key)
-{
-    return Encrypt::pack($key);
-}
-function decrypt($key)
-{
-    return Encrypt::unpack($key);
-}
+// function encrypt($key)
+// {
+//     return Encrypt::pack($key);
+// }
+// function decrypt($key)
+// {
+//     return Encrypt::unpack($key);
+// }
 
 class Crypt
 {
@@ -190,6 +190,7 @@ class Encrypt extends Crypt
     private static function _bytexor($a, $b, $ilimit)
     {
         $c = '';
+
         for ($i = 0; $i < $ilimit; ++$i) {
             $c .= $a[$i] ^ $b[$i];
         }
@@ -360,6 +361,7 @@ class SaferCrypto extends UnsafeCrypto
      *
      * @param string $a
      * @param string $b
+     *
      * @ref https://paragonie.com/b/WS1DLx6BnpsdaVQW
      *
      * @return bool

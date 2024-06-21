@@ -137,10 +137,20 @@ class Aes
 
     public static function unpack($message)
     {
-        return \unserialize(
-            \Limepie\Aes::decrypt(
-                \gzuncompress($message)
-            )
+        $result = \Limepie\Aes::decrypt(
+            \gzuncompress($message)
         );
+
+        // converting, test로 기본세팅했었음.
+        if (!$result) {
+            $result = \Limepie\Aes::decrypt(
+                \gzuncompress($message),
+                'test'
+            );
+        }
+
+        if ($result) {
+            return \unserialize($result);
+        }
     }
 }

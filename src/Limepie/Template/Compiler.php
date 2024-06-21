@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie\Template;
 
@@ -28,7 +30,45 @@ class Compiler
 
     private $filename;
 
-    private $funtions = [];
+    private $basepath;
+
+    private $tpl_path;
+
+    private $obj_plugins_flip;
+
+    private $func_plugins_flip;
+
+    private $postfilters_flip;
+
+    private $prefilters_flip;
+
+    private $prefilter;
+
+    private $postfilter;
+
+    private $prefilters;
+
+    private $postfilters;
+
+    private $plugin_dir;
+
+    private $plugins;
+
+    private $func_plugins;
+
+    private $obj_plugins;
+
+    private $func_list;
+
+    private $obj_list;
+
+    private $method_list;
+
+    private $on_ms;
+
+    private $pluginExtension;
+
+    private $functions = [];
 
     public function __construct()
     {
@@ -41,11 +81,11 @@ class Compiler
     }
 
     /**
-     * @param $tpl
-     * @param $fid
-     * @param $tplPath
-     * @param $cplPath
-     * @param $cplHead
+     * @param mixed $tpl
+     * @param mixed $fid
+     * @param mixed $tplPath
+     * @param mixed $cplPath
+     * @param mixed $cplHead
      *
      * @return mixed
      */
@@ -116,7 +156,7 @@ class Compiler
                 } else {
                     switch ($match[1]) {
                         case 'function':
-                                $this->func_plugins[$match[2]] = $plugin;
+                            $this->func_plugins[$match[2]] = $plugin;
 
                             break;
                         case 'prefilter':
@@ -169,7 +209,7 @@ class Compiler
 
         $phpTag .= '|';
 
-        $tokens = \preg_split('/(' . $phpTag . '<!--{(?!`)|{{!--|"{{|\'{{|\/\*{(?!`)|(?<!`)}-->|(?<!`)}\*\/|}}"|--}}|}}\'|{(?!`)|(?<!`)})/i', $source, -1, \PREG_SPLIT_DELIM_CAPTURE);
+        $tokens = \preg_split('/(' . $phpTag . '<!--{(?!`)|{{!--|"{{|\'{{|\/\*{(?!`)|(?<!`)}-->|(?<!`)}\*\/|}}"|--}}|}}\'|(?:\.\.\.\.)*{|{(?!`)|(?<!`)})/i', $source, -1, \PREG_SPLIT_DELIM_CAPTURE);
 
         $line      = 0;
         $isOpen    = 0;
@@ -231,7 +271,7 @@ class Compiler
                     if ($result) {
                         if (1 === $result[0] || false === $result[1]) {
                             // \로 이스케이프 하는 등 원본에서 가공된 스트링을 돌려주기 위함
-                            $newTokens[$_index - 1] = $result[1]; //$tokens[$_index - 1];
+                            $newTokens[$_index - 1] = $result[1]; // $tokens[$_index - 1];
                         } elseif (2 === $result[0]) {
                             $newTokens[$isOpen]     = '<?php ';
                             $newTokens[$_index - 1] = $result[1];
@@ -244,6 +284,9 @@ class Compiler
                     break;
 
                 default:
+                    if (\preg_match('/(\.\.\.\.)*\{/', $tokens[$_index])) {
+                        $isOpen = $_index;
+                    }
             }
         }
 
@@ -259,12 +302,13 @@ class Compiler
     }
 
     /**
-     * @param $statement
-     * @param $line
+     * @param mixed $statement
+     * @param mixed $line
+     * @param mixed $add
      *
      * @return mixed
      */
-    public function compileStatement($statement, $line)
+    public function compileStatement($statement, $line, $add = ';')
     {
         $org       = $statement;
         $statement = \trim($statement);
@@ -275,7 +319,7 @@ class Compiler
         if ($match[1]) {
             // escape
             $result = [1, \substr($org, 1)];
-        //pr($match, $result);
+        // pr($match, $result);
         } else {
             switch ($match[2]) {
                 case '@':
@@ -296,12 +340,23 @@ class Compiler
 
                     break;
                 case '#':
-                    if (1 === \preg_match('`^#([\s+])?([a-zA-Z0-9\-_\.]+)$`', $statement)) {
-                        $result = [2, $this->compileDefine($statement, $line)];
-                    } elseif (1 === \preg_match('`^#([\s+])?([a-zA-Z0-9\-_\.]+) scope (.*)$`', $statement, $tmp)) {
-                        $result = [2, $this->compileScorpDefine('#' . $tmp[2], $line, $tmp[3])];
-                    } elseif (1 === \preg_match('`^#([\s+])?([a-zA-Z0-9\-_\.]+) ([^ ]+)$`', $statement, $tmp)) {
-                        $result = [2, $this->compileInDefine('#' . $tmp[2], $this->basepath . '/' . $tmp[3], $line, $tmp[5] ?? '')];
+                    // scope a b:c => $a, $b = $c;
+
+                    if (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                        // #define_id scope variable
+                        $result = [2, $this->compileDefine('#' . $tmp['define'], $line, $tmp['scope'] ?? '')];
+                    } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?:\'|")(?P<filename>[^ ]+)(?:\'|")(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                        // #define_id "a.tpl" scope variable
+                        $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
+                    } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                        // #define_id a.tpl scope variable
+                        $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
+                    } elseif (1 === \preg_match('`^#([\s+])?(?:\'|")(?P<filename>[^"\']+)(?:\'|")(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                        // #"a.tpl" scope variable
+                        $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
+                    } elseif (1 === \preg_match('`^#([\s+])?(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                        // #a.tpl scope variable
+                        $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
                     } else {
                         $result = [1, $statement];
                     }
@@ -378,7 +433,7 @@ class Compiler
                         if (false === $compileString) {
                             $result = [1, $org];
                         } else {
-                            $result = [2, $compileString . ';'];
+                            $result = [2, $compileString . $add];
                         }
                     }
 
@@ -392,23 +447,59 @@ class Compiler
     public function compileInDefine($statement, $file, $line, $scope = '')
     {
         if ($scope) {
-            return 'self::setScope("' . $scope . '", $' . $scope . ');' . "self::define('" . \trim(\substr($statement, 1)) . "', '" . $file . "');self::printContents('" . \trim(\substr($statement, 1)) . "', [], '" . $scope . "')";
+            $scopeDefines = '';
+            $scopeVars    = '';
+            $parts        = [];
+
+            foreach (\explode(' ', $scope) as $item) {
+                if (false === \strpos($item, ':')) {
+                    $key   = $item;
+                    $value = $this->compileStatement($item, 0, '')[1];
+                } else {
+                    [$key, $value] = \explode(':', $item);
+                    $value         = $this->compileStatement($value, 0, '')[1];
+                }
+
+                $scopeDefines .= 'self::setScope("' . $key . '", ' . $value . ');';
+                $parts[] = "'" . $key . "'";
+            }
+            $scopeVars = '[' . \implode(',', $parts) . ']';
+
+            return $scopeDefines . "self::define('" . \trim(\substr($statement, 1)) . "', '" . $file . "');self::printContents('" . \trim(\substr($statement, 1)) . "', [], " . $scopeVars . ')';
         }
 
         return "self::define('" . \trim(\substr($statement, 1)) . "', '" . $file . "');self::printContents('" . \trim(\substr($statement, 1)) . "')";
     }
 
-    public function compileScorpDefine($statement, $line, $scope = '')
+    public function compileDefine($statement, $line, $scope = '')
     {
-        return 'self::setScope("' . $scope . '", $' . \trim($scope) . ');' . "self::printContents('" . \trim(\substr($statement, 1)) . "', [], '" . $scope . "')";
-    }
+        if ($scope) {
+            $scopeDefines = '';
+            $scopeVars    = '';
+            $parts        = [];
 
-    /**
-     * @param $statement
-     * @param $line
-     */
-    public function compileDefine($statement, $line)
-    {
+            /*
+             * {order = payload.order} {#row Row.tpl scope order}
+             * =>
+             * {#row Row.tpl scope order:payload.order}
+             */
+            foreach (\explode(' ', $scope) as $item) {
+                if (false === \strpos($item, ':')) {
+                    $key   = $item;
+                    $value = $this->compileStatement($item, 0, '')[1];
+                } else {
+                    [$key, $value] = \explode(':', $item);
+                    $value         = $this->compileStatement($value, 0, '')[1];
+                }
+
+                $scopeDefines .= 'self::setScope("' . $key . '", ' . $value . ');';
+                $parts[] = "'" . $key . "'";
+            }
+            $scopeVars = '[' . \implode(',', $parts) . ']';
+
+            return $scopeDefines . "self::printContents('" . \trim(\substr($statement, 1)) . "', [], " . $scopeVars . ')';
+        }
+
         return "self::printContents('" . \trim(\substr($statement, 1)) . "')";
     }
 
@@ -418,8 +509,8 @@ class Compiler
     }
 
     /**
-     * @param $statement
-     * @param $line
+     * @param mixed $statement
+     * @param mixed $line
      *
      * @return mixed
      */
@@ -428,21 +519,17 @@ class Compiler
         return $this->tokenizer($statement, $line);
     }
 
-    /**
-     * @param $statement
-     * @param $line
-     */
     public function compileLoop($statement, $line)
     {
         $result = $this->tokenizer(\substr($statement, 1), $line);
 
         if (!$result) {
-            throw new Compiler\Exception('Parse error: syntax error, loop는 {@row = array}...{/} 로 사용해주세요. 표현식은 안됩니다. line ' . $line);
+            throw new \Limepie\Exception('Parse error: syntax error, loop는 {@row = array}...{/} 로 사용해주세요. 표현식은 안됩니다. file ' . $this->filename . ' line ' . $line);
         }
         $tokenizer = \explode('=', $result, 2);
 
         if (false === isset($tokenizer[0]) || false === isset($tokenizer[1])) {
-            throw new Compiler\Exception('Parse error: syntax error, loop는 {@row = array}...{/} 로 사용해주세요. line ' . $line);
+            throw new Compiler\Exception('Parse error: syntax error, loop는 {@row = array}...{/} 로 사용해주세요. file ' . $this->filename . ' line ' . $line);
         }
 
         [$loop, $array] = $tokenizer;
@@ -456,20 +543,15 @@ class Compiler
 
         return $loopArrayName . '=' . $array . ';'
             . $loopIndexName . '=-1;'
-            . 'if((true===is_array(' . $loopArrayName . ') || true===is_object(' . $loopArrayName . '))&&0<(' . $loopSizeName . '=\Limepie\count(' . $loopArrayName . '))' . '){'
-            . 'foreach(' . $loopArrayName . ' as ' . $loopKeyName . '=>' . $loopValueName . '){'
+            . 'if((true===is_array(' . $loopArrayName . ') || true===is_object(' . $loopArrayName . '))&&0<(' . $loopSizeName . '=\Limepie\count(' . $loopArrayName . '))){foreach(' . $loopArrayName . ' as ' . $loopKeyName . '=>' . $loopValueName . '){'
             . $loopIndexName . '++;'
-            . $loopValueName . '_index_=' . $loopIndexName . ';'
-            . $loopValueName . '_size_=' . $loopSizeName . ';'
-            . $loopValueName . '_key_=' . $loopKeyName . ';'
-            . $loopValueName . '_value_=' . $loopValueName . ';'
-            . $loopValueName . '_last_=(' . $loopValueName . '_size_==' . $loopValueName . '_index_+1);';
+            . $loopValueName . '__index=' . $loopValueName . '_index_=' . $loopIndexName . ';'
+            . $loopValueName . '__size=' . $loopValueName . '_size_=' . $loopSizeName . ';'
+            . $loopValueName . '__key=' . $loopValueName . '_key_=' . $loopKeyName . ';'
+            . $loopValueName . '__value=' . $loopValueName . '_value_=' . $loopValueName . ';'
+            . $loopValueName . '__last=' . $loopValueName . '_last_=(' . $loopValueName . '_size_==' . $loopValueName . '_index_+1);';
     }
 
-    /**
-     * @param $statement
-     * @param $line
-     */
     public function compileIf($statement, $line)
     {
         $result = $this->tokenizer(\substr($statement, 1), $line);
@@ -481,10 +563,6 @@ class Compiler
         return 'if(' . $result . '){{';
     }
 
-    /**
-     * @param $statement
-     * @param $line
-     */
     public function compileEcho($statement, $line)
     {
         $result = $this->tokenizer(\substr($statement, 1), $line);
@@ -496,54 +574,34 @@ class Compiler
         return 'echo ' . $result . ';';
     }
 
-    /**
-     * @param $statement
-     * @param $line
-     */
     public function compileElse($statement, $line)
     {
         return '}}else{{' . $this->tokenizer(\substr($statement, 1), $line);
     }
 
-    /**
-     * @param $statement
-     * @param $line
-     */
     public function compileElseif($statement, $line)
     {
         return '}}else if(' . $this->tokenizer(\substr($statement, 2), $line) . '){{';
     }
 
-    /**
-     * @param $statement
-     * @param $line
-     */
     public function compileClose($statement, $line)
     {
         return '}}' . $this->tokenizer(\substr($statement, 1), $line);
     }
 
-    /**
-     * @param $statement
-     * @param $line
-     */
     public function compileCloseIf($statement, $line)
     {
         return '}}' . $this->tokenizer(\substr($statement, 2), $line);
     }
 
-    /**
-     * @param $statement
-     * @param $line
-     */
     public function compileCloseLoop($statement, $line)
     {
         return '}}' . $this->tokenizer(\substr($statement, 2), $line);
     }
 
     /**
-     * @param $source
-     * @param $line
+     * @param mixed $source
+     * @param mixed $line
      *
      * @return mixed
      */
@@ -608,12 +666,12 @@ class Compiler
                 $token[] = $r;
             }
         }
-        //\pr($token);
+        // \pr($token);
         $xpr    = '';
         $stat   = [];
         $assign = 0;
         $org    = '';
-        $prev   = $next   = [];
+        $prev   = $next = [];
 
         foreach ($token as $key => &$current) {
             if ('semi_colon' === $current['name']) {
@@ -647,6 +705,7 @@ class Compiler
             } else {
                 $next = ['org' => '', 'name' => '', 'value' => ''];
             }
+
             // 마지막이 종결되지 않음
             if (!$next['name'] && false === \in_array($current['name'], ['string', 'number', 'string_number', 'right_bracket', 'right_parenthesis', 'double_operator', 'quote'], true)) {
                 if ('sam' === $current['name']) {
@@ -654,14 +713,15 @@ class Compiler
 
                     continue;
                 }
-                //pr($current);
+
+                // pr($current);
                 if (true === $this->debug) {
                     \pr($xpr, $prev, $current, __LINE__);
                 }
 
                 return $this->empty($prev, $current, $xpr, __LINE__);
 
-                throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $current['org']);
+                throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $current['org']);
             }
 
             switch ($current['name']) {
@@ -673,11 +733,11 @@ class Compiler
 
                         return $this->empty($prev, $current, $xpr, __LINE__);
 
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
-                    if (true === \in_array($current['value'], ['int', 'string', 'float'], true)
-                    && 'left_parenthesis' === $prev['name']
+                    if (true               === \in_array($current['value'], ['int', 'string', 'float'], true)
+                    && 'left_parenthesis'  === $prev['name']
                     && 'right_parenthesis' === $next['name']
                     ) {
                         $xpr .= $current['value'];
@@ -692,11 +752,11 @@ class Compiler
 
                             return $this->empty($prev, $current, $xpr, __LINE__);
 
-                            throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org'] . $next['org']);
+                            throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org'] . $next['org']);
                         }
 
                         if ('_' === $current['value']) {
-                            //$xpr .= '\\limepie\\'.$current['value'];
+                            // $xpr .= '\\limepie\\'.$current['value'];
                             $xpr .= $current['value'];
                         } else {
                             $xpr .= $current['value'];
@@ -708,7 +768,7 @@ class Compiler
                     } elseif ('namespace_sigh' === $prev['name']) {
                         $xpr .= $current['value'];
                     } elseif ('string_concat' === $prev['name']) {
-                        if (true === \in_array($current['value'], ['index_', 'key_', 'value_', 'last_', 'size_'], true)) {
+                        if (true === \in_array($current['value'], ['index_', 'key_', 'value_', 'last_', 'size_', '_index', '_key', '_value', '_last', '_size'], true)) {
                             if (0 === \strrpos($xpr, ']')) {
                                 $xpr .= '[\'' . $current['value'] . '\']';
                             } else {
@@ -743,7 +803,7 @@ class Compiler
                         return $this->empty($prev, $current, $xpr, __LINE__); // 원본 출력(javascript)
                     }
 
-                    throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                    throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
 
                     break;
                 case 'not_support':
@@ -753,7 +813,7 @@ class Compiler
 
                     return $this->empty($prev, $current, $xpr, __LINE__); // 원본 출력(javascript)
 
-                    throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                    throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
 
                     break;
                 case 'not_match':
@@ -765,7 +825,7 @@ class Compiler
                         return $this->empty($prev, $current, $xpr, __LINE__); // 원본 출력
                     }
 
-                    throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $current['org']);
+                    throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $current['org']);
 
                     break;
                 case 'assoc_array':
@@ -775,13 +835,13 @@ class Compiler
                         && 0 < $last_stat['key']
                         && true === \in_array($token[$last_stat['key'] - 1]['name'], ['string'], true)
                     ) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
                     $stat[] = $last_stat;
 
                     if (false === \in_array($prev['name'], ['number', 'string', 'quote', 'right_parenthesis', 'right_bracket'], true)) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= $current['value'];
 
@@ -832,7 +892,7 @@ class Compiler
                     }
 
                     if (false === \in_array($prev['name'], ['', 'left_parenthesis', 'left_bracket', 'comma', 'compare', 'assoc_array', 'operator', 'quote_number_concat', 'assign', 'sam', 'sam2'], true)) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= $current['value'];
 
@@ -848,13 +908,13 @@ class Compiler
                         && 1 < $last_stat['key']
                         && 'assoc_array' === $prev['name'] && false === \in_array($token[$last_stat['key'] - 1]['name'], ['left_bracket'], true)
                     ) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
                     $stat[] = $last_stat;
 
                     if (false === \in_array($prev['name'], ['', 'left_bracket', 'left_parenthesis', 'comma', 'compare', 'operator', 'assign', 'assoc_array', 'string', 'right_bracket', 'number_concat', 'string_concat', 'quote_number_concat', 'sam', 'sam2'], true)) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
                     if ('quote_number_concat' === $prev['name']) {
@@ -869,15 +929,15 @@ class Compiler
                     break;
                 case 'string_number':
                     if (false === \in_array($prev['name'], ['right_bracket', 'number_concat'], true)) {
-                        //'string',
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        // 'string',
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= '[' . $current['value'] . ']';
 
                     break;
                 case 'number_concat':
                     if (false === \in_array($prev['name'], ['string', 'string_number', 'right_bracket'], true)) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
                     break;
@@ -889,14 +949,14 @@ class Compiler
 
                         return $this->empty($prev, $current, $xpr, __LINE__);
 
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= $current['value'];
 
                     break;
                 case 'object_sign':
                     if (false === \in_array($prev['name'], ['right_bracket', 'string', 'right_parenthesis'], true)) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
                     $xpr .= $current['value'];
@@ -904,7 +964,7 @@ class Compiler
                     break;
                 case 'clone_sign':
                     if (false === \in_array($prev['name'], ['left_parenthesis'], true)) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
                     $xpr .= $current['value'];
@@ -916,9 +976,9 @@ class Compiler
                             \pr($xpr, $prev, $current, __LINE__);
                         }
 
-                        //return $this->empty($prev, $current, $xpr, __LINE__);
+                        // return $this->empty($prev, $current, $xpr, __LINE__);
 
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . '(' . $prev['name'] . ')' . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . '(' . $prev['name'] . ')' . $current['org']);
                     }
 
                     if ('static_object_sign' === $prev['name']) {
@@ -929,8 +989,8 @@ class Compiler
 
                     break;
                 case 'static_object_sign':
-                    if (false === \in_array($prev['name'], ['string', ''], true)) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                    if (false === \in_array($prev['name'], ['right_parenthesis', 'string', ''], true)) {
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= $current['value'];
 
@@ -943,11 +1003,11 @@ class Compiler
 
                         return $this->empty($prev, $current, $xpr, __LINE__);
 
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
                     // + 이지만 앞이나 뒤가 quote라면 + -> .으로 바꾼다. 지금의 name또한 변경한다.
-                    //|| false !== \strpos($current['value'], "'"), 변수가 포함되면 무조건 concat이 되므로 삭제
+                    // || false !== \strpos($current['value'], "'"), 변수가 포함되면 무조건 concat이 되므로 삭제
                     if ('+' === $current['value'] && ('quote' === $prev['name'] || 'quote' === $next['name'])) {
                         $xpr .= '.';
                         $current['name'] = 'quote_number_concat';
@@ -958,7 +1018,7 @@ class Compiler
                     break;
                 case 'compare':
                     if (false === \in_array($prev['name'], ['', 'number', 'string', 'string_number', 'assign', 'left_parenthesis', 'left_bracket', 'quote', 'right_parenthesis', 'right_bracket', 'double_operator'], true)) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= $current['value'];
 
@@ -968,17 +1028,18 @@ class Compiler
 
                     if (2 < $assign) {
                         // $test = $ret = ... 와 같이 여러 변수를 사용하지 못하는 제약 조건
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
                     if (false === \in_array($prev['name'], ['sam', 'right_bracket', 'string', 'operator'], true)) {
                         // \pr($prev, $current, $next);
                         // exit;
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
-                        // = 앞에는 일부의 연산자만 허용된다. +=, -=...
+
+                    // = 앞에는 일부의 연산자만 허용된다. +=, -=...
                     if ('operator' === $prev['name'] && false === \in_array($prev['value'], ['+', '-', '*', '/', '%', '^', '!'], true)) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
                     $xpr .= $current['value'];
@@ -988,7 +1049,7 @@ class Compiler
                     $stat[] = $current;
 
                     if (false === \in_array($prev['name'], ['', 'assign', 'left_bracket', 'right_bracket', 'comma', 'left_parenthesis', 'right_parenthesis', 'assoc_array', 'string', 'string_number', 'sam'], true)) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= $current['value'];
 
@@ -997,18 +1058,18 @@ class Compiler
                     $last_stat = \array_pop($stat);
 
                     if ('left_bracket' !== $last_stat['name']) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
                     if (false === \in_array($prev['name'], ['quote', 'left_bracket', 'right_parenthesis', 'comma', 'string', 'number', 'string_number', 'right_bracket'], true)) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= $current['value'];
 
                     break;
                 case 'array_keyword': // number next             |(?P<array_keyword>array)
                     if (false === \in_array($prev['name'], ['', 'compare', 'operator', 'left_parenthesis', 'left_bracket', 'comma', 'assign'], true)) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= $current['value'];
 
@@ -1016,9 +1077,9 @@ class Compiler
                 case 'left_parenthesis': // ()
                     $stat[] = $current;
 
-                    if (false === \in_array($prev['name'], ['', 'quote_number_concat', 'operator', 'compare', 'assoc_array', 'left_parenthesis', 'comma', 'left_bracket', 'array_keyword', 'string', 'assign', 'right_bracket'], true)) {
-                        //, 'string_number' ->d.3.a() -> ->d[3]['a']() 제외
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                    if (false === \in_array($prev['name'], ['', 'quote_number_concat', 'operator', 'compare', 'assoc_array', 'left_parenthesis', 'comma', 'left_bracket', 'array_keyword', 'string', 'assign', 'right_bracket', 'sam2'], true)) {
+                        // , 'string_number' ->d.3.a() -> ->d[3]['a']() 제외
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= $current['value'];
 
@@ -1034,18 +1095,18 @@ class Compiler
                     }
 
                     if ('left_parenthesis' !== $last_stat['name']) {
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
                     if (false === \in_array($prev['name'], ['left_parenthesis', 'right_bracket', 'right_parenthesis', 'string', 'number', 'string_number', 'quote'], true)) {
-//                        pr($prev);
+                        //                        pr($prev);
                         if (true === $this->debug) {
                             \pr($xpr, $prev, $current, __LINE__);
                         }
 
                         return $this->empty($prev, $current, $xpr, __LINE__);
 
-                        throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                        throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= $current['value'];
 
@@ -1057,7 +1118,7 @@ class Compiler
                         if ($last_stat['name'] && 'left_bracket' === $last_stat['name'] && 0 < $last_stat['key']) {
                             // ][ ,] 면 배열키이므로 ,가 있으면 안됨
                             if (\in_array($token[$last_stat['key'] - 1]['name'], ['right_bracket', 'string'], true)) {
-                                throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                                throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                             }
                         }
 
@@ -1069,13 +1130,13 @@ class Compiler
 
                             return $this->empty($prev, $current, $xpr, __LINE__);
 
-                            throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                            throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                         }
 
                         $stat[] = $last_stat;
 
                         if (false === \in_array($prev['name'], ['quote', 'string', 'number', 'string_number', 'right_parenthesis', 'right_bracket'], true)) {
-                            throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
+                            throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                         }
 
                         $xpr .= $current['value'];
@@ -1092,11 +1153,11 @@ class Compiler
 
             if ($last_stat) {
                 if ('left_parenthesis' === $last_stat['name']) {
-                    throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $current['org']);
+                    throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $current['org']);
                 }
 
                 if ('left_bracket' === $last_stat['name']) {
-                    throw new Compiler\Exception(__LINE__ . ' parse error : file ' . $this->filename . ' line ' . $line . ' ' . $current['org']);
+                    throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $current['org']);
                 }
             }
         }
@@ -1114,12 +1175,6 @@ class Compiler
         return false;
     }
 
-    /**
-     * @param $cplPath
-     * @param $source
-     * @param $cplHead
-     * @param $initCode
-     */
     private function saveResult($cplPath, $source, $cplHead, $initCode)
     {
         if ($this->postfilter) {

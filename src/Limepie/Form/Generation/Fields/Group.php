@@ -2,10 +2,75 @@
 
 namespace Limepie\Form\Generation\Fields;
 
-//https://stackoverflow.com/questions/36551105/applying-containment-to-jquery-ui-sortable-table-prevents-moving-tall-rows-to-th
+use Limepie\Form\Generation\Fields;
 
-class Group extends \Limepie\Form\Generation\Fields
+// https://stackoverflow.com/questions/36551105/applying-containment-to-jquery-ui-sortable-table-prevents-moving-tall-rows-to-th
+
+class Group extends Fields
 {
+    public static function getValueFromData($pattern, $map)
+    {
+        $patterns = \explode('.', \str_replace(['[', ']'], ['.', '*'], $pattern));
+        $maps     = \explode('.', \str_replace(['[', ']'], ['.', ''], $map));
+
+        $new = [];
+
+        $currentData = static::$allData;
+        $currentSpec = static::$specs;
+
+        foreach ($patterns as $index => $d) {
+            if (isset($maps[$index]) && 1 === \preg_match('#__([^_]{13})__#', $maps[$index])) {
+                $key = $new[] = $maps[$index];
+            } else {
+                $key = $new[] = $d;
+            }
+
+            if (isset($currentSpec['properties'][$key])) {
+                $currentSpec = $currentSpec['properties'][$key];
+            } elseif (isset($currentSpec['properties'][$key . '[]'])) {
+                $currentSpec = $currentSpec['properties'][$key . '[]'];
+            }
+
+            if (isset($currentData[$key])) {
+                $currentData = $currentData[$key];
+            } else {
+                $currentData = null;
+            }
+        }
+
+        if (null === $currentData && isset($currentSpec['default']) && $currentSpec['default']) {
+            $currentData = $currentSpec['default'];
+        }
+
+        return $currentData;
+    }
+
+    public static function checkCondition($condition, $base)
+    {
+        // \pr($condition);
+        // 조건문 내의 {path}를 실제 데이터 값으로 대체
+        $interpolatedCondition = \preg_replace_callback('/\{([^}]+)\}/', function ($matches) use ($base) {
+            $path  = $matches[1];
+            $value = null;
+
+            if (false === \strpos($path, '.')) {
+                $path = $base . '.' . $path;
+            }
+            $value = static::getValueFromData($path, $base);
+            // \pr($path, $base, $value);
+
+            if (\is_null($value)) {
+                return 0;
+            }
+
+            return \is_string($value) ? "'{$value}'" : $value;
+        }, $condition);
+        // \pr($interpolatedCondition, eval("return {$interpolatedCondition};"));
+
+        // 조건문 평가
+        return eval("return {$interpolatedCondition};");
+    }
+
     public static function write(string $prevKey, array $specs, $data, $prevNext = null)
     {
         $innerhtml = '';
@@ -30,7 +95,7 @@ class Group extends \Limepie\Form\Generation\Fields
             $strip          = false;
 
             if (false !== \strpos((string) $fixPropertyKey, '[]')) {
-                //\pr($fixPropertyKey, $propertyValue['multiple'] ?? false);
+                // \pr($fixPropertyKey, $propertyValue['multiple'] ?? false);
                 $fixPropertyKey = \str_replace('[]', '', $fixPropertyKey);
                 $isArray        = true;
                 $strip          = true;
@@ -116,9 +181,9 @@ class Group extends \Limepie\Form\Generation\Fields
                     }
                 }
             } else {
-                //if (false === isset($parentId)) {
+                // if (false === isset($parentId)) {
                 $parentId = static::getUniqueId();
-                //}
+                // }
 
                 if (false === $isArray) {
                     // TODO: default가 array면 error
@@ -217,7 +282,7 @@ class Group extends \Limepie\Form\Generation\Fields
                     $collapse = 'hide';
                 } else {
                     if (false === (bool) static::getValueByDot($aData, $propertyValue['collapse'])) {
-                        //\var_dump((bool) static::getValue($data, $propertyValue['collapse']));
+                        // \var_dump((bool) static::getValue($data, $propertyValue['collapse']));
                         $collapse = 'hide';
                     }
                 }
@@ -260,12 +325,13 @@ class Group extends \Limepie\Form\Generation\Fields
             // }
             if (true === isset($propertyValue['collapse'])) {
                 if (\is_string($propertyValue['collapse'])) {
-                    //\pr($aData, $propertyValue['collapse'], $aData, $propertyValue['collapse']);
+                    // \pr($aData, $propertyValue['collapse'], $aData, $propertyValue['collapse']);
                 }
-                //\pr($aData, $propertyValue['collapse'], $aData, $propertyValue['collapse'], \Limepie\is_boolean_type($propertyValue['collapse']), \is_int($propertyValue['collapse']), \is_bool($propertyValue['collapse']));
-                //\var_dump(static::isValue($aData));
+
+                // \pr($aData, $propertyValue['collapse'], $aData, $propertyValue['collapse'], \Limepie\is_boolean_type($propertyValue['collapse']), \is_int($propertyValue['collapse']), \is_bool($propertyValue['collapse']));
+                // \var_dump(static::isValue($aData));
                 if (
-                    false === \Limepie\is_boolean_type($propertyValue['collapse'])
+                    false    === \Limepie\is_boolean_type($propertyValue['collapse'])
                     && false === (bool) static::getValueByDot($aData, $propertyValue['collapse'])
                 ) {
                     $collapse1 = static::arrow(false);
@@ -296,16 +362,67 @@ class Group extends \Limepie\Form\Generation\Fields
             //   1: "display: block"
             //   2: "display: block"
 
+            $addStyle = '; ';
+
+            // if (true === isset($propertyValue['display_condition'])) {
+            //     // \pr($propertyValue['display_condition']);
+
+            //     $else = $propertyValue['display_condition']['else'];
+            //     unset($propertyValue['display_condition']['else']);
+            //     $fixedStyle = $else;
+
+            //     foreach ($propertyValue['display_condition'] as $innerCondition => $innerStyle) {
+            //         $result = static::checkCondition($innerCondition, static::$allData);
+
+            //         if ($result) {
+            //             $fixedStyle = $innerStyle;
+
+            //             break;
+            //         }
+            //     }
+
+            //     $addStyle = $fixedStyle;
+            // }
+
+            // switch:
+            //     cases:
+            //         "{$form_type} == 'select' || {$form_type} == 'choice'":
+            //             style: "display:block"
+            //     default:
+            //         style: "display:none"
+
+            if (true === isset($propertyValue['switch'])) {
+                $else = $propertyValue['switch']['default'];
+                // unset($propertyValue['switch']['default']);
+                $fixedStyle = $else['style'] ?? '';
+                $fixedClass = $else['class'] ?? '';
+
+                foreach ($propertyValue['switch']['cases'] as $innerCondition => $innerStyle) {
+                    $result = static::checkCondition($innerCondition, $prevKey);
+                    // \pr($innerCondition, $prevKey, $result, $innerStyle);
+
+                    if ($result) {
+                        $fixedStyle = $innerStyle['style'] ?? '';
+                        $fixedClass = $innerStyle['class'] ?? '';
+
+                        break;
+                    }
+                }
+
+                $addStyle .= $fixedStyle;
+                $addClass .= $fixedClass;
+            }
+
             if (true === isset($propertyValue['display_targets'])) {
                 [$left, $right] = $propertyValue['display_targets'];
 
                 $tmpids = \explode('.', $left);
-                //\pr($tmpids, $data);
+                // \pr($tmpids, $data);
                 $leftValue = &$data;
                 $leftSpec  = &$specs;
 
                 foreach ($tmpids as $tmpid) {
-                    //\pr($leftValue, $tmpids, $tmpid);
+                    // \pr($leftValue, $tmpids, $tmpid);
 
                     if (true === isset($leftValue[$tmpid])) {
                         $leftValue = &$leftValue[$tmpid];
@@ -322,7 +439,7 @@ class Group extends \Limepie\Form\Generation\Fields
                 $rightSpec  = &$specs;
 
                 foreach ($tmpids as $tmpid) {
-                    //\pr($rightValue, $tmpids, $tmpid);
+                    // \pr($rightValue, $tmpids, $tmpid);
 
                     if (true === isset($rightValue[$tmpid])) {
                         $rightValue = &$rightValue[$tmpid];
@@ -372,7 +489,7 @@ class Group extends \Limepie\Form\Generation\Fields
                         }
                     }
                 }
-                //pr($leftValue, $rightValue);
+                // pr($leftValue, $rightValue);
             }
 
             if (true === isset($propertyValue['display_target'])) {
@@ -409,13 +526,14 @@ class Group extends \Limepie\Form\Generation\Fields
                 } else {
                     if (false !== \strpos($propertyValue['display_target'], '.')) {
                         $tmpids = \explode('.', $propertyValue['display_target']);
-                        //\pr($tmpids, $data);
+                        // \pr($tmpids, $data);
                         $targetValue = &$data;
                         $targetSpec  = &$specs;
 
-                        //\pr($prevKey, preg_replace('#\[__([^_]{13})__\]#','.*', $prevKey), $propertyValue, $data);
+                        // \pr($prevKey, preg_replace('#\[__([^_]{13})__\]#','.*', $prevKey), $propertyValue, $data);
                         $tmpid = \Limepie\str_replace_first(\preg_replace('#\[__([^_]{13})__\]#', '.*', $prevKey) . '.', '', $propertyValue['display_target']);
-                        //\pr($targetValue, $tmpid, $targetSpec['properties'][$tmpid]);
+
+                        // \pr($targetValue, $tmpid, $targetSpec['properties'][$tmpid]);
                         if (true === isset($targetValue[$tmpid])) {
                             $targetValue = &$targetValue[$tmpid];
                         } else {
@@ -425,7 +543,7 @@ class Group extends \Limepie\Form\Generation\Fields
                         if (true === isset($targetSpec['properties'][$tmpid])) {
                             $targetSpec = &$targetSpec['properties'][$tmpid];
                         }
-                        //foreach ($tmpids as $tmpid) {
+                        // foreach ($tmpids as $tmpid) {
                         //     //\pr($targetValue, $tmpids, $tmpid);
 
                         //     //\pr($tmpid, $targetValue);
@@ -438,7 +556,7 @@ class Group extends \Limepie\Form\Generation\Fields
                         //     }
                         // }
 
-                        //\pr($propertyKey, $tmpids, $targetValue, $targetSpec);
+                        // \pr($propertyKey, $tmpids, $targetValue, $targetSpec);
 
                         // if (true === \is_object($targetValue)) {
                         //     if (true === \property_exists($targetValue, 'value')) {
@@ -456,7 +574,7 @@ class Group extends \Limepie\Form\Generation\Fields
                                     $targetValue = $targetValue->value;
                                 }
                             }
-                            //\pr($propertyValue['display_target'],$propertyValue['display_target_condition'],$targetValue);
+                            // \pr($propertyValue['display_target'],$propertyValue['display_target_condition'],$targetValue);
 
                             if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
                                 $addStyle .= '; ' . $propertyValue['display_target_condition'][$targetValue];
@@ -470,7 +588,7 @@ class Group extends \Limepie\Form\Generation\Fields
                                 }
                             }
 
-                            //\pr($propertyValue['display_target_condition'][$targetValue]);
+                            // \pr($propertyValue['display_target_condition'][$targetValue]);
 
                             if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
                                 $addStyle .= '; ' . $propertyValue['display_target_condition'][$targetValue];
@@ -509,7 +627,7 @@ class Group extends \Limepie\Form\Generation\Fields
                 }
             }
 
-//            $dotKey = str_replace(['[',']'],['.',''],$propertyName);
+            //            $dotKey = str_replace(['[',']'],['.',''],$propertyName);
 
             $parts      = \explode('.', $dotKey);
             $dotParts   = [];
@@ -526,7 +644,7 @@ class Group extends \Limepie\Form\Generation\Fields
             $dotName = \implode('.', $dotParts);
 
             if (true === isset(static::$reverseConditions[$dotName])) {
-                //console.log('aaaaatttt',$dotName, static::$reverseConditions[$dotName]);
+                // console.log('aaaaatttt',$dotName, static::$reverseConditions[$dotName]);
                 $condition = static::$reverseConditions[$dotName];
 
                 foreach ($condition as $keyAs => $va1) {
@@ -548,17 +666,18 @@ class Group extends \Limepie\Form\Generation\Fields
                     if (null === $valueResult1) {
                         $valueResult1 = static::getDefaultByDot(static::$specs, $keyAs2);
                     }
+
                     // var_dump($valueResult1);
                     // pr($dotName, $keyAs2, $va1, $valueResult1);
                     if (true === isset($va1[$valueResult1])) {
-                        if (false === ($va1[$valueResult1])) {
-                            //return true;
+                        if (false === $va1[$valueResult1]) {
+                            // return true;
                             $addClass .= ' d-none';
                         } else {
                             $addClass .= ' d-block';
                         }
                     } else {
-                        //\pr($va1);
+                        // \pr($va1);
 
                         throw new \Exception(static::getNameByDot($keyAs) . ' value not found.');
                     }
@@ -695,13 +814,13 @@ EOT;
         return $html;
     }
 
-    public static function read(string $prevKey, array $specs, $data)
+    public static function read(string $prevKey, array $specs, $data, $prevNext = null)
     {
-        //pr($prevKey, $data);
+        // pr($prevKey, $data);
 
         $innerhtml = '';
 
-        foreach ($specs['properties'] as $propertyKey => $propertyValue) {
+        foreach ($specs['properties'] ?? [] as $propertyKey => $propertyValue) {
             $method   = __NAMESPACE__ . '\\' . \Limepie\camelize($propertyValue['type']);
             $elements = '';
             $index    = 0;
@@ -733,9 +852,9 @@ EOT;
                     foreach ($aData as $aKey => $aValue) {
                         ++$index;
 
-                        //if (false === isset($parentId)) {
+                        // if (false === isset($parentId)) {
                         $parentId = $aKey;
-                        //}
+                        // }
                         $elements .= static::readElement(
                             $method::read($propertyName . '[' . $aKey . ']', $propertyValue, $aData[$aKey]),
                             $index
@@ -763,7 +882,7 @@ EOT;
             }
 
             $language = $propertyValue['label'][static::getLanguage()] ?? $prevKey;
-            //$multipleHtml = true === isset($propertyValue['multiple']) ? static::getMultipleHtml($parentId) : '';
+            // $multipleHtml = true === isset($propertyValue['multiple']) ? static::getMultipleHtml($parentId) : '';
             $titleHtml = '<label>' . $language . '</label>';
 
             if ('hidden' === $propertyValue['type']) {

@@ -2,7 +2,9 @@
 
 namespace Limepie\Form\Generation\Fields;
 
-class Dummy extends \Limepie\Form\Generation\Fields
+use Limepie\Form\Generation\Fields;
+
+class Dummy extends Fields
 {
     public static function write($key, $property, $value, $ruleName)
     {

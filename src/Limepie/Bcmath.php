@@ -95,15 +95,15 @@ class Bcmath
     private static function bcceil($number)
     {
         if (false !== \strpos($number, '.')) {
-            if (\preg_match("~\.[0]+$~", $number)) {
+            if (\preg_match('~\\.[0]+$~', $number)) {
                 return static::bcround($number, 0);
             }
 
             if ('-' !== $number[0]) {
-                return \bcadd($number, 1, 0);
+                return \bcadd($number, '1', 0);
             }
 
-            return \bcsub($number, 0, 0);
+            return \bcsub($number, '0', 0);
         }
 
         return $number;
@@ -112,15 +112,15 @@ class Bcmath
     private static function bcfloor($number)
     {
         if (false !== \strpos($number, '.')) {
-            if (\preg_match("~\.[0]+$~", $number)) {
+            if (\preg_match('~\\.[0]+$~', $number)) {
                 return static::bcround($number, 0);
             }
 
             if ('-' !== $number[0]) {
-                return \bcadd($number, 0, 0);
+                return \bcadd($number, '0', 0);
             }
 
-            return \bcsub($number, 1, 0);
+            return \bcsub($number, '1', 0);
         }
 
         return $number;

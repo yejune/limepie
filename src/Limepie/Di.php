@@ -15,7 +15,7 @@ class Di
      */
     public function __destruct()
     {
-        //Di::instance()->properties = null;
+        // Di::instance()->properties = null;
     }
 
     public static function __callStatic($name, $arguments)
@@ -134,7 +134,7 @@ class Di
 
     public static function isCallableClosure($value) : bool
     {
-        //return true === \is_object($value) && ($value instanceof \Closure);
+        // return true === \is_object($value) && ($value instanceof \Closure);
 
         return true === \is_object($value) && true === \is_callable($value);
     }
