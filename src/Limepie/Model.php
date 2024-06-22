@@ -380,6 +380,18 @@ class Model extends ArrayObject
             foreach ($attributes as $column => &$value) {
                 if (true === isset($this->dataStyles[$column])) {
                     switch ($this->dataStyles[$column]) {
+                        case 'curlfile_serialize':
+                            if ($value && \Limepie\is_serialized_string($value)) {
+                                try {
+                                    $value = \Limepie\CurlFile::unserialize($value);
+                                } catch (\Exception $e) {
+                                    throw $e;
+                                }
+                            } else {
+                                $value = [];
+                            }
+
+                            break;
                         case 'serialize':
                             if ($value && \Limepie\is_serialized_string($value)) {
                                 try {
@@ -1110,6 +1122,10 @@ class Model extends ArrayObject
 
                     if (true === isset($this->dataStyles[$column])) {
                         switch ($this->dataStyles[$column]) {
+                            case 'curlfile_serialize':
+                                $value = CurlFile::serialize($value);
+
+                                break;
                             case 'serialize':
                                 $value = \serialize($value);
 
@@ -1307,6 +1323,10 @@ class Model extends ArrayObject
 
                     if (true === isset($this->dataStyles[$column])) {
                         switch ($this->dataStyles[$column]) {
+                            case 'curlfile_serialize':
+                                $value = CurlFile::serialize($value);
+
+                                break;
                             case 'serialize':
                                 $value = \serialize($value);
 
