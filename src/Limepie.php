@@ -3498,7 +3498,7 @@ function is_hx_request()
 
 function parser_reseponce_json_message($response)
 {
-    if(is_string($response)) {
+    if (\is_string($response)) {
         $response = \json_decode($response, true);
     }
 
@@ -3581,4 +3581,14 @@ function get_current_datetime6()
 
     // 날짜와 시간을 포맷팅
     return \date('Y-m-d H:i:s', $seconds) . '.' . $microseconds;
+}
+
+function array_injection_key($datasets, $requiredKeys)
+{
+    return \array_map(function ($values) use ($requiredKeys) {
+        return \array_combine(
+            $requiredKeys,
+            $values
+        );
+    }, $datasets);
 }
