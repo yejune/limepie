@@ -94,6 +94,14 @@ class Model extends ArrayObject
 
     public $callbackColumns = [];
 
+    // update시 변경된 컬럼
+    public $changeColumns = [];
+
+    // update시 변경된 변수
+    public $changeBinds = [];
+
+    // public $sameColumns = [];
+
     public static function newInstance(?\PDO $pdo = null, array|ArrayObject $attributes = []) : self
     {
         return new self($pdo, $attributes);
@@ -383,7 +391,7 @@ class Model extends ArrayObject
                         case 'curlfile_serialize':
                             if ($value && \Limepie\is_serialized_string($value)) {
                                 try {
-                                    $value = \Limepie\CurlFile::unserialize($value);
+                                    $value = CurlFile::unserialize($value);
                                 } catch (\Exception $e) {
                                     throw $e;
                                 }
@@ -1230,37 +1238,53 @@ class Model extends ArrayObject
         return false;
     }
 
-    // TODO: db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 말기
     public function update($checkUpdatedTs = false)
     {
-        $columns = [];
+        $this->changeColumns = [];
 
         if (false === isset($this->attributes[$this->primaryKeyName])) {
             $debug = \debug_backtrace()[0];
 
             throw (new Exception('not found ' . $this->primaryKeyName))->setDebugMessage('models update?', $debug['file'], $debug['line']);
         }
-        $binds = [
+        $this->changeBinds = [
             ':' . $this->primaryKeyName => $this->attributes[$this->primaryKeyName],
         ];
 
         foreach ($this->allColumns as $column) {
-            if (
-                true === isset($this->originAttributes[$column])
-                && false == isset($this->rawAttributes[$column])
-            ) {
-                // null일 경우에는 0과 비교할 가능성이 있으므로
-                if (
-                    null    === $this->attributes[$column]
-                    || null === $this->originAttributes[$column]
-                ) {
-                    if (null !== $this->attributes[$column] && $this->attributes[$column] === $this->originAttributes[$column]) {
-                        continue;
-                    }
-                } else {
-                    if (null !== $this->attributes[$column] && $this->attributes[$column] == $this->originAttributes[$column]) {
-                        continue;
-                    }
+            // if (
+            //     true === isset($this->originAttributes[$column])
+            //     && false == isset($this->rawAttributes[$column])
+            // ) {
+            //     \pr($column);
+
+            //     // null일 경우에는 0과 비교할 가능성이 있으므로
+            //     if (
+            //         null    === $this->attributes[$column]
+            //         || null === $this->originAttributes[$column]
+            //     ) {
+            //         if (null !== $this->attributes[$column] && $this->attributes[$column] === $this->originAttributes[$column]) {
+            //             continue;
+            //         }
+            //     } else {
+            //         if (null !== $this->attributes[$column] && $this->attributes[$column] == $this->originAttributes[$column]) {
+            //             continue;
+            //         }
+            //     }
+            // }
+
+            // raw가 아니고 값이 같으면 업데이트 안함
+                // db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 말기
+
+            if (false === isset($this->rawAttributes[$column])) {
+                $attr     = $this->attributes[$column]       ?? null;
+                $origAttr = $this->originAttributes[$column] ?? null;
+
+                // attr과 originAttr가 같으면 continue
+                if ($attr === $origAttr) {
+                    // $this->sameColumns[$column] = $origAttr;
+
+                    continue;
                 }
             }
 
@@ -1287,20 +1311,20 @@ class Model extends ArrayObject
             } else {
                 if ('created_ts' === $column || 'updated_ts' === $column) {
                 } elseif ('ip' === $column) {
-                    $columns[]            = "`{$this->tableName}`." . '`' . $column . '` = inet6_aton(:' . $column . ')';
-                    $binds[':' . $column] = $this->attributes[$column] ?? \Limepie\getIp();
+                    $this->changeColumns[]            = "`{$this->tableName}`." . '`' . $column . '` = inet6_aton(:' . $column . ')';
+                    $this->changeBinds[':' . $column] = $this->attributes[$column] ?? \Limepie\getIp();
                 } elseif ('aes_serialize' === $this->dataStyles[$column]) {
-                    $columns[]                           = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey)';
-                    $binds[':' . $column]                = \serialize($this->attributes[$column] ?? null);
-                    $binds[':' . $column . '_secretkey'] = Aes::$salt;
+                    $this->changeColumns[]                           = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey)';
+                    $this->changeBinds[':' . $column]                = \serialize($this->attributes[$column] ?? null);
+                    $this->changeBinds[':' . $column . '_secretkey'] = Aes::$salt;
                 } elseif ('aes' === $this->dataStyles[$column]) {
-                    $columns[]                           = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey)';
-                    $binds[':' . $column]                = $this->attributes[$column] ?? null;
-                    $binds[':' . $column . '_secretkey'] = Aes::$salt;
+                    $this->changeColumns[]                           = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey)';
+                    $this->changeBinds[':' . $column]                = $this->attributes[$column] ?? null;
+                    $this->changeBinds[':' . $column . '_secretkey'] = Aes::$salt;
                 } elseif ('aes_hex' === $this->dataStyles[$column]) {
-                    $columns[]                           = "`{$this->tableName}`." . '`' . $column . '` = HEX(AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey))';
-                    $binds[':' . $column]                = $this->attributes[$column] ?? null;
-                    $binds[':' . $column . '_secretkey'] = Aes::$salt;
+                    $this->changeColumns[]                           = "`{$this->tableName}`." . '`' . $column . '` = HEX(AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey))';
+                    $this->changeBinds[':' . $column]                = $this->attributes[$column] ?? null;
+                    $this->changeBinds[':' . $column . '_secretkey'] = Aes::$salt;
                 } elseif (
                     true === isset($this->dataStyles[$column])
                     && 'point' == $this->dataStyles[$column]
@@ -1313,10 +1337,10 @@ class Model extends ArrayObject
                             throw new Exception('empty point value');
                         }
 
-                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = point(:' . $column . '1, :' . $column . '2)';
+                        $this->changeColumns[] = "`{$this->tableName}`." . '`' . $column . '` = point(:' . $column . '1, :' . $column . '2)';
 
-                        $binds[':' . $column . '1'] = $value[0];
-                        $binds[':' . $column . '2'] = $value[1];
+                        $this->changeBinds[':' . $column . '1'] = $value[0];
+                        $this->changeBinds[':' . $column . '2'] = $value[1];
                     }
                 } elseif (true === \array_key_exists($column, $this->attributes)) {
                     $value = $this->attributes[$column];
@@ -1362,30 +1386,30 @@ class Model extends ArrayObject
                     }
 
                     if (true === isset($this->plusAttributes[$column])) {
-                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . "`{$this->tableName}`." . '`' . $column . '` + ' . $this->plusAttributes[$column];
+                        $this->changeColumns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . "`{$this->tableName}`." . '`' . $column . '` + ' . $this->plusAttributes[$column];
                     } elseif (true === isset($this->minusAttributes[$column])) {
                         $name = "`{$this->tableName}`." . '`' . $column . '`';
 
-                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . "IF({$name} > 0, {$name} - " . $this->minusAttributes[$column] . ', 0)';
+                        $this->changeColumns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . "IF({$name} > 0, {$name} - " . $this->minusAttributes[$column] . ', 0)';
                     } elseif (true === isset($this->rawAttributes[$column])) {
-                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . \str_replace('?', ':' . $column, $this->rawAttributes[$column]);
+                        $this->changeColumns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . \str_replace('?', ':' . $column, $this->rawAttributes[$column]);
 
                         if (null === $value) {
                         } elseif (true === \is_array($value)) {
-                            $binds += $value;
+                            $this->changeBinds += $value;
                         } else {
                             throw new Exception($column . ' raw bind error');
                         }
                     } else {
-                        $columns[]            = "`{$this->tableName}`." . '`' . $column . '` = :' . $column;
-                        $binds[':' . $column] = $value;
+                        $this->changeColumns[]            = "`{$this->tableName}`." . '`' . $column . '` = :' . $column;
+                        $this->changeBinds[':' . $column] = $value;
                     }
                 }
             }
         }
 
-        if ($columns) {
-            $column = \implode(', ', $columns);
+        if ($this->changeColumns) {
+            $column = \implode(', ', $this->changeColumns);
             $where  = $this->primaryKeyName;
             $sql    = <<<SQL
                 UPDATE
@@ -1398,15 +1422,15 @@ class Model extends ArrayObject
 
             if (true === $checkUpdatedTs) {
                 $sql .= ' AND updated_ts = :check_updated_ts';
-                $binds[':check_updated_ts'] = $this->attributes['updated_ts'];
+                $this->changeBinds[':check_updated_ts'] = $this->attributes['updated_ts'];
             }
 
             if (static::$debug) {
-                $this->print($sql, $binds);
+                $this->print($sql, $this->changeBinds);
                 Timer::start();
             }
 
-            if ($this->getConnect()->set($sql, $binds)) {
+            if ($this->getConnect()->set($sql, $this->changeBinds)) {
                 if (static::$debug) {
                     echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
                 }
