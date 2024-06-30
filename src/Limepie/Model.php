@@ -221,6 +221,10 @@ class Model extends ArrayObject
             return $this->buildCount($name, $arguments, 9, true);
         }
 
+        if (0 === \strpos($name, 'getCountBy')) {
+            return $this->buildCount($name, $arguments, 10);
+        }
+
         if (0 === \strpos($name, 'getCount')) {
             return $this->buildCount($name, $arguments, 8);
         }
@@ -1274,7 +1278,7 @@ class Model extends ArrayObject
             // }
 
             // raw가 아니고 값이 같으면 업데이트 안함
-                // db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 말기
+            // db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 말기
 
             if (false === isset($this->rawAttributes[$column])) {
                 $attr     = $this->attributes[$column]       ?? null;

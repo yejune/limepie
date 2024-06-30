@@ -3041,6 +3041,17 @@ function get_countdown_days($recruit_start_dt, $recruit_end_dt, $recruit_announc
 
     return $selected_messages['ongoing'];
 }
+// 주어진 종료 날짜와 현재 날짜 간의 차이를 일수로 계산하여 반환합니다.
+// 남은 일수가 양수(+)로 표시되고 초과된 일수가 음수(-)로 표시
+function dday($endDate)
+{
+    $currentDate = new DateTime();
+    $endDate     = new DateTime($endDate);
+    $interval    = $currentDate->diff($endDate);
+
+    // 날짜 차이를 일수로 계산
+    return (int) $interval->format('%r%a');
+}
 
 function generateRandomString($length)
 {
