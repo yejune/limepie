@@ -90,6 +90,16 @@ class Format
         return $this;
     }
 
+    public function top()
+    {
+        $this->format->align(
+            ExcelFormat::FORMAT_ALIGN_VERTICAL_TOP
+        );
+
+        // Assuming vertical center is applied along with other align methods.
+        return $this;
+    }
+
     //     $backgroundStyle = $format->background(
     //         Format::COLOR_RED
     //     )->toResource();
