@@ -91,7 +91,8 @@ class Tagify extends Fields
             $option = <<<EOD
                 ,
                 transformTag: function(tagData) {
-                    tagData.value = tagData.value.replace(/@|#|,|\\./g, '');
+                    tagData.value = tagData.value.replace(/[@#,\$\\%\\(\\)\\[\\]\\{\\}\\;\\:'"\\/`]/g, '');
+
                     return tagData;
                 },
                 originalInputValueFormat: function(valuesArr) {
@@ -101,12 +102,13 @@ class Tagify extends Fields
                 },
                 templates: {
                     tag: function(tagData) {
+                        if(!tagData.value ) return false;
                         return '<tag title="' + tagData.value + '" contenteditable="false" spellcheck="false" tabindex="-1" class="' + this.settings.classNames.tag + (tagData.class ? ' ' + tagData.class : '') + '" ' + this.getAttributes(tagData) + '>' +
-                                    '<x title="" class="' + this.settings.classNames.tagX + '" role="button" aria-label="remove tag"></x>' +
-                                    '<div>' +
-                                        '<span class="' + this.settings.classNames.tagText + '">{$tag}' + tagData.value + '</span>' +
-                                    '</div>' +
-                                '</tag>';
+                            '<x title="" class="' + this.settings.classNames.tagX + '" role="button" aria-label="remove tag"></x>' +
+                            '<div>' +
+                                '<span class="' + this.settings.classNames.tagText + '">{$tag}' + tagData.value + '</span>' +
+                            '</div>' +
+                        '</tag>';
                     }
                 }
             EOD;
