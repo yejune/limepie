@@ -22,9 +22,10 @@ class Tagify extends Fields
         if (true === \is_array($value)) {
             $value = '';
         }
-        $id     = 'tagify' . \uniqid();
-        $server = $property['server'] ?? '../tagify';
-        $value  = \htmlspecialchars((string) $value);
+        $id         = 'tagify' . \uniqid();
+        $delimiters = $property['delimiters'] ?? ',';
+        $tag        = $property['tag']        ?? '';
+        $value      = \htmlspecialchars((string) $value);
 
         if (0 === \strlen($value) && true === isset($property['default']) && false === \is_array($property['default'])) {
             $value = \htmlspecialchars((string) $property['default']);
@@ -72,58 +73,6 @@ class Tagify extends Fields
         $template = '';
         $tagType  = 'tagify-text';
 
-        if (isset($property['template']) && 'image' == $property['template']) {
-            $tagType  = 'tagify-image';
-            $template = <<<'TMPL'
-                tag: function(tagData, tagify) {
-                    return '<tag title="' + (tagData.title || tagData.value) + '" ' +
-                        'contenteditable="false" ' +
-                        'spellcheck="false" ' +
-                        'tabIndex="' + (this.settings.a11y.focusableTags ? '0' : '-1') + '" ' +
-                        'class="' + this.settings.classNames.tag + ' ' + (tagData.class ? tagData.class : "") + '" ' +
-                        this.getAttributes(tagData) + '>' +
-                        '<x title="" class="' + this.settings.classNames.tagX + '" role="button" aria-label="remove tag"></x>' +
-                        '<div>' +
-                            '<span class="' + this.settings.classNames.tagText + ' me-1"><img src="' +  tagData.cover_url + '" height="26"></span>' +
-                        '</div>' +
-                        '</tag>';
-                },
-                dropdownItem: function(item) {
-                    return '<div ' + this.getAttributes(item) +
-                           ' class="' + this.settings.classNames.dropdownItem + ' ' + (item.class || "") + '"' +
-                           ' tabindex="0" ' +
-                           ' role="option"><img src="' +  item.cover_url + '" height="26"></div>';
-                },
-            TMPL;
-        } elseif (isset($property['template']) && 'imagetext' == $property['template']) {
-            $tagType = 'tagify-imagetext';
-
-            $template = <<<'TMPL'
-                tag: function(tagData, tagify) {
-                    return '<tag title="' + (tagData.title || tagData.value) + '" ' +
-                        'contenteditable="false" ' +
-                        'spellcheck="false" ' +
-                        'tabIndex="' + (this.settings.a11y.focusableTags ? '0' : '-1') + '" ' +
-                        'class="' + this.settings.classNames.tag + ' ' + (tagData.class ? tagData.class : "") + '" ' +
-                        this.getAttributes(tagData) + '>' +
-                        '<x title="" class="' + this.settings.classNames.tagX + '" role="button" aria-label="remove tag"></x>' +
-                        '<div>' +
-                            '<span class="' + this.settings.classNames.tagText + '"><img src="' +  tagData.cover_url + '" height="26"></span>' +
-                            ' <span class="tagify__tag-text ms-1 me-1">'+ tagData.value+'</span>'+
-                        '</div>' +
-                        '</tag>';
-                },
-                dropdownItem: function(item) {
-                    return '<div ' + this.getAttributes(item) +
-                           ' class="' + this.settings.classNames.dropdownItem + ' ' + (item.class || "") + '"' +
-                           ' tabindex="0" ' +
-                           ' role="option"><img src="' +  item.cover_url + '" height="26" class="">' +
-                           ' <span class="tagify__tag-text ms-1 me-1">'+ item.value+'</span>'+
-                           '</div>';
-                },
-            TMPL;
-        }
-
         $prepend = $prependClass = '';
 
         // if (true === isset($property['prepend_class']) && $property['prepend_class']) {
@@ -138,38 +87,58 @@ class Tagify extends Fields
 
         $append = $appendClass = '';
 
-        // if (true === isset($property['append_class']) && $property['append_class']) {
-        //     $appendClass = ' ' . $property['append_class'];
-        // }
-
-        // if (true === isset($property['append']) && $property['append']) {
-        //     $append = <<<EOD
-        //     <span class="input-group-text{$appendClass}">{$property['append']}</span>
-        //     EOD;
-        // }
-
+        if ($tag) {
+            $option = <<<EOD
+                ,
+                transformTag: function(tagData) {
+                    tagData.value = tagData.value.replace(/@|#|,|\\./g, '');
+                    return tagData;
+                },
+                originalInputValueFormat: function(valuesArr) {
+                    return valuesArr.map(function(item) {
+                        return '{$tag}' + item.value;
+                    }).join(' ');
+                },
+                templates: {
+                    tag: function(tagData) {
+                        return '<tag title="' + tagData.value + '" contenteditable="false" spellcheck="false" tabindex="-1" class="' + this.settings.classNames.tag + (tagData.class ? ' ' + tagData.class : '') + '" ' + this.getAttributes(tagData) + '>' +
+                                    '<x title="" class="' + this.settings.classNames.tagX + '" role="button" aria-label="remove tag"></x>' +
+                                    '<div>' +
+                                        '<span class="' + this.settings.classNames.tagText + '">{$tag}' + tagData.value + '</span>' +
+                                    '</div>' +
+                                '</tag>';
+                    }
+                }
+            EOD;
+        } else {
+            $option = '';
+        }
         $script = <<<SCRIPT
         <script>
         $(function () {
             var inputElem = document.getElementById('{$id}');
-            var tagify = new ExtendedTagify(inputElem, {
-                mode: 'search',
-                sortable: true,
-                template: '{$tagType}',
-                position: 'manual',
-                server: '{$server}',
+            new Tagify(inputElem, {
+                delimiters: '{$delimiters}'
+                {$option}
+            });
+            var el = $(inputElem).prev()[0];
+            el.classList.remove('valid-target');
+            Sortable.create(el, {
+                draggable: '.tagify__tag',
+                onUpdate: function (/**Event*/evt) {
+                    $(evt.from).next()[0].__tagify.updateValueByDOMTags()
+                }
             });
         });
         </script>
         SCRIPT;
 
         return <<<EOT
-        <div class="form-control {$tagType}" style="padding:1px 0px" onclick="$('.tagify__input',this).elementFocus();">
+        <div class="form-control {$tagType}" style="padding:1px 0px">
             {$prepend}
             <input type="text" id="{$id}" class="valid-target {$elementClass}" name="{$key}" value="{$value}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}"{$readonly}{$disabled}{$placeholder}{$style} />
             {$append}
             {$script}
-            <div class="dropdown-container"></div>
         </div>
         EOT;
     }
