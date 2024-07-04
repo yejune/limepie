@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Limepie\Template;
 
+use Limepie\Exception;
+
 class Compiler
 {
     private $debug = true;
@@ -314,12 +316,12 @@ class Compiler
         $statement = \trim($statement);
 
         $match = [];
-        \preg_match('/^(\\\\*)\s*(:\?|\?#|:\?#|\/@|\/\?|[=#@?:\/+\*])?(.*)$/s', $statement, $match);
+        \preg_match('/^(\\\*)\s*(:\?|\?#|:\?#|\/@|\/\?|[\|\-=#@?:\/+\*])?(.*)$/s', $statement, $match);
 
         if ($match[1]) {
             // escape
             $result = [1, \substr($org, 1)];
-        // pr($match, $result);
+            // pr($match, $result);
         } else {
             switch ($match[2]) {
                 case '@':
@@ -378,8 +380,10 @@ class Compiler
                     $result = [2, '/*' . $statement . '*/'];
 
                     break;
+                case '-':
+                case '|':
                 case '/':
-                    if (0 === \strpos($match[3], '/')) {
+                    if (0 === \strpos($match[3], $match[2])) {
                         $result = [1, $org];
 
                         break;
@@ -524,7 +528,7 @@ class Compiler
         $result = $this->tokenizer(\substr($statement, 1), $line);
 
         if (!$result) {
-            throw new \Limepie\Exception('Parse error: syntax error, loop는 {@row = array}...{/} 로 사용해주세요. 표현식은 안됩니다. file ' . $this->filename . ' line ' . $line);
+            throw new Exception('Parse error: syntax error, loop는 {@row = array}...{/} 로 사용해주세요. 표현식은 안됩니다. file ' . $this->filename . ' line ' . $line);
         }
         $tokenizer = \explode('=', $result, 2);
 
@@ -631,7 +635,7 @@ class Compiler
             |(?P<right_bracket>\])
             |(?P<comma>,)
             |(?:(?P<string>[A-Z_a-z\x7f-\xff][\w\x7f-\xff]*)\s*)
-            |(?<quote>(?:"(?:\\\\.|[^"])*")|(?:\'(?:\\\\.|[^\'])*\'))
+            |(?<quote>(?:"(?:\\\.|[^"])*")|(?:\'(?:\\\.|[^\'])*\'))
             |(?P<double_operator>\+\+|--)
             |(?P<operator>\+|\-|\*|\/|%|&|\^|~|\!|\|)
             |(?P<not_support>\?|:)
@@ -743,7 +747,7 @@ class Compiler
                         $xpr .= $current['value'];
                     } elseif ('new' === $current['value'] && 'namespace_sigh' === $next['name']) {
                         $xpr .= 'new ';
-                    // 클로저를 허용하지 않음. 그래서 string_concat 비교 보다 우선순위가 높음
+                        // 클로저를 허용하지 않음. 그래서 string_concat 비교 보다 우선순위가 높음
                     } elseif (true === \in_array($next['name'], ['left_parenthesis', 'static_object_sign', 'namespace_sigh'], true)) {
                         if ('string_concat' === $prev['name']) {
                             if (true === $this->debug) {
@@ -1198,21 +1202,21 @@ class Compiler
 
     private function filter($source, $type)
     {
-        $func_split    = \preg_split('/\s*(?<!\\\\)\|\s*/', \trim($this->{$type . 'filter'}));
+        $func_split    = \preg_split('/\s*(?<!\\\)\|\s*/', \trim($this->{$type . 'filter'}));
         $func_sequence = [];
 
         for ($i = 0,$s = \count($func_split); $i < $s; ++$i) {
             if ($func_split[$i]) {
-                $func_sequence[] = \str_replace('\\|', '|', $func_split[$i]);
+                $func_sequence[] = \str_replace('\|', '|', $func_split[$i]);
             }
         }
 
         if (!empty($func_sequence)) {
             for ($i = 0,$s = \count($func_sequence); $i < $s; ++$i) {
-                $func_args = \preg_split('/\s*(?<!\\\\)\&\s*/', $func_sequence[$i]);
+                $func_args = \preg_split('/\s*(?<!\\\)\&\s*/', $func_sequence[$i]);
 
                 for ($j = 1,$k = \count($func_args); $j < $k; ++$j) {
-                    $func_args[$j] = \str_replace('\\&', '&', \trim($func_args[$j]));
+                    $func_args[$j] = \str_replace('\&', '&', \trim($func_args[$j]));
                 }
                 $func      = \strtolower(\array_shift($func_args));
                 $func_name = $this->{$type . 'filters_flip'}[$func];
