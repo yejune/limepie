@@ -2354,6 +2354,38 @@ function array_cleanup(array|ArrayObject $value) : ?array
     return $value;
 }
 
+// 배열에서 특정 패턴(__(.*){13}__)을 숫자로 바꾸고, 값이 빈 배열이거나 빈 문자열('')인 경우 null로 교체
+function array_clean($array)
+{
+    $transformed = [];
+    $i           = -1;
+
+    foreach ($array as $key => $value) {
+        ++$i;
+
+        if (\preg_match('/^__(.*){13}__$/', $key)) {
+            $key = $i;
+        }
+
+        // 값이 배열이면 재귀적으로 처리
+        if (\is_array($value)) {
+            // 빈 배열은 null로 교체
+            if (empty($value)) {
+                $value = null;
+            } else {
+                $value = array_clean($value);
+            }
+        } elseif ('' === $value) {
+            // 빈 문자열을 null로 교체
+            $value = null;
+        }
+
+        $transformed[$key] = $value;
+    }
+
+    return $transformed;
+}
+
 function array_cleanup2(array|ArrayObject $array)
 {
     if ($array instanceof ArrayObject) {
