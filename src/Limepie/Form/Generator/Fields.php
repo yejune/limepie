@@ -76,7 +76,7 @@ class Fields
 
     public static function isValue($value)
     {
-        if (true === \Limepie\is_file_array($value, true)) {
+        if (true === \Limepie\arr\is_file_array($value, true)) {
             return true;
         }
 
@@ -148,7 +148,7 @@ class Fields
 
     public static function isValue2($value)
     {
-        if (true === \Limepie\is_file_array($value, true)) {
+        if (true === \Limepie\arr\is_file_array($value, true)) {
             return true;
         }
 

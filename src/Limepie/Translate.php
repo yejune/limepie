@@ -40,7 +40,7 @@ class Translate implements \Iterator, \ArrayAccess, \Countable
             return $this->language[$fieldName] ?? null;
         }
 
-        throw new \Limepie\Exception('"' . $property . '" function not found', 999);
+        throw new Exception('"' . $property . '" function not found', 999);
     }
 
     public function count() : int
@@ -77,7 +77,7 @@ class Translate implements \Iterator, \ArrayAccess, \Countable
     // iterator_to_array
     public function toArray()
     {
-        if (true === \Limepie\is_assoc($this->language)) {
+        if (true === \Limepie\arr\is_assoc($this->language)) {
             return $this->language;
         }
         $language = [];

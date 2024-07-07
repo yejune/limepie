@@ -14,7 +14,7 @@ class File extends Fields
             $ruleName = $property['rule_name'];
         }
 
-        if (true === \Limepie\is_file_array($data, false)) {
+        if (true === \Limepie\arr\is_file_array($data, false)) {
             $value  = \htmlspecialchars((string) $data['name']);
             $accept = $property['rules']['accept'] ?? '';
             $button = '';
@@ -62,7 +62,7 @@ class File extends Fields
     {
         $html = '';
 
-        if (true === \Limepie\is_file_array($data, false)) {
+        if (true === \Limepie\arr\is_file_array($data, false)) {
             $value = \str_replace('', '', (string) $data['path']);
             $html  = <<<EOT
                 <img src="{$value}" />

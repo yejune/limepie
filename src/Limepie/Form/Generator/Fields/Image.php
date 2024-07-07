@@ -51,7 +51,7 @@ class Image extends Fields
             EOD;
         }
 
-        if (true === \Limepie\is_file_array($data, false)) {
+        if (true === \Limepie\arr\is_file_array($data, false)) {
             $value  = \htmlspecialchars((string) $data['name']);
             $button = '';
             $html   = <<<EOT
@@ -98,7 +98,7 @@ class Image extends Fields
     {
         $html = '';
 
-        if (true === \Limepie\is_file_array($data, false)) {
+        if (true === \Limepie\arr\is_file_array($data, false)) {
             $value = \str_replace('', '', (string) $data['path']);
             $html  = <<<EOT
             <img src="{$value}" />

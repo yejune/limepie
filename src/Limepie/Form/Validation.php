@@ -194,11 +194,11 @@ class Validation
             if (true === \is_array($data)) {
                 foreach ($data as $v) {
                     if (true === \is_array($v)) {
-                        if (true === \Limepie\is_file_array($v)) {
+                        if (true === \Limepie\arr\is_file_array($v)) {
                             $v = $v['name'];
                             // $v = $v['file_name_alias_seq'];
                         } else {
-                            // \pr($v, \Limepie\is_file_array($v));
+                            // \pr($v, \Limepie\arr\is_file_array($v));
 
                             throw (new \Limepie\Exception('error'))->setDebugMessage('not support datatype', __FILE__, __LINE__);
                         }
@@ -442,7 +442,7 @@ class Validation
         if (false === \is_array($param)) {
             $param = [$param];
         }
-        $format = \preg_replace('/\\{([0-9]+)\\}/', '%s', $format);
+        $format = \preg_replace('/\{([0-9]+)\}/', '%s', $format);
 
         return \call_user_func_array('sprintf', \array_merge([$format], $param));
     }

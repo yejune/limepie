@@ -2,6 +2,8 @@
 
 namespace Limepie\Form\Generation;
 
+use Limepie\ArrayObject;
+
 class Fields
 {
     public static $allData = [];
@@ -69,11 +71,11 @@ class Fields
 
     public static function isValue($value)
     {
-        if (true === \Limepie\is_file_array($value, true)) {
+        if (true === \Limepie\arr\is_file_array($value, true)) {
             return true;
         }
 
-        if ($value instanceof \Limepie\ArrayObject) {
+        if ($value instanceof ArrayObject) {
             $value = $value->toArray();
         }
 
@@ -107,7 +109,7 @@ class Fields
         }
 
         return '<span class="button-collapse" data-feather="chevron-' . $arrow . '"></span>';
-        //return '<i class="button-collapse glyphicon glyphicon-triangle-' . $arrow . '"></i> ';
+        // return '<i class="button-collapse glyphicon glyphicon-triangle-' . $arrow . '"></i> ';
     }
 
     public static function testValue($value)
@@ -141,7 +143,7 @@ class Fields
 
     public static function isValue2($value)
     {
-        if (true === \Limepie\is_file_array($value, true)) {
+        if (true === \Limepie\arr\is_file_array($value, true)) {
             return true;
         }
 
@@ -165,7 +167,8 @@ class Fields
     {
         $keys  = \explode('[', \str_replace([']'], '', \str_replace('[]', '', $key)));
         $value = $data;
-        //pr($key, $value);
+
+        // pr($key, $value);
         foreach ($keys as $id) {
             if (true === isset($value[$id])) {
                 $value = $value[$id];
@@ -201,7 +204,8 @@ class Fields
     {
         $keys  = \explode('.', $key);
         $value = $spec;
-        //pr($spec, $keys);
+
+        // pr($spec, $keys);
         foreach ($keys as $id) {
             if (1 === \preg_match('#__([^_]{13})__#', $id)) {
                 // pr($id);
@@ -241,7 +245,7 @@ class Fields
         $class = '';
 
         if (0 === \strpos(\trim($html), "<div class='fieldset")) {
-            $class = ''; //' btn-block';
+            $class = ''; // ' btn-block';
         }
 
         if (true === $isMultiple) {

@@ -10,6 +10,7 @@ class Getter implements \Iterator, \ArrayAccess, \Countable
     {
         $this->properties = $properties;
     }
+
     public function __get($property)
     {
         if (true === isset($this->properties[$property])) {
@@ -31,14 +32,17 @@ class Getter implements \Iterator, \ArrayAccess, \Countable
             $this->properties[$fieldName] = $arguments[0];
 
             return $this;
-        } elseif (0 === \strpos($property, 'get')) {
+        }
+
+        if (0 === \strpos($property, 'get')) {
             $fieldName = \Limepie\decamelize(\substr($property, 3));
 
             return $this->properties[$fieldName] ?? null;
-        } else {
-            throw new \Limepie\Exception('"' . $property . '" function not found', 999);
         }
+
+        throw new Exception('"' . $property . '" function not found', 999);
     }
+
     public function count()
     {
         return \count($this->properties);
@@ -70,16 +74,16 @@ class Getter implements \Iterator, \ArrayAccess, \Countable
         return isset($this->properties[$offset]) ? $this->properties[$offset] : null;
     }
 
-    //iterator_to_array
+    // iterator_to_array
     public function toArray()
     {
-        if (true === \Limepie\is_assoc($this->properties)) {
+        if (true === \Limepie\arr\is_assoc($this->properties)) {
             return $this->properties;
         }
         $properties = [];
 
         foreach ($this->properties as $index => $property) {
-            //index에서 seq로 변경
+            // index에서 seq로 변경
             $properties[] = $property->toArray();
         }
 
@@ -93,30 +97,23 @@ class Getter implements \Iterator, \ArrayAccess, \Countable
 
     public function current()
     {
-        $var = \current($this->properties);
-
-        return $var;
+        return \current($this->properties);
     }
 
     public function key()
     {
-        $var = \key($this->properties);
-
-        return $var;
+        return \key($this->properties);
     }
 
     public function next()
     {
-        $var = \next($this->properties);
-
-        return $var;
+        return \next($this->properties);
     }
 
     public function valid()
     {
         $key = \key($this->properties);
-        $var = (null !== $key && false !== $key);
 
-        return $var;
+        return (null !== $key && false !== $key);
     }
 }

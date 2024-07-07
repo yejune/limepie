@@ -223,7 +223,7 @@ class Group extends Fields
                 $propertyValue = [...$propertyValue, ...$nextData->property];
                 $nextData      = $nextData->value;
 
-                if (\Limepie\is_assoc($nextData)) {
+                if (\Limepie\arr\is_assoc($nextData)) {
                     $isArray = false;
                 }
             }
