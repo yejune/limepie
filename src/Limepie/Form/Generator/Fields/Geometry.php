@@ -85,7 +85,7 @@ class Geometry extends Fields
     <div class="input-group mt-1" id="map{$geometryId}" style="{$display} width: 100%; height: 300px;"></div>
     <input type="hidden" id='geometry{$geometryId}' value="">
 </div>
-<script>
+<script nonce="{$_SESSION['nonce']}">
 $(function() {
     $("#submit{$geometryId}").on('click', function() {
         $("#map{$geometryId}").address({

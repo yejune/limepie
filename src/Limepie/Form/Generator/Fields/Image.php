@@ -55,20 +55,20 @@ class Image extends Fields
             $value  = \htmlspecialchars((string) $data['name']);
             $button = '';
             $html   = <<<EOT
-                <input type="text" class='form-control form-control-file' value="{$value}" readonly="readonly" />
+            <input type="text" class='form-control form-control-file' value="{$value}" readonly="readonly" />
             EOT;
 
             foreach ($data as $key1 => $value1) {
                 if (\in_array($key1, ['name', 'type', 'size', 'tmp_name', 'error', 'full_path', 'file_name_alias_seq', 'url'])) {
                     if ('name' === $key1) {
                         $html .= <<<EOT
-                            <input type="text" class='valid-target form-control-file form-control-filetext form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}[{$key1}]" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value1}" accept="{$accept}" />
+                        <input type="text" class='valid-target form-control-file form-control-filetext form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}[{$key1}]" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value1}" accept="{$accept}" />
                         EOT;
                     } else {
                         if ('tmp_name' === $key1) {
                         } else {
                             $html .= <<<EOT
-                                <input type="hidden" class="clone-element" name="{$key}[{$key1}]"  value="{$value1}" />
+                            <input type="hidden" class="clone-element" name="{$key}[{$key1}]"  value="{$value1}" />
                             EOT;
                         }
                     }
@@ -76,22 +76,18 @@ class Image extends Fields
             }
 
             $html .= <<<EOT
-                <div class='form-preview clone-element'><div><a href="{$data['url']}" target="_new"><img {$style} src='{$data['url']}' class='form-preview-image'></a></div></div>
+            <div class='form-preview clone-element'><div><a href="{$data['url']}" target="_new"><img {$style} src='{$data['url']}' class='form-preview-image'></a></div></div>
             EOT;
             $button = <<<'EOT'
-                <button class="btn btn-search btn-file-search-text" type="button">&nbsp;</button>
+            <button class="btn btn-search btn-file-search-text" type="button">&nbsp;</button>
             EOT;
         } else {
             $value = '';
             $html  = <<<EOT
-            <div class="input-group">
-                {$prepend}
-                <input type="text" class='form-control form-control-file' value="" readonly="readonly" />
-                <input type="file" class='valid-target form-control-file form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" accept="{$accept}" />
-            </div>
+            <div class="input-group">{$prepend}<input type="text" class='form-control form-control-file' value="" readonly="readonly" /><input type="file" class='valid-target form-control-file form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" accept="{$accept}" /></div>
             EOT;
             $button = <<<'EOT'
-                <button class="btn btn-search btn-file-search" type="button">&nbsp;</button>
+            <button class="btn btn-search btn-file-search" type="button">&nbsp;</button>
             EOT;
         }
 

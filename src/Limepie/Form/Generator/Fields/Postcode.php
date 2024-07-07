@@ -74,7 +74,7 @@ class Postcode extends Fields
 
 
 <script src="//ssl.daumcdn.net/dmaps/map_js_init/postcode.v2.js"></script>
-<script>
+<script nonce="{$_SESSION['nonce']}">
 var {$id}_postcode_element = new DaumPostcode('#{$id}_postcode_raw');
 // console.log({$id}_postcode_element );
 </script>

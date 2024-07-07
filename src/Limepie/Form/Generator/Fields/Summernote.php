@@ -27,7 +27,7 @@ class Summernote extends Fields
         <link href="//cdnjs.cloudflare.com/ajax/libs/summernote/0.8.12/summernote-bs4.css" rel="stylesheet">
         <script src="//cdnjs.cloudflare.com/ajax/libs/summernote/0.8.12/summernote-bs4.js"></script>
         <textarea id="summernote{$id}" class="valid-target form-control summernote" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}" rows="{$rows}">{$value}</textarea>
-<script>
+<script nonce="{$_SESSION['nonce']}">
 $(function() {
 
     $('#summernote{$id}').summernote({

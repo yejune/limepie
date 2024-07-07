@@ -113,11 +113,7 @@ class Number extends Fields
         }
 
         return <<<EOT
-            <div class="input-group">
-            {$prepend}
-            <input type="number" class="valid-target form-control{$elementClass}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" data-default="{$default}"{$readonly}{$disabled}{$placeholder}{$style} {$onchange} />
-            {$append}
-            </div>
+        <div class="input-group">{$prepend}<input type="number" class="valid-target form-control{$elementClass}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" data-default="{$default}"{$readonly}{$disabled}{$placeholder}{$style} {$onchange} />{$append}</div>
         EOT;
     }
 

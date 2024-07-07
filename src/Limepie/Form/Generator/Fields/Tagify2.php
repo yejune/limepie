@@ -149,7 +149,7 @@ class Tagify2 extends Fields
         // }
 
         $script = <<<SCRIPT
-        <script>
+        <script nonce="{$_SESSION['nonce']}">
         $(function () {
             var inputElem = document.getElementById('{$id}');
             var tagify = new ExtendedTagify2(inputElem, {
@@ -164,13 +164,7 @@ class Tagify2 extends Fields
         SCRIPT;
 
         return <<<EOT
-        <div class="form-control {$tagType}" style="padding:1px 0px" onclick="$('.tagify__input',this).elementFocus();">
-            {$prepend}
-            <input type="text" id="{$id}" class="valid-target {$elementClass}" name="{$key}" value="{$value}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}"{$readonly}{$disabled}{$placeholder}{$style} />
-            {$append}
-            {$script}
-            <div class="dropdown-container"></div>
-        </div>
+        <div class="form-control {$tagType}" style="padding:1px 0px" onclick="$('.tagify__input',this).elementFocus();">{$prepend}<input type="text" id="{$id}" class="valid-target {$elementClass}" name="{$key}" value="{$value}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}"{$readonly}{$disabled}{$placeholder}{$style} />{$append}{$script}<div class="dropdown-container"></div></div>
         EOT;
     }
 

@@ -44,7 +44,7 @@ class Button extends Fields
         }
 
         return <<<EOT
-            <script>
+            <script nonce="{$_SESSION['nonce']}">
             $(function() {
                 {$init_script}
                 $("#btn{$id}").on('click', function() {
@@ -52,9 +52,7 @@ class Button extends Fields
                 });
             });
             </script>
-            <input type="hidden" class="valid-target form-control" readonly="readonly" name="{$key}"  data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}" />
-            <input type="button" class="btn{$class}" name="btn{$key}" id="btn{$id}" value="{$property['text']}" {$readonly}/>
-
+            <input type="hidden" class="valid-target form-control" readonly="readonly" name="{$key}"  data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}" /><input type="button" class="btn{$class}" name="btn{$key}" id="btn{$id}" value="{$property['text']}" {$readonly}/>
         EOT;
     }
 

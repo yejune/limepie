@@ -81,13 +81,13 @@ class Tui extends Fields
         <input type="hidden" name="{$uuidkey}" value="{$uuid}">
         <textarea class="form-control d-none" id="textarea_html{$id}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}" >{$value}</textarea>
         <div id="tui{$id}" class="form-control {$class} tui-body" style="display:block; width: 100%">{$value}</div>
-        <style>#tui{$id} .te-mode-switch-section {
+        <style nonce="{$_SESSION['nonce']}">#tui{$id} .te-mode-switch-section {
         //  display: none !important;
         //  height: 0;
         }
         {$imageButton}
         </style>
-<script>
+<script nonce="{$_SESSION['nonce']}">
 $(function() {
     tui("{$id}", {
         fileserver: "{$fileserver}"

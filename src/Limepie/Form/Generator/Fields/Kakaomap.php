@@ -183,7 +183,7 @@ class Kakaomap extends Fields
 </div>
 <textarea style="display: none" id='geometry{$geometryId}' class="valid-target" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}" >{$encodeValue}</textarea>
 
-<script>
+<script nonce="{$_SESSION['nonce']}">
 function kakao_map_init{$geometryId}() {
     var mapContainer = document.getElementById('map{$geometryId}'); // 지도를 표시할 div
     var mapOption = {

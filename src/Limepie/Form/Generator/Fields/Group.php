@@ -748,9 +748,7 @@ class Group extends Fields
 
             if ('hidden' === $propertyValue['type']) {
                 $innerhtml .= <<<EOT
-                    <div class="x-hidden {$addClassString}" name="{$nextLineName}-layer">
-                        {$elements}
-                    </div>
+                <div class="x-hidden {$addClassString}" name="{$nextLineName}-layer">{$elements}</div>
                 EOT;
             } elseif ('dummy' === $propertyValue['type'] && '' === $nextData) {
                 $innerhtml .= <<<'EOT'
@@ -764,23 +762,11 @@ class Group extends Fields
                 }
 
                 $innerhtml .= <<<EOT
-                    <div class="{$addClassString}" name="{$nextLineName}-layer">
-                        <div class="checkbox">
-                            <label>{$elements}</label>
-                            {$d}
-                        </div>
-                    </div>
+                <div class="{$addClassString}" name="{$nextLineName}-layer"><div class="checkbox"><label>{$elements}</label>{$d}</div></div>
                 EOT;
             } else {
                 $innerhtml .= <<<EOT
-                    <div class="{$addClassString}" style="{$addStyleString}" name="{$nextLineName}-layer">
-                        {$titleHtml}
-                        {$prependDescription}
-                        <div class="form-element">
-                            {$elements}
-                        </div>
-                        {$appendDescription}
-                    </div>
+                <div class="{$addClassString}" style="{$addStyleString}" name="{$nextLineName}-layer">{$titleHtml}{$prependDescription}<div class="form-element">{$elements}</div>{$appendDescription}</div>
                 EOT;
             }
         }
@@ -821,7 +807,7 @@ class Group extends Fields
                 $groupId      = 'blank_' . \Limepie\uniqid();
                 $groupClass[] = $groupId;
                 $styleTag     = <<<STYLE
-                    <style>
+                    <style nonce="{$_SESSION['nonce']}">
                     .form-container .{$groupId}::after {
                         content: "{$specs['blank_message']}";
                     }
@@ -843,11 +829,7 @@ class Group extends Fields
         }
 
         $html = <<<EOT
-            {$styleTag}
-            <div class='{$groupClassString}'{$groupStyle}>
-            {$innerhtml}
-            </div>
-            {$script}
+        {$styleTag}<div class='{$groupClassString}'{$groupStyle}>{$innerhtml}</div>{$script}
         EOT;
 
         return $html;
@@ -926,15 +908,12 @@ class Group extends Fields
 
             if ('hidden' === $propertyValue['type']) {
                 $innerhtml .= <<<EOT
-                    {$elements}
-EOT;
+                {$elements}
+                EOT;
             } else {
                 $innerhtml .= <<<EOT
-                {$titleHtml}
-                <div class="form-group">
-                    {$elements}
-                </div>
-EOT;
+                {$titleHtml}<div class="form-group">{$elements}</div>
+                EOT;
             }
             unset($parentId);
         }
@@ -945,11 +924,8 @@ EOT;
         }
 
         $html = <<<EOT
-<div class='form-group'  {$groupStyle}>
-    {$innerhtml}
-</div>
-
-EOT;
+        <div class='form-group'  {$groupStyle}>{$innerhtml}</div>
+        EOT;
 
         return $html;
     }

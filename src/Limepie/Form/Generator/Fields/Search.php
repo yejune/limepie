@@ -87,25 +87,22 @@ class Search extends Fields
 
         if (true === isset($property['callback'])) {
             $callback = <<<SCRIPT
-                $('#{$id}').on('select2:select', {$property['callback']});
+            $('#{$id}').on('select2:select', {$property['callback']});
             SCRIPT;
         }
 
         $expend  = '';
         $scripts = <<<SCRIPT
-            <script>
-
-                select2('{$id}', '{$keyword_min_length}', '{$delay}');
-                {$callback}
-
-            </script>
+        <script nonce="{$_SESSION['nonce']}">
+        select2('{$id}', '{$keyword_min_length}', '{$delay}');{$callback}
+        </script>
         SCRIPT;
 
         $prepend = '';
 
         if (isset($property['prepend']) && $property['prepend']) {
             $prepend = <<<EOD
-                <span class="input-group-text">{$property['prepend']}</span>
+            <span class="input-group-text">{$property['prepend']}</span>
             EOD;
         }
 
@@ -113,7 +110,7 @@ class Search extends Fields
 
         if (isset($property['append']) && $property['append']) {
             $append = <<<EOD
-                <span class="input-group-text">{$property['append']}</span>
+            <span class="input-group-text">{$property['append']}</span>
             EOD;
         }
         $option = '';
@@ -185,18 +182,12 @@ class Search extends Fields
         $styleText = '';
 
         if ($hide_searching) {
-            $styleText = "<style>.{$id}_select2 .loading-results { display: none; }</style>";
+            $styleText = "<style nonce=\"{$_SESSION['nonce']}\">.{$id}_select2 .loading-results { display: none; }</style>";
         }
 
         return <<<EOT
-        {$styleText}
-        <div class="input-group">
-        {$prepend}
-        <select class="valid-target form-control{$class}" {$style} name="{$key}" data-api-server="{$api_server}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>
-        {$append}
-        </div>
-        {$scripts}
-EOT;
+        {$styleText}<div class="input-group">{$prepend}<select class="valid-target form-control{$class}" {$style} name="{$key}" data-api-server="{$api_server}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>{$append}</div>{$scripts}
+        EOT;
     }
 
     public static function read($key, $property, $value)

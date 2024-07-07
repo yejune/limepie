@@ -25,7 +25,7 @@ class Hidden extends Fields
         }
 
         return <<<EOT
-            <input type="hidden" class="valid-target form-control" readonly="readonly" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" data-default="{$default}" />
+        <input type="hidden" class="valid-target form-control" readonly="readonly" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" data-default="{$default}" />
         EOT;
     }
 

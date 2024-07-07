@@ -42,8 +42,7 @@ class Checkbox extends Fields
         }
 
         $html = <<<EOT
-            <div><input type="checkbox" class="valid-target" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="1" {$checked} {$onclick}{$style} /> <span>{$title}</span></div>
-
+        <div><input type="checkbox" class="valid-target" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="1" {$checked} {$onclick}{$style} /> <span>{$title}</span></div>
         EOT;
 
         return $html;

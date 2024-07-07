@@ -48,7 +48,7 @@ class Generator
 
     public function write(array $spec, array|ArrayObject $data = []) : string
     {
-        $method = __NAMESPACE__ . '\\Generator\\Fields\\' . \Limepie\camelize($spec['type']);
+        $method = __NAMESPACE__ . '\Generator\Fields\\' . \Limepie\camelize($spec['type']);
         $html   = '';
 
         if ($data instanceof ArrayObject) {
@@ -142,10 +142,7 @@ class Generator
         $elements = $method::write($spec['key'] ?? '', $spec, $data);
 
         $innerhtml = <<<EOT
-        <div>
-        {$html}
-        {$elements}
-        </div>
+        <div>{$html}{$elements}</div>
         EOT;
 
         $innerhtml .= '<hr /> <div class="clearfix">';
@@ -302,7 +299,7 @@ class Generator
 
     public function read(array $spec, array $data = []) : string
     {
-        $method = __NAMESPACE__ . '\\Generator\\Fields\\' . \Limepie\camelize($spec['type']);
+        $method = __NAMESPACE__ . '\Generator\Fields\\' . \Limepie\camelize($spec['type']);
 
         if (true === isset($spec['label'][\Limepie\get_language()])) {
             $title = $spec['label'][\Limepie\get_language()];
@@ -315,10 +312,10 @@ class Generator
         $elements = $method::read($spec['key'] ?? '', $spec, $data);
 
         return <<<EOT
-<div>
-<label>{$title}</label>
-{$elements}
-</div>
-EOT;
+        <div>
+        <label>{$title}</label>
+        {$elements}
+        </div>
+        EOT;
     }
 }

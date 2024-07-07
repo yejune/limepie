@@ -25,8 +25,7 @@ class Password extends Fields
         }
 
         return <<<EOT
-            <input type="password" class="valid-target form-control" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="" data-default="{$default}"{$readonly} />
-
+        <input type="password" class="valid-target form-control" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="" data-default="{$default}"{$readonly} />
         EOT;
     }
 

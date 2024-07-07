@@ -126,8 +126,7 @@ class Choice extends Fields
                 }
 
                 $buttons .= <<<EOD
-                    <input id="{$id}" class="valid-target btn-check{$inputClass}" type="radio" name="{$key}" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$k1}" data-is-default="{$checkdefault}" {$checked} {$onchange} {$onclick}>
-                    <label for="{$id}" class="btn btn-switch {$elementClass}"><span>{$v1}</span></label>
+                <input id="{$id}" class="valid-target btn-check{$inputClass}" type="radio" name="{$key}" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$k1}" data-is-default="{$checkdefault}" {$checked} {$onchange} {$onclick}><label for="{$id}" class="btn btn-switch {$elementClass}"><span>{$v1}</span></label>
                 EOD;
 
                 // if ($changeEvent) {
@@ -165,11 +164,8 @@ class Choice extends Fields
             // }
 
             $html = <<<EOT
-                <div class="btn-group btn-group-toggle{$readonly}{$buttonClass}" data-toggle="buttons">
-                {$buttons}
-                </div>
-                {$script}
-                EOT;
+            <div class="btn-group btn-group-toggle{$readonly}{$buttonClass}" data-toggle="buttons">{$buttons}</div>{$script}
+            EOT;
         } else {
             $html = '<input type="text" class="form-control" value="application에서 설정하세요." />';
         }

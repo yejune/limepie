@@ -32,8 +32,7 @@ class Textarea extends Fields
         }
 
         return <<<EOT
-            <textarea class="valid-target form-control {$className}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}" rows="{$rows}"{$maxLength}>{$value}</textarea>{$counter}
-
+        <textarea class="valid-target form-control {$className}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}" rows="{$rows}"{$maxLength}>{$value}</textarea>{$counter}
         EOT;
     }
 

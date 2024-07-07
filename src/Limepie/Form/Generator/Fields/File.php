@@ -19,7 +19,7 @@ class File extends Fields
             $accept = $property['rules']['accept'] ?? '';
             $button = '';
             $html   = <<<EOT
-                <input type="text" class='form-control form-control-file' value="{$value}" readonly="readonly" />
+            <input type="text" class='form-control form-control-file' value="{$value}" readonly="readonly" />
             EOT;
             // $html .= <<<EOT
             //     <input type="text" class='form-control-file form-control-filetext' name="{$key}" value="{$value}" accept="{$accept}" />
@@ -29,13 +29,13 @@ class File extends Fields
                 if (\in_array($key1, ['name', 'type', 'size', 'tmp_name', 'error', 'full_path', 'file_name_alias_seq', 'url'])) {
                     if ('name' === $key1) {
                         $html .= <<<EOT
-                            <input type="text" class='valid-target form-control-file form-control-filetext' name="{$key}[{$key1}]" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value1}" accept="{$accept}" />
+                        <input type="text" class='valid-target form-control-file form-control-filetext' name="{$key}[{$key1}]" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value1}" accept="{$accept}" />
                         EOT;
                     } else {
                         if ('tmp_name' === $key1) {
                         } else {
                             $html .= <<<EOT
-                                <input type="hidden" class="clone-element" name="{$key}[{$key1}]" value="{$value1}" />
+                            <input type="hidden" class="clone-element" name="{$key}[{$key1}]" value="{$value1}" />
                             EOT;
                         }
                     }
@@ -48,8 +48,7 @@ class File extends Fields
             $value  = '';
             $accept = $property['rules']['accept'] ?? '';
             $html   = <<<EOT
-                <input type="text" class='form-control form-control-file' value="" readonly="readonly" />
-                <input type="file" class='valid-target form-control-file' name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" accept="{$accept}" />
+            <input type="text" class='form-control form-control-file' value="" readonly="readonly" /><input type="file" class='valid-target form-control-file' name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" accept="{$accept}" />
             EOT;
             $button = <<<'EOT'
             <button class="btn btn-search btn-file-search" type="button">&nbsp;</button>

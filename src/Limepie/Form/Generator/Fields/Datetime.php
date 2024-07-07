@@ -35,8 +35,7 @@ class Datetime extends Fields
         }
 
         return <<<EOT
-            <input type="datetime-local" class="valid-target form-control" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}"{$readonly}{$onchange} />
-
+        <input type="datetime-local" class="valid-target form-control" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}"{$readonly}{$onchange} />
         EOT;
     }
 

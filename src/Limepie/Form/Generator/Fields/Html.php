@@ -23,7 +23,7 @@ class Html extends Fields
 
         if (true === isset($property['empty_style'])) {
             $styleTag .= <<<STYLE
-            <style>
+            <style nonce="{$_SESSION['nonce']}">
             .form-container .{$groupId}:empty {
                 {$property['empty_style']}
             }
@@ -33,7 +33,7 @@ class Html extends Fields
 
         if (true === isset($property['empty_message'])) {
             $styleTag .= <<<STYLE
-            <style>
+            <style nonce="{$_SESSION['nonce']}">
             .form-container .{$groupId}:empty::before {
                 content: "{$property['empty_message']}";
             }

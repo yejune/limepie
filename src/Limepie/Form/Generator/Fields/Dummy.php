@@ -40,8 +40,7 @@ class Dummy extends Fields
         }
 
         return <<<EOT
-            <div class="{$elementClass}" style="{$elementStyle}">{$value}</div>
-
+        <div class="{$elementClass}" style="{$elementStyle}">{$value}</div>
         EOT;
     }
 

@@ -53,8 +53,8 @@ class Selectbox extends Fields
             $class = ' ' . $property['element_class'];
         }
 
-        $scripts = <<<'EOD'
-            <script>
+        $scripts = <<<EOD
+            <script nonce="{$_SESSION['nonce']}">
             $('.input-group .form-select').on('change', function () {
 
                 if ($(this.options[this.selectedIndex]).closest('optgroup').length) {
@@ -145,13 +145,7 @@ class Selectbox extends Fields
         }
 
         return <<<EOT
-            <div class="input-group">
-            {$prepend}
-            <span class="input-group-text input-group-text-group {$groupNameClass}" id="{$id}">{$groupName}</span>
-            <select class="valid-target form-select{$class}" {$style} name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  {$onchange} data-default="{$default}">{$option}</select>
-            {$append}
-            </div>
-            {$scripts}
+        <div class="input-group">{$prepend}<span class="input-group-text input-group-text-group {$groupNameClass}" id="{$id}">{$groupName}</span><select class="valid-target form-select{$class}" {$style} name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  {$onchange} data-default="{$default}">{$option}</select>{$append}</div>{$scripts}
         EOT;
     }
 

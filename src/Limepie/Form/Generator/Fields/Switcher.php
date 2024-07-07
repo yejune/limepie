@@ -129,7 +129,7 @@ class Switcher extends Fields
         // EOD;
 
         $script = <<<SCR
-        <script>
+        <script nonce="{$_SESSION['nonce']}">
         // $(function () {
         //     var f = $('#'+$.escapeSelector( '{$id}'));
         //     if (f[0].onclick) {

@@ -85,7 +85,7 @@ class Editorjs extends Fields
         }
         {$imageButton}
         </style>
-<script>
+<script nonce="{$_SESSION['nonce']}">
 $(function() {
     const quill = new Quill("#contentjs{$id}", {
         theme: "snow",

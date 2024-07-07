@@ -24,7 +24,7 @@ class Summernote5 extends Fields
 
         return <<<EOT
         <textarea id="summernote{$id}" class="valid-target form-control summernote" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}" rows="{$rows}">{$value}</textarea>
-<script>
+<script nonce="{$_SESSION['nonce']}">
 $(function() {
 
     var summernoteElement = $('#summernote{$id}');

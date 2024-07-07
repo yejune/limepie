@@ -34,7 +34,7 @@ class Date extends Fields
 
         if (isset($property['prepend']) && $property['prepend']) {
             $prepend = <<<EOD
-                <span class="input-group-text">{$property['prepend']}</span>
+            <span class="input-group-text">{$property['prepend']}</span>
             EOD;
         }
 
@@ -43,15 +43,11 @@ class Date extends Fields
         if (isset($property['append']) && $property['append']) {
             $append = <<<EOD
             <span class="input-group-text">{$property['append']}</span>
-        EOD;
+            EOD;
         }
 
         return <<<EOT
-            <div class="input-group">
-            {$prepend}
-            <input type="date" class="valid-target form-control" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}"{$readonly} />
-            {$append}
-            </div>
+        <div class="input-group">{$prepend}<input type="date" class="valid-target form-control" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}"{$readonly} />{$append}</div>
         EOT;
     }
 

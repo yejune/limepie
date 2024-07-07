@@ -31,9 +31,7 @@ class Boolean extends Fields
         }
 
         return <<<EOT
-            <label style='font-weight: normal'>
-            <input type="checkbox" class="valid-target form-control" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="1" {$checked} {$onclick} />{$text}
-            </label>
+        <label style='font-weight: normal'><input type="checkbox" class="valid-target form-control" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="1" {$checked} {$onclick} />{$text}</label>
         EOT;
     }
 
