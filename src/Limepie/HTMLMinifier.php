@@ -68,6 +68,19 @@ class HTMLMinifier
     }
 
     /**
+     * Template Literals 보호.
+     *
+     * @param string $script
+     * @return string
+     */
+    private function protectTemplateLiterals($script)
+    {
+        return \preg_replace_callback('/`(?:\\\.|[^`\\\])*`/s', function ($matches) {
+            return '##TEMPLATE_LITERAL' . \base64_encode($matches[0]) . '##';
+        }, $script);
+    }
+
+    /**
      * script 태그 처리.
      *
      * @param mixed $input
@@ -88,7 +101,7 @@ class HTMLMinifier
 
             $scriptContent = \preg_replace('/\s+/', ' ', $scriptContent);
 
-            return \str_replace($matches[1], $scriptContent, $scriptTag);
+            return \str_replace($matches[1], \trim($scriptContent), $scriptTag);
         }, $input);
     }
 
@@ -99,6 +112,8 @@ class HTMLMinifier
      */
     private function processJavaScript($script)
     {
+        $script = $this->protectTemplateLiterals($script);
+
         // 여러 줄 주석 제거
         $script = \preg_replace('/\/\*[\s\S]*?\*\//', '', $script);
 
@@ -113,7 +128,9 @@ class HTMLMinifier
             }
         }
 
-        return \implode("\n", $processedLines);
+        $script = \implode("\n", $processedLines);
+
+        return $this->restoreTemplateLiterals($script);
     }
 
     /**
@@ -140,13 +157,23 @@ class HTMLMinifier
                     break;
                 }
 
-                if (('"' === $char || "'" === $char || '`' === $char) && '\\' !== $prevChar) {
+                if (('"' === $char || "'" === $char) && '\\' !== $prevChar) {
                     $inString   = true;
                     $stringChar = $char;
                     $result .= $char;
-                } elseif ('/' === $char && '*' !== $nextChar && '\\' !== $prevChar) {
+                } elseif ('/' === $char && '\\' !== $prevChar) {
                     // 정규식 시작 가능성 체크
-                    $inRegex = true;
+                    $j = $i - 1;
+                    // 정규식 앞에 올 수 있는 문자들을 체크
+                    $validRegexPrefixes = [' ', '=', '(', '[', '!', '&', '|', ':', '^', ',', '?', '+', '-', '~', '*', '/', '%', '<', '>'];
+
+                    while ($j >= 0 && \in_array($line[$j], $validRegexPrefixes)) {
+                        --$j;
+                    }
+
+                    if ($j < 0 || \in_array($line[$j], $validRegexPrefixes)) {
+                        $inRegex = true;
+                    }
                     $result .= $char;
                 } else {
                     $result .= $char;
@@ -162,6 +189,11 @@ class HTMLMinifier
 
                 if ('/' === $char && '\\' !== $prevChar) {
                     $inRegex = false;
+
+                    // 정규식 플래그 추가
+                    while ($i + 1 < $length && \preg_match('/[gimsuy]/', $line[$i + 1])) {
+                        $result .= $line[++$i];
+                    }
                 }
             }
         }
@@ -267,5 +299,18 @@ class HTMLMinifier
         return \preg_replace_callback('/##PHP_BLOCK(.+?)##/', function ($matches) {
             return \base64_decode($matches[1]);
         }, $input);
+    }
+
+    /**
+     * Template Literals 복원.
+     *
+     * @param string $script
+     * @return string
+     */
+    private function restoreTemplateLiterals($script)
+    {
+        return \preg_replace_callback('/##TEMPLATE_LITERAL(.+?)##/', function ($matches) {
+            return \base64_decode($matches[1]);
+        }, $script);
     }
 }
