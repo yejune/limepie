@@ -1215,34 +1215,102 @@ function get_redirect_code($code = 301)
     return $code;
 }
 
-function get_encode_return_url($default = '/')
+/**
+ * GET 파라미터로 주어진 return_url을 디코딩하고, URL 인코딩된 쿼리 스트링을 반환합니다.
+ *
+ * @return string URL 인코딩된 return_url 쿼리 스트링
+ */
+function build_qs_return_url()
 {
-    if (isset($_GET['return_url'])) {
-        $urlRequestUrl = \rawurldecode($_GET['return_url']);
-    } elseif ($default) {
-        $urlRequestUrl = \rawurldecode($default);
-    } else {
-        $urlRequestUrl = $_SERVER['REQUEST_URI'];
-    }
+    // get_return_url 함수를 사용하여 URL을 가져옵니다.
+    $urlRequestUrl = get_return_url();
 
     if ($urlRequestUrl) {
-        return '?return_url=' . \rawurlencode($urlRequestUrl);
+        return '?return_url=' . rawurlencode($urlRequestUrl);
     }
 
     return '';
 }
 
-function get_return_url($default = '/')
+/**
+ * 특정 규칙에 따라 return_url을 디코딩하고, URL 인코딩된 쿼리 스트링을 반환합니다.
+ *
+ * @param string $default 기본 경로, return_url이 없을 때 사용됩니다
+ *
+ * @return string URL 인코딩된 return_url 쿼리 스트링
+ */
+function build_qs_return_url_by_rule($default = '/')
 {
-    if (isset($_GET['return_url'])) {
-        $urlRequestUrl = \rawurldecode($_GET['return_url']);
-    } elseif ($default) {
-        $urlRequestUrl = \rawurldecode($default);
-    } else {
-        $urlRequestUrl = $_SERVER['REQUEST_URI'];
+    // get_return_url_by_rule 함수를 사용하여 URL을 가져옵니다.
+    $urlRequestUrl = get_return_url_by_rule($default);
+
+    if ($urlRequestUrl) {
+        return '?return_url=' . rawurlencode($urlRequestUrl);
     }
 
-    return $urlRequestUrl;
+    return '';
+}
+
+/**
+ * 현재 URL을 기준으로 return_url 파라미터를 생성합니다.
+ *
+ * @return string URL 인코딩된 return_url 쿼리 스트링
+ */
+function build_qs_current_return_url()
+{
+    // get_current_url_path 함수를 사용하여 현재 URL을 가져옵니다.
+    return build_qs_return_url_by_rule(get_current_url_path());
+}
+
+/**
+ * GET 파라미터로 주어진 return_url을 디코딩하고, 경로를 반환합니다.
+ *
+ * @return string 디코딩된 return_url 경로
+ */
+function get_return_url()
+{
+    if (isset($_GET['return_url'])) {
+        return \rawurldecode($_GET['return_url']);
+    }
+
+    return '';
+}
+
+/**
+ * 특정 규칙에 따라 return_url을 디코딩하고, 경로를 반환합니다.
+ *
+ * @param string $default 기본 경로, return_url이 없을 때 사용됩니다
+ *
+ * @return string 디코딩된 return_url 경로
+ */
+function get_return_url_by_rule($default = '/')
+{
+    if (isset($_GET['return_url'])) {
+        return \rawurldecode($_GET['return_url']);
+    }
+
+    if ($default) {
+        return \rawurldecode($default);
+    }
+
+    return get_current_url();
+}
+
+/**
+ * 현재 URL의 경로를 가져와 반환합니다.
+ *
+ * @return string 현재 URL 경로
+ */
+function get_current_url_path()
+{
+    // 서버 변수로부터 현재 URL 경로를 가져옵니다.
+    return \parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+}
+
+function get_current_url()
+{
+    // 서버 변수로부터 현재 URL 경로를 가져옵니다.
+    return $_SERVER['REQUEST_URI'];
 }
 
 function get_daum_postcode(?array $raw = null)
