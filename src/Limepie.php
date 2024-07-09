@@ -1645,6 +1645,15 @@ function is_hx_request()
     return isset($_SERVER['HTTP_HX_REQUEST']) && 'true' == $_SERVER['HTTP_HX_REQUEST'];
 }
 
+function is_hx_swap_paging()
+{
+    if (isset($_SERVER['HTTP_HX_SWAP_TYPE']) && 'paging' == $_SERVER['HTTP_HX_SWAP_TYPE']) {
+        return true;
+    }
+
+    return false;
+}
+
 function parser_reseponce_json_message($response)
 {
     if (\is_string($response)) {
