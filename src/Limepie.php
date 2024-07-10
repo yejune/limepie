@@ -1557,13 +1557,15 @@ function str_folder_name($inputString, $originalDelimiter = '|', $newDelimiter =
 
 function add_https($url)
 {
-    // URL에 "http://" 또는 "https://"가 포함되어 있는지 확인합니다.
-    if (!\preg_match('~^(?:f|ht)tps?://~i', $url)) {
-        // "http://" 또는 "https://"가 없는 경우 "https://"를 추가합니다.
-        $url = 'https://' . $url;
-    }
+    if ($url) {
+        // URL에 "http://" 또는 "https://"가 포함되어 있는지 확인합니다.
+        if (!\preg_match('~^(?:f|ht)tps?://~i', $url)) {
+            // "http://" 또는 "https://"가 없는 경우 "https://"를 추가합니다.
+            $url = 'https://' . $url;
+        }
 
-    return $url;
+        return $url;
+    }
 }
 
 function deleteDirectory($dir)
