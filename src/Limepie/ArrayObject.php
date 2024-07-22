@@ -10,7 +10,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
     public function __construct(null|array|ArrayObject|\stdClass $array)
     {
-        if ($array instanceof \Limepie\ArrayObject) {
+        if ($array instanceof ArrayObject) {
             $this->attributes = $array->attributes;
         } elseif ($array instanceof \stdClass) {
             $this->attributes = (array) $array;
@@ -49,7 +49,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             return $this->buildSetColumn($name, $arguments);
         }
 
-        throw new \Limepie\Exception('"' . $name . '" method not found', 500);
+        throw new Exception('"' . $name . '" method not found', 500);
     }
 
     public function __set($key, $value)
@@ -65,7 +65,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             return $this->attributes[$name];
         }
 
-        throw new \Limepie\Exception(\get_called_class() . ': Column "' . $name . '" not found #9', 500);
+        throw new Exception(\get_called_class() . ': Column "' . $name . '" not found #9', 500);
     }
 
     public function isExists() : bool
@@ -90,7 +90,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
     public function merge(array $array)
     {
-        $attributes = \Limepie\array_change_key_case_recursive($array, \CASE_LOWER);
+        $attributes = \Limepie\arr\change_key_case_recursive($array, \CASE_LOWER);
         $this->attribute += $attributes;
     }
 
@@ -105,7 +105,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             $this->attributes = \array_replace_recursive($this->attributes, $attributes);
         } else {
             if (null === $value) {
-                return new \Limepie\ArrayObject($this->attributes[$attributes] ?? []);
+                return new ArrayObject($this->attributes[$attributes] ?? []);
             }
             $this->attributes[$attributes] = $value;
         }
@@ -130,7 +130,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         $fieldName = \Limepie\decamelize(\substr($name, 3));
 
         if (!$name) {
-            throw new \Limepie\Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #2', 500);
+            throw new Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #2', 500);
         }
 
         // if ('cartItems' == $name) {
@@ -152,7 +152,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             // \var_dump([$name, $default]);
 
             if (true === \is_array($default)) {
-                return new \Limepie\Model();
+                return new Model();
             }
 
             return $default;
@@ -188,7 +188,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
             // \pr($this->attributes);
 
-            throw (new \Limepie\Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #1', 500))
+            throw (new Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #1', 500))
                 ->setDebugMessage(\get_called_class() . ': Column "' . $fieldName . '" not found #1', __FILE__, __LINE__)
                 ->setDisplayMessage('Column "' . $fieldName . '" not found')
             ;
@@ -251,7 +251,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
         foreach ($keys as $key) {
             if (false === \array_key_exists($key, $this->attributes)) {
-                throw new \Limepie\Exception($key . ': unset key not found');
+                throw new Exception($key . ': unset key not found');
             }
             unset($this->attributes[$key]);
         }
@@ -270,7 +270,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
         foreach ($keys as $key) {
             if (false === \array_key_exists($key, $this->attributes)) {
-                throw new \Limepie\Exception($key . ': unset key not found');
+                throw new Exception($key . ': unset key not found');
             }
             unset($this->attributes[$key]);
         }
@@ -283,14 +283,14 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             $message = 'Undefined offset: ' . $offset;
             $code    = 234;
 
-            throw new \Limepie\Exception($message, $code);
+            throw new Exception($message, $code);
         }
 
         return $this->attributes[$offset];
         // return isset($this->attributes[$offset]) ? $this->attributes[$offset] : null;
     }
 
-    public function toArray(\Closure $callbackFunction = null)
+    public function toArray(?\Closure $callbackFunction = null)
     {
         $attributes = $this->buildArray($this);
 
@@ -325,7 +325,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
     private function buildArray($d)
     {
-        if ($d instanceof \Limepie\ArrayObject) {
+        if ($d instanceof ArrayObject) {
             $d = \array_map(__METHOD__, $d->attributes);
         }
 
@@ -346,7 +346,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
     public function usort(callable $compareFunc) : self
     {
         if (true !== \usort($this->attributes, $compareFunc)) {
-            throw new \Limepie\Exception('usort() failed');
+            throw new Exception('usort() failed');
         }
 
         return $this;

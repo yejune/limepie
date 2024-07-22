@@ -148,7 +148,7 @@ class Search extends Fields
                 $coverUrl = '';
 
                 if (isset($itemText['id'])) {
-                    $coverUrl = $itemText['cover_url'];
+                    $coverUrl = $itemText['cover_url'] ?? '';
                     $itemText = $itemText['text'];
                 }
                 $disabled2 = '';

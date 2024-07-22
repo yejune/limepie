@@ -108,31 +108,7 @@ class SelectModal extends Fields
         }
 
         return <<<EOT
-        <div class="select-modal-wrap">
-            <div class="modal fade" id="select-modal{$id}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="select-modal-label{$id}" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h1 class="modal-title fs-5" id="select-modal-label">{$property['label']}.</h1>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            {$html}
-                        </div>
-                        <div class="modal-footer d-none">
-                            <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Close</button>
-                            <button type="button" class="btn btn-primary">선택하세요.</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <input type="hidden" name="{$key}" class="valid-target select-modal-value" id="value_{$id}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$value}">
-            <div class="input-group dropdown-icon">
-                {$prepend}
-                <input type="text" id="target_{$id}" class="select-modal-text form-control cursor-pointer bg-white  {$class}"  {$style} placeholder="선택하세요." readonly  data-bs-toggle="modal" data-bs-target="#select-modal{$id}" value="{$selectText}">
-                {$append}
-            </div>
-        </div>
+        <div class="select-modal-wrap"><div class="modal fade" id="select-modal{$id}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="select-modal-label{$id}" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h1 class="modal-title fs-5" id="select-modal-label">{$property['label']}.</h1><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body">{$html}</div><div class="modal-footer d-none"><button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Close</button><button type="button" class="btn btn-primary">선택하세요.</button></div></div></div></div><input type="hidden" name="{$key}" class="valid-target select-modal-value" id="value_{$id}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$value}"><div class="input-group dropdown-icon">{$prepend}<input type="text" id="target_{$id}" class="select-modal-text form-control cursor-pointer bg-white  {$class}"  {$style} placeholder="선택하세요." readonly  data-bs-toggle="modal" data-bs-target="#select-modal{$id}" value="{$selectText}">{$append}</div></div>
         EOT;
     }
 

@@ -27,15 +27,45 @@ class Datetime extends Fields
         if (isset($property['readonly']) && $property['readonly']) {
             $readonly = ' readonly="readonly"';
         }
+        $style = '';
+
+        if (isset($property['style']) && $property['style']) {
+            $style = ' style="' . $property['style'] . '"';
+        }
 
         $onchange = '';
 
+        if (isset($property['event'])) {
+            $function = '';
+            $type     = [];
+
+            if (isset($property['event']['function'])) {
+                $function = $property['event']['function'];
+            }
+
+            if (isset($property['event']['type'])) {
+                $type = $property['event']['type'];
+            }
+
+            if ($type) {
+                foreach ($type as $event) {
+                    if ('onchange' === $event) {
+                        $onchange .= ' onchange="' . \str_replace('"', '\"', $function) . '"';
+                    }
+
+                    if ('onload' === $event) {
+                        $onchange .= ' data-onload="' . \str_replace('"', '\"', $function) . '"';
+                    }
+                }
+            }
+        }
+
         if (isset($property['onchange']) && $property['onchange']) {
-            $onchange = ' onchange="' . \str_replace('"', '\"', $property['onchange']) . '"';
+            $onchange .= ' onchange="' . \str_replace('"', '\"', $property['onchange']) . '"';
         }
 
         return <<<EOT
-        <input type="datetime-local" class="valid-target form-control" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}"{$readonly}{$onchange} />
+        <input type="datetime-local" class="valid-target form-control" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$value}" data-default="{$default}"{$readonly}{$onchange}{$style} />
         EOT;
     }
 

@@ -146,7 +146,7 @@ class Validation
         });
 
         Validation::addMethod('in', function ($value, $name, $param) {
-            $enum = \Limepie\array_value_flatten($param);
+            $enum = \Limepie\arr\value_flatten($param);
 
             return $this->optional($value) || false !== \in_array($value, $enum, false);
         });
