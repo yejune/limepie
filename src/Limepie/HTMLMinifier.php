@@ -71,6 +71,7 @@ class HTMLMinifier
      * Template Literals 보호.
      *
      * @param string $script
+     *
      * @return string
      */
     private function protectTemplateLiterals($script)
@@ -152,7 +153,7 @@ class HTMLMinifier
             $prevChar = ($i > 0) ? $line[$i - 1] : '';
 
             if (!$inString && !$inRegex) {
-                if ('/' === $char && '/' === $nextChar) {
+                if ('/' === $char && '/' === $nextChar && '\\' !== $prevChar) {
                     // 한 줄 주석 시작, 여기서 처리 중단
                     break;
                 }
@@ -162,16 +163,14 @@ class HTMLMinifier
                     $stringChar = $char;
                     $result .= $char;
                 } elseif ('/' === $char && '\\' !== $prevChar) {
-                    // 정규식 시작 가능성 체크
+                    // 정규식 시작 가능성 체크 (이 부분 수정)
                     $j = $i - 1;
-                    // 정규식 앞에 올 수 있는 문자들을 체크
-                    $validRegexPrefixes = [' ', '=', '(', '[', '!', '&', '|', ':', '^', ',', '?', '+', '-', '~', '*', '/', '%', '<', '>'];
 
-                    while ($j >= 0 && \in_array($line[$j], $validRegexPrefixes)) {
+                    while ($j >= 0 && \ctype_space($line[$j])) {
                         --$j;
                     }
 
-                    if ($j < 0 || \in_array($line[$j], $validRegexPrefixes)) {
+                    if ($j < 0 || \preg_match('/[\(\[=,:!&|?+\-~*\/%<>^]$/', \substr($line, 0, $j + 1))) {
                         $inRegex = true;
                     }
                     $result .= $char;
@@ -194,11 +193,39 @@ class HTMLMinifier
                     while ($i + 1 < $length && \preg_match('/[gimsuy]/', $line[$i + 1])) {
                         $result .= $line[++$i];
                     }
+
+                    // 정규식 종료 후 추가 체크 (이 부분 추가)
+                    $nextNonSpaceChar = $this->getNextNonSpaceChar($line, $i + 1);
+
+                    if ($nextNonSpaceChar && !\in_array($nextNonSpaceChar, [';', ')', ']', '}', ','])) {
+                        $inRegex = true; // 정규식이 아닐 수 있으므로 다시 정규식 모드로 진입
+                    }
                 }
             }
         }
 
         return $result;
+    }
+
+    /**
+     * 다음 공백이 아닌 문자 가져오기.
+     *
+     * @param string $line
+     * @param int    $startIndex
+     *
+     * @return null|string
+     */
+    private function getNextNonSpaceChar($line, $startIndex)
+    {
+        $length = \strlen($line);
+
+        for ($i = $startIndex; $i < $length; ++$i) {
+            if (!\ctype_space($line[$i])) {
+                return $line[$i];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -305,6 +332,7 @@ class HTMLMinifier
      * Template Literals 복원.
      *
      * @param string $script
+     *
      * @return string
      */
     private function restoreTemplateLiterals($script)
