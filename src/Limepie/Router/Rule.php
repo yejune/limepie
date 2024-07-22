@@ -2,6 +2,8 @@
 
 namespace Limepie\Router;
 
+use Limepie\Exception;
+
 class Rule
 {
     public static $keys = [
@@ -52,7 +54,7 @@ class Rule
                 }
             } elseif (true === isset($default['method'])) {
                 if (true === \is_array($default['method'])) {
-                    throw new \Limepie\Exception('Change property name method to methods');
+                    throw new Exception('Change property name method to methods');
                 }
 
                 if ('all' == $default['method']) {
@@ -74,7 +76,7 @@ class Rule
                             $returns[$key] = $value;
                         } else {
                             if ('properties' === $key) {
-                                $returns['properties'] = \Limepie\array_merge_deep($returns['properties'], $value);
+                                $returns['properties'] = \Limepie\arr\merge_deep($returns['properties'], $value);
                             } else {
                                 $returns['properties'][$key] = $value;
                             }
