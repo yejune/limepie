@@ -684,7 +684,7 @@ function seq2key($seq)
 
 function keytoseq($key)
 {
-    if (1 === \preg_match('#^__([0]+)?(?P<seq>\d+)__$#', $key, $m)) {
+    if (1 === \preg_match('#^__([0]+)?(?P<seq>\d+)__$#', (string) $key, $m)) {
         return (int) $m['seq'];
     }
 
