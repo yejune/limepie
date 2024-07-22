@@ -211,7 +211,7 @@ class Compiler
 
         $phpTag .= '|';
 
-        $tokens = \preg_split('/(' . $phpTag . '<!--{(?!`)|{{!--|"{{|\'{{|\/\*{(?!`)|(?<!`)}-->|(?<!`)}\*\/|}}"|--}}|}}\'|(?:\.\.\.\.)*{|{(?!`)|(?<!`)})/i', $source, -1, \PREG_SPLIT_DELIM_CAPTURE);
+        $tokens = \preg_split('/(' . $phpTag . '<!--{(?!`)|{{!--|"{{|`{|\'{{|\/\*{(?!`)|(?<!`)}-->|(?<!`)}\*\/|}}"|}`;|}`|--}}|}}\'|(?:\.\.\.\.)*{|{(?!`)|(?<!`)})/i', $source, -1, \PREG_SPLIT_DELIM_CAPTURE);
 
         $line      = 0;
         $isOpen    = 0;
@@ -250,6 +250,7 @@ class Compiler
                 case '<!--{':
                 case '/*{':
                 case '"{{':
+                case '`{':
                 case "'{{":
                 case '{':
                     $isOpen = $_index;
@@ -263,6 +264,8 @@ class Compiler
                 case '}*/':
                 case '}}"':
                 case "}}'":
+                case '}`;':
+                case '}`':
                 case '}':
                     if ($_index - 2 !== $isOpen) {
                         break; // switch exit
@@ -1184,19 +1187,34 @@ class Compiler
         if ($this->postfilter) {
             $source = $this->filter($source, 'post');
         }
-        // +9 cpl직접수정방지
-        $sourceSize = \strlen($cplHead) + 9 + \strlen($initCode) + \strlen($source);
 
-        $source = $cplHead . \str_pad((string) $sourceSize, 9, '0', \STR_PAD_LEFT) . $initCode . $source;
+        $sourceSize = \strlen($cplHead) + 9 + \strlen($initCode) + \strlen($source);
+        $source     = $cplHead . \str_pad((string) $sourceSize, 9, '0', \STR_PAD_LEFT) . $initCode . $source;
 
         \file_put_contents($cplPath, $source, \LOCK_EX);
 
-        if (\filesize($cplPath) !== \strlen($source)) {
+        // 파일 시스템 동기화
+        \system('sync');
+
+        $retries  = 5;
+        $fileSize = 0;
+
+        while ($retries > 0 && $fileSize !== \strlen($source)) {
+            \clearstatcache(true, $cplPath);
+            $fileSize = \filesize($cplPath);
+
+            if ($fileSize !== \strlen($source)) {
+                \usleep(100000); // 100ms 대기
+                --$retries;
+            }
+        }
+
+        // echo $retries;
+
+        if ($fileSize !== \strlen($source)) {
             \unlink($cplPath);
 
-            throw new Compiler\Exception(\filesize($cplPath) . ' | ' . \strlen($source) . ' Problem by concurrent access. Just retry after some seconds. "<b>' . $cplPath . '</b>"');
-
-            exit;
+            throw new Compiler\Exception($fileSize . ' | ' . \strlen($source) . ' Problem by concurrent access. Just retry after some seconds. "<b>' . $cplPath . '</b>"');
         }
     }
 
