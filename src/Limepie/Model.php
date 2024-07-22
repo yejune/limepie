@@ -2615,6 +2615,8 @@ class Model extends ArrayObject
         }
 
         if ($attributes) {
+            $attributes = $this->buildDataType($attributes);
+
             foreach ($this->joinModels as $joinModelInfomation) {
                 $joinModel          = $joinModelInfomation['model'];
                 $joinClassAliasName = $joinModel->tableAliasName;
