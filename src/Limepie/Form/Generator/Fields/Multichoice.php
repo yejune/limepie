@@ -74,7 +74,7 @@ class Multichoice extends Fields
             }
 
             $html = <<<EOT
-            <div class="flex-wrap btn-group-toggle">
+            <div class="btn-group flex-wrap btn-group-toggle">
             {$buttons}
             </div>
             EOT;
