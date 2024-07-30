@@ -209,9 +209,31 @@ class Compiler
             $phpTag .= '|<%(?!`)|(?<!`)%>';
         }
 
-        $phpTag .= '|';
+        //        $phpTag .= '|';
 
-        $tokens = \preg_split('/(' . $phpTag . '<!--{(?!`)|{{!--|"{{|`{|\'{{|\/\*{(?!`)|(?<!`)}-->|(?<!`)}\*\/|}}"|}`;|}`|--}}|}}\'|(?:\.\.\.\.)*{|{(?!`)|(?<!`)})/i', $source, -1, \PREG_SPLIT_DELIM_CAPTURE);
+        $tokens = \preg_split('/(' . \implode('|', [
+            $phpTag,
+            '<!--{(?!`)',
+            '\{\*\*',
+            '\{\*',
+            '{{!--',
+            '"{{',
+            '`{',
+            '\'{{',
+            '\/\*{(?!`)',
+            '(?<!`)}-->',
+            '(?<!`)}\*\/',
+            '}}"',
+            '}`;',
+            '}`',
+            '\*\*\}',
+            '\*\}',
+            '--}}',
+            '}}\'',
+            '(?:\.\.\.\.)*{',
+            '{(?!`)',
+            '(?<!`)})',
+        ]) . '/i', $source, -1, \PREG_SPLIT_DELIM_CAPTURE);
 
         $line      = 0;
         $isOpen    = 0;
@@ -243,6 +265,8 @@ class Compiler
                     }
 
                     break;
+                case '{*':
+                case '{**':
                 case '{{!--':
                     $newTokens[$_index] = '<?php /*';
 
@@ -256,6 +280,8 @@ class Compiler
                     $isOpen = $_index;
 
                     break;
+                case '**}':
+                case '*}':
                 case '--}}':
                     $newTokens[$_index] = '*/ ?>';
 

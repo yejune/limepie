@@ -8,10 +8,13 @@ class Redis
 
     public function __construct(string $dsn, array $options = [], float $timeout = 5.0)
     {
-        $parsedUrl = \parse_url($dsn);
-        $host      = $parsedUrl['scheme'] . '://' . $parsedUrl['host'];
-        $port      = $parsedUrl['port'] ?? 6379; // 기본 포트 6379 사용
-
+        if (\strpos($dsn, '://')) {
+            $parsedUrl = \parse_url($dsn);
+            $host      = $parsedUrl['scheme'] . '://' . $parsedUrl['host'];
+            $port      = $parsedUrl['port'] ?? 6379; // 기본 포트 6379 사용
+        } else {
+            [$host, $port] = \explode(':', $dsn);
+        }
         $this->redis = new \Redis();
         $useTLS      = \str_starts_with($host, 'tls://');
 

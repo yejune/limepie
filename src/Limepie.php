@@ -239,6 +239,27 @@ function get_language() : string
     return $_COOKIE['client-language'] ?? 'ko';
 }
 
+function create_dir($dir, $permissions = 0755)
+{
+    if (!\file_exists($dir)) {
+        $dirs       = explode('/', $dir);
+        $createPath = '';
+
+        foreach ($dirs as $part) {
+            $createPath .= $part . '/';
+
+            if (!\is_dir($createPath)) {
+                if (!\mkdir($createPath)) {
+                    throw new Exception('Cannot create directory: ' . $createPath);
+                }
+                \chmod($createPath, $permissions);
+            }
+        }
+    }
+
+    return true;
+}
+
 function mkdir($dir)
 {
     if (false === \is_file($dir)) {
