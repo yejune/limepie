@@ -33,7 +33,7 @@ class Redis
             }
             $this->redis->connect(
                 $host,
-                $port,
+                (int) $port,
                 $timeout,
                 null,
                 0,
