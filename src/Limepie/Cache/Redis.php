@@ -15,6 +15,7 @@ class Redis
         } else {
             [$host, $port] = \explode(':', $dsn);
         }
+
         $this->redis = new \Redis();
         $useTLS      = \str_starts_with($host, 'tls://');
 
