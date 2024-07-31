@@ -239,6 +239,14 @@ function get_language() : string
     return $_COOKIE['client-language'] ?? 'ko';
 }
 
+function file_put_contents($filename, mixed $data, int $flags = 0, $context = null)
+{
+    $foldername = \dirname($filename);
+    \Limepie\create_dir($foldername);
+
+    return \file_put_contents($filename, $data, $flags, $context);
+}
+
 function create_dir($dir, $permissions = 0755)
 {
     if (!\file_exists($dir)) {
