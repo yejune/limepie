@@ -137,8 +137,8 @@ class Kakaomap extends Fields
 
         $apikey = '';
 
-        if (Di::getResponse()->getPrivate()->getKakaoLogin(null)?->getClientId(null)) {
-            $apikey = Di::getResponse()->getPrivate()?->getKakaoLogin(null)?->getClientId(null);
+        if (Di::getServiceSpecModel()?->getSpec(null)?->getKakaoSocialConnect(null)?->getClientId(null)) {
+            $apikey = Di::getServiceSpecModel()?->getSpec(null)?->getKakaoSocialConnect(null)?->getClientId(null);
         }
 
         if (!$apikey) {
