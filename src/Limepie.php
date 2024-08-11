@@ -19,6 +19,72 @@ function ___($domain, $string, $a, $b)
     return \dngettext($domain, $string, $a, $b);
 }
 
+function utc_date($format)
+{
+    $utcDate = new \DateTime('now', new \DateTimeZone('UTC'));
+
+    return $utcDate->format($format);
+}
+// 받침 유무 판별 함수
+function has_final_consonant($char)
+{
+    $code = \mb_ord($char) - 44032;
+
+    return 0 != $code % 28;
+}
+function add_josa($word, $josa)
+{
+    // UTF-8 인코딩으로 문자열을 처리합니다.
+    $code = \mb_substr($word, -1, 1, 'UTF-8');
+    $len  = \strlen($code);
+
+    // 한글인지, 숫자인지, 영문인지 판별
+    if (\preg_match('/[0-9]/', $code)) {
+        $last_char_type = 'number';
+    } elseif (\preg_match('/[a-zA-Z]/', $code)) {
+        $last_char_type = 'english';
+    } elseif ($len > 1) {
+        $last_char_type = 'korean';
+    } else {
+        $last_char_type = 'other';
+    }
+
+    // 조사를 선택합니다.
+    switch ($josa) {
+        case '은':
+        case '는':
+            if ('korean' == $last_char_type && has_final_consonant($code)) {
+                return $word . '은';
+            }
+
+            return $word . '는';
+        case '이':
+        case '가':
+            if ('korean' == $last_char_type && has_final_consonant($code)) {
+                return $word . '이';
+            }
+
+            return $word . '가';
+        case '와':
+        case '과':
+            if ('korean' == $last_char_type && has_final_consonant($code)) {
+                return $word . '과';
+            }
+
+            return $word . '와';
+        case '을':
+        case '를':
+            if ('korean' == $last_char_type && has_final_consonant($code)) {
+                return $word . '을';
+            }
+
+            return $word . '를';
+
+        default:
+            return $word;
+    }
+}
+
 function decamelize($word)
 {
     if (false === \strpos($word, ' ')) {

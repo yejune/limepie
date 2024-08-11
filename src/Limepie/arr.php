@@ -7,6 +7,30 @@ namespace Limepie\arr;
 use Limepie\ArrayObject;
 use Limepie\Exception;
 
+function replace($description, array $row = [])
+{
+    // preg_replace_callback 함수를 사용하여 정규표현식 패턴에 맞는 부분을 찾아 치환합니다.
+    return \preg_replace_callback(
+        // 정규표현식 패턴: {=로 시작하고 }로 끝나는 패턴을 찾습니다.
+        // (\w+)는 하나 이상의 단어 문자(알파벳, 숫자, 언더스코어)를 캡처합니다.
+        '/\{=(\w+)\}/',
+
+        // 콜백 함수: 매치된 각 패턴에 대해 실행됩니다.
+        function ($matches) use ($row) {
+            // $matches[0]는 전체 매치 (예: {=created_ts})
+            // $matches[1]는 첫 번째 캡처 그룹 (예: created_ts)
+
+            // $row 배열에서 해당 키를 찾아 반환합니다.
+            // 만약 키가 없다면 원래 문자열을 그대로 반환합니다.
+            return $row[$matches[1]] ?? $matches[0];
+        },
+
+        // 원본 문자열
+        $description
+    );
+}
+
+// 숫자 배열을 퍼센트로 변환
 function percent(array $numbers, $precision = 0)
 {
     $result = [];
@@ -25,6 +49,7 @@ function percent(array $numbers, $precision = 0)
 
     return $result;
 }
+
 /**
  * 배열을 html table로 반환.
  *
@@ -57,6 +82,19 @@ function to_html(array $in) : string
     return '';
 }
 
+// 주어진 배열이 연관 배열(associative array)인지 확인
+function is_assoc($array)
+{
+    if (true === \is_array($array)) {
+        $keys = \array_keys($array);
+
+        return \array_keys($keys) !== $keys;
+    }
+
+    return false;
+}
+
+// 배열이 순차적인 정수 키를 가진 "리스트" 형태인지 확인
 function is_list(array $array) : bool
 {
     if (empty($array)) {
@@ -170,6 +208,7 @@ function key_flatten($array)
 
     return $keys;
 }
+
 function value_flatten($array)
 {
     // if (!isset($array) || !\is_array($array)) {
@@ -676,24 +715,6 @@ function flatten_get($data, $flattenKey)
     }
 
     return $data;
-}
-
-/**
- * 배열의 키가 숫자가 아닌 경우를 판별.
- *
- * @param array $array
- *
- * @return bool
- */
-function is_assoc($array)
-{
-    if (true === \is_array($array)) {
-        $keys = \array_keys($array);
-
-        return \array_keys($keys) !== $keys;
-    }
-
-    return false;
 }
 
 // source : https://api.drupal.org/api/drupal/includes%21bootstrap.inc/function/drupal_array_merge_deep_array/7.x
