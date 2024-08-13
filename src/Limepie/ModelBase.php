@@ -694,6 +694,7 @@ class ModelBase extends ArrayObject
                 ->getsByIsSaleAndLtSaleStartDtAndGtSaleEndDt(1, \date('Y-m-d H:i:s'), \date('Y-m-d H:i:s'))
             ;
         */
+
         if (1 === \preg_match('#(?P<type>left)?(j|J)oin(?P<leftKeyName>.*)With(?P<rightKeyName>.*)#', $name, $m)) {
             $this->joinModels[] = [
                 'model' => $arguments[0],

@@ -845,6 +845,7 @@ class Model extends ModelBase
         if (true == $this->deleteLock) {
             return true;
         }
+        // \prx($this->tableName, $this->attributes);
 
         if (true === isset($this->attributes[$this->primaryKeyName])) {
             $sql = <<<SQL
@@ -2171,6 +2172,7 @@ class Model extends ModelBase
         $condition .= $this->condition;
         $binds += $this->binds;
 
+        $groupBy    = $this->getGroupBy();
         $orderBy    = $this->getOrderBy();
         $limit      = $this->getLimit();
         $join       = '';
@@ -2216,6 +2218,7 @@ class Model extends ModelBase
             {$forceIndex}
             {$join}
             {$condition}
+            {$groupBy}
             {$orderBy}
             {$limit}
         SQL;

@@ -19,6 +19,50 @@ function ___($domain, $string, $a, $b)
     return \dngettext($domain, $string, $a, $b);
 }
 
+// 사용 예시
+// Base: /a/b/c, Relative: .
+//   keepCurrent false: /a/b
+//   keepCurrent true:  /a/b/c
+
+// Base: /a/b/c, Relative: ..
+//   keepCurrent false: /a
+//   keepCurrent true:  /a/b
+
+function adjust_path($basePath, $relativePath, $keepCurrent = true) {
+    $basePath = '/' . trim($basePath, '/');
+    $parts = array_filter(explode('/', $basePath), 'strlen');
+
+    if ($relativePath === '' || ($relativePath === '.' && $keepCurrent)) {
+        return '/' . implode('/', $parts);
+    }
+
+    $relativeParts = explode('/', $relativePath);
+    $skipCount = 0;
+
+    foreach (array_reverse($relativeParts) as $part) {
+        if ($part === '.' && !$keepCurrent) {
+            continue;
+        } elseif ($part === '..') {
+            $skipCount++;
+        } else {
+            if ($skipCount > 0) {
+                $skipCount--;
+            } else {
+                array_unshift($parts, $part);
+            }
+        }
+    }
+
+    if ($keepCurrent) {
+        $parts = array_slice($parts, 0, count($parts) - $skipCount);
+    } else {
+        $parts = array_slice($parts, $skipCount);
+    }
+
+    return '/' . implode('/', $parts);
+}
+
+
 function utc_date($format)
 {
     $utcDate = new \DateTime('now', new \DateTimeZone('UTC'));
