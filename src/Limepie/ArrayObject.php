@@ -369,6 +369,29 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return $this;
     }
 
+    public function toCount()
+    {
+        return \count($this->attributes);
+    }
+
+    public function shift($default = null)
+    {
+        if ($this->attributes) {
+            return \Limepie\arr\shift($this->attributes);
+        }
+
+        return $default;
+    }
+
+    public function pull($key, $default = null)
+    {
+        if (isset($this->attributes[$key]) && $this->attributes[$key]) {
+            return \Limepie\arr\shift($this->attributes, $key);
+        }
+
+        return $default;
+    }
+
     public function children(array $data, array $maps = [], $params = [])
     {
         $request   = Di::getRequest();

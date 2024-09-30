@@ -7,6 +7,129 @@ namespace Limepie\arr;
 use Limepie\ArrayObject;
 use Limepie\Exception;
 
+/**
+ * 배열의 첫 번째 요소를 제거하고 그 값을 반환합니다. 키는 유지되지 않습니다.
+ * 원본 배열이 수정됩니다.
+ *
+ * @param array &$array 대상 배열 (참조로 전달)
+ *
+ * @return null|mixed 첫 번째 요소의 값 또는 빈 배열일 경우 null
+ */
+function shift(&$array)
+{
+    if (!\is_array($array) || empty($array)) {
+        return null;
+    }
+    $key   = \key($array);
+    $value = \reset($array);
+    unset($array[$key]);
+
+    return $value;
+}
+
+/**
+ * 배열에서 지정된 키의 값을 제거하고 반환합니다.
+ * 원본 배열이 수정됩니다.
+ *
+ * @param array &$array 대상 배열 (참조로 전달)
+ * @param mixed $key    제거할 키
+ *
+ * @return mixed 제거된 값 또는 키가 없을 경우 null
+ */
+function pull(&$array, $key)
+{
+    if (\array_key_exists($key, $array)) {
+        $value = $array[$key];
+        unset($array[$key]);
+
+        return $value;
+    }
+
+    return null;
+}
+
+function difference($array1, $array2)
+{
+    // 배열의 값을 문자열로 변환
+    $array1 = \array_map('strval', $array1);
+    $array2 = \array_map('strval', $array2);
+
+    // 각 배열에 고유한 요소 찾기
+    $diff1 = \array_diff($array1, $array2);
+    $diff2 = \array_diff($array2, $array1);
+
+    // 결과 반환
+    return [
+        'only_in_first'  => \array_values($diff1),
+        'only_in_second' => \array_values($diff2),
+    ];
+}
+
+function is_same($array1, $array2)
+{
+    // 배열 크기 비교
+    if (\count($array1) !== \count($array2)) {
+        return false;
+    }
+
+    // 배열의 값을 문자열로 변환하고 정렬
+    $sorted1 = \array_map('strval', $array1);
+    $sorted2 = \array_map('strval', $array2);
+    \sort($sorted1);
+    \sort($sorted2);
+
+    // 정렬된 배열 비교
+    return $sorted1 === $sorted2;
+}
+
+function is_diff($array1, $array2)
+{
+    return !\Limepie\arr\is_same($array1, $array2);
+}
+
+// 5점이 3건, 4점이 2건, 3점이 1건이 있는 경우 로직상 가장 많은 것을 가득채우고 그것의 비례에 맞게 나머지를 비율로 채움
+function get_percent_stars($reviewCounts)
+{
+    // 리뷰 카운트 배열: [5점 카운트, 4점 카운트, 3점 카운트, 2점 카운트, 1점 카운트]
+    $totalReviews = \array_sum($reviewCounts);
+
+    if (0 == $totalReviews) {
+        return [
+            'percentages' => [
+                5 => 0,
+                4 => 0,
+                3 => 0,
+                2 => 0,
+                1 => 0,
+            ],
+            'max_group' => null,
+            'max_count' => 0,
+        ];
+    }
+
+    $maxCount    = \max($reviewCounts);
+    $scaleFactor = 100 / $maxCount;  // 최대값을 100%로 스케일링
+
+    $scaledCounts = \array_map(function ($count) use ($scaleFactor) {
+        return \round($count * $scaleFactor, 2);
+    }, $reviewCounts);
+
+    $highestScoreIndex = \array_search($maxCount, $reviewCounts);
+    $highestScoreGroup = 5 - $highestScoreIndex;
+
+    return [
+        'percentages' => [
+            5 => $scaledCounts[0],
+            4 => $scaledCounts[1],
+            3 => $scaledCounts[2],
+            2 => $scaledCounts[3],
+            1 => $scaledCounts[4],
+        ],
+        'max_group' => $highestScoreGroup,
+        'max_count' => $maxCount,
+    ];
+}
+
 function replace($description, array $row = [])
 {
     // preg_replace_callback 함수를 사용하여 정규표현식 패턴에 맞는 부분을 찾아 치환합니다.
@@ -717,6 +840,21 @@ function flatten_get($data, $flattenKey)
     return $data;
 }
 
+function array_rmerge($arr1, $arr2)
+{
+    $merged = $arr1;
+
+    foreach ($arr2 as $key => &$value) {
+        if (\is_array($value) && isset($merged[$key]) && \is_array($merged[$key])) {
+            $merged[$key] = array_rmerge($merged[$key], $value);
+        } else {
+            $merged[$key] = $value;
+        }
+    }
+
+    return $merged;
+}
+
 // source : https://api.drupal.org/api/drupal/includes%21bootstrap.inc/function/drupal_array_merge_deep_array/7.x
 function drupal_array_merge_deep_array($arrays)
 {
@@ -1278,4 +1416,15 @@ function refparse($arr = [], $basepath = '') : array
     // pr($return);
 
     return $return;
+}
+
+function extract_property($array, $propertyName = 'name')
+{
+    $names = [];
+
+    foreach ($array ?? [] as $row) {
+        $names[] = $row[$propertyName];
+    }
+
+    return \implode(',', $names);
 }

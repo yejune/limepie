@@ -117,6 +117,7 @@ class HTMLMinifier
 
         // 여러 줄 주석 제거
         $script = \preg_replace('/\/\*[\s\S]*?\*\//', '', $script);
+        $script = \preg_replace('#//.*#', '', $script);
 
         $lines          = \explode("\n", $script);
         $processedLines = [];

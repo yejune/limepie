@@ -6,6 +6,109 @@ namespace Limepie\dt;
 
 use Limepie\Exception;
 
+/*
+$testCases = [
+    ['2023-12-01', '1D'],
+    ['2023-11-20', '2W'],
+    ['2023-10-15', '3M'],
+    ['2022-12-01', '1Y'],
+    [null, '1D'],
+    ['', '1W'],
+    ['2023-12-05', '1D']
+];
+*/
+function in_range($date, $range = '1D')
+{
+    if (null === $date || '' === $date) {
+        return false;
+    }
+
+    $now        = new \DateTime();
+    $targetDate = new \DateTime($date);
+    $interval   = new \DateInterval('P' . \substr($range, 0, -1) . \substr($range, -1));
+    $rangeStart = (clone $now)->sub($interval);
+
+    return $targetDate >= $rangeStart && $targetDate <= $now;
+}
+
+function get_relative_time($date, $lang = 'ko', $params = [])
+{
+    $defaults = [
+        'threshold_months' => 3,
+        'date_format'      => 'Y-m-d',
+    ];
+    $params = \array_merge($defaults, $params);
+
+    $time = \strtotime($date);
+    $now  = \time();
+    $diff = $now - $time;
+
+    $intervals = [
+        'year'   => 31536000,
+        'month'  => 2592000,
+        'week'   => 604800,
+        'day'    => 86400,
+        'hour'   => 3600,
+        'minute' => 60,
+        'second' => 1,
+    ];
+
+    $translations = [
+        'en' => [
+            'year'     => 'year', 'years' => 'years',
+            'month'    => 'month', 'months' => 'months',
+            'week'     => 'week', 'weeks' => 'weeks',
+            'day'      => 'day', 'days' => 'days',
+            'hour'     => 'hour', 'hours' => 'hours',
+            'minute'   => 'minute', 'minutes' => 'minutes',
+            'second'   => 'second', 'seconds' => 'seconds',
+            'ago'      => 'ago',
+            'just_now' => 'just now',
+        ],
+        'ko' => [
+            'year'     => '년', 'years' => '년',
+            'month'    => '개월', 'months' => '개월',
+            'week'     => '주', 'weeks' => '주',
+            'day'      => '일', 'days' => '일',
+            'hour'     => '시간', 'hours' => '시간',
+            'minute'   => '분', 'minutes' => '분',
+            'second'   => '초', 'seconds' => '초',
+            'ago'      => '전',
+            'just_now' => '방금',
+        ],
+        'ja' => [
+            'year'     => '年', 'years' => '年',
+            'month'    => 'ヶ月', 'months' => 'ヶ月',
+            'week'     => '週間', 'weeks' => '週間',
+            'day'      => '日', 'days' => '日',
+            'hour'     => '時間', 'hours' => '時間',
+            'minute'   => '分', 'minutes' => '分',
+            'second'   => '秒', 'seconds' => '秒',
+            'ago'      => '前',
+            'just_now' => 'たった今',
+        ],
+    ];
+
+    $t = $translations[$lang] ?? $translations['en'];
+
+    foreach ($intervals as $interval => $seconds) {
+        $count = \floor($diff / $seconds);
+
+        if ($count > 0) {
+            if ('month' == $interval && $count >= $params['threshold_months']) {
+                return \date($params['date_format'], $time);
+            }
+            $unit = 1 == $count ? $interval : $interval . 's';
+
+            return 'ko' == $lang || 'ja' == $lang
+                ? "{$count}{$t[$unit]}{$t['ago']}"
+                : "{$count} {$t[$unit]} {$t['ago']}";
+        }
+    }
+
+    return $t['just_now'];
+}
+
 function format(string $date, $format)
 {
     $time = \strtotime($date);
@@ -30,8 +133,9 @@ function format(string $date, $format)
     return \date($format, $time);
 }
 
-function date($date)
+function date(string $date)
 {
+    // return 'aaa';
     $format = 'Y년 m월 d일 A h:i';
     $date   = \str_replace(['AM', 'PM'], ['오전', '오후'], \date($format, \strtotime($date)));
 

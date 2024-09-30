@@ -213,6 +213,7 @@ class Compiler
 
         $tokens = \preg_split('/(' . \implode('|', [
             $phpTag,
+            '\$\{(?!`)',
             '<!--{(?!`)',
             '\{\*\*',
             '\{\*',
@@ -245,6 +246,10 @@ class Compiler
             $newTokens[$_index] = $tokens[$_index];
 
             switch (\strtolower($tokens[$_index])) {
+                case '${': // pass
+                    $newTokens[$_index] = $tokens[$_index];
+
+                    break;
                 case '<?php':
                 case '<?=':
                 case '<?':

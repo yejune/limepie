@@ -21,6 +21,23 @@ class Textarea extends Fields
         $className = $property['element_class'] ?? '';
         $counter   = '';
         $maxLength = '';
+        $readonly  = '';
+
+        if (isset($property['readonly']) && $property['readonly']) {
+            $readonly = ' readonly="readonly"';
+        }
+        $style = '';
+
+        if (true === isset($property['readonly']) && $property['readonly']) {
+            if (false === isset($property['element_style'])) {
+                $property['element_style'] = '';
+            }
+            // $property['element_style'] .= ' pointer-events: none;';
+        }
+
+        if (isset($property['element_style']) && $property['element_style']) {
+            $style = ' style="' . $property['element_style'] . '"';
+        }
 
         if (
             isset($property['counter']) && $property['counter']
@@ -32,7 +49,7 @@ class Textarea extends Fields
         }
 
         return <<<EOT
-        <textarea class="valid-target form-control {$className}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}" rows="{$rows}"{$maxLength}>{$value}</textarea>{$counter}
+        <textarea class="valid-target form-control {$className}" {$readonly} {$style} name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}" rows="{$rows}"{$maxLength}>{$value}</textarea>{$counter}
         EOT;
     }
 

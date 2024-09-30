@@ -19,6 +19,182 @@ function ___($domain, $string, $a, $b)
     return \dngettext($domain, $string, $a, $b);
 }
 
+function get_filename_from_url(string $url) : string
+{
+    $path = \parse_url($url, PHP_URL_PATH) ?? '';
+
+    return \rawurlencode(\pathinfo($path, PATHINFO_BASENAME)) ?: '';
+}
+
+function highlight_keyword($text, $keywords, $useHash = false, $className = 'highlight')
+{
+    // keywords가 배열인지 확인
+    if (!\is_array($keywords)) {
+        // \prx($keywords);
+
+        return $text;
+
+        throw new Exception('Keywords must be an array');
+    }
+
+    // 빈 배열 체크
+    if (empty($keywords)) {
+        return $text; // 키워드가 없으면 원본 텍스트 반환
+    }
+
+    // 각 키워드에 대해 preg_quote 적용
+    $quotedKeywords = \array_map(function ($keyword) {
+        return \preg_quote($keyword['name'], '/');
+    }, $keywords);
+
+    // 키워드들을 정규표현식 패턴으로 변환
+    $keywordPattern = \implode('|', $quotedKeywords);
+
+    if ($useHash) {
+        $pattern = '/[#|＃](' . $keywordPattern . ')(?=[^\p{L}\p{N}]|$)/u';
+    } else {
+        $pattern = '/(' . $keywordPattern . ')(?=[^\p{L}\p{N}]|$)/u';
+    }
+
+    // 콜백 함수를 사용하여 매치된 키워드를 하이라이트된 버전으로 교체
+    return \preg_replace_callback($pattern, function ($matches) use ($useHash, $className) {
+        if ($useHash) {
+            return '<span class="' . \htmlspecialchars($className) . '">#' . \htmlspecialchars($matches[1]) . '</span>';
+        }
+
+        return '<span class="' . \htmlspecialchars($className) . '">' . \htmlspecialchars($matches[0]) . '</span>';
+    }, $text);
+}
+function wrap_space_em($text)
+{
+    // 첫 번째 공백을 찾습니다.
+    $pos = \strpos($text, ' ');
+
+    // 공백이 없으면 원래 텍스트를 그대로 반환합니다.
+    if (false === $pos) {
+        return $text;
+    }
+
+    // 첫 번째 부분(공백 전까지)과 두 번째 부분(공백 포함 이후)을 나눕니다.
+    $firstPart  = \substr($text, 0, $pos);
+    $secondPart = \substr($text, $pos);
+
+    // 두 번째 부분을 <em> 태그로 감쌉니다.
+    return $firstPart . '<em>' . \trim($secondPart) . '</em>';
+}
+function star_item_percentage($averagePercentage, $starNumber)
+{
+    // 입력값 유효성 검사
+    if ($averagePercentage < 0 || $averagePercentage > 100) {
+        throw new Exception('Average percentage must be between 0 and 100');
+    }
+
+    if ($starNumber < 1 || $starNumber > 5) {
+        throw new Exception('Star number must be between 1 and 5');
+    }
+
+    // 별 하나당 백분율 계산 (20%씩)
+    $percentagePerStar = 20;
+
+    // 해당 별의 최대 백분율 계산
+    $maxPercentageForStar = $starNumber * $percentagePerStar;
+
+    // 해당 별의 채워짐 정도 계산
+    return \max(0, \min(100, ($averagePercentage - ($starNumber - 1) * $percentagePerStar) / $percentagePerStar * 100));
+}
+
+function get_hash_tags($text)
+{
+    $pattern = '/[＃|#]([\p{L}\p{N}_]+)/u';
+    \preg_match_all($pattern, $text, $matches);
+
+    if (isset($matches[1]) && $matches[1] && \is_array($matches[1])) {
+        return \array_unique($matches[1]);
+    }
+
+    return [];
+}
+
+function clean_tags($input)
+{
+    $input   = \strip_tags($input, '<div><img><p><br>');
+    $pattern = '/<(p|div)([^>]*)>|<img([^>]*\ssrc=["\']([^"\']*)["\'][^>]*)>/i';
+
+    $replacement = function ($matches) {
+        if (!empty($matches[1])) {
+            // <p>, <div>, <span> 태그
+            return "<{$matches[1]}>";
+        }
+
+        if (!empty($matches[4])) {
+            // <img> 태그
+            return "<img src=\"{$matches[4]}\">";
+        }
+
+        return $matches[0];
+    };
+
+    return \preg_replace_callback($pattern, $replacement, $input);
+}
+
+function get_age_group($birthdate, $language = 'en')
+{
+    // 현재 날짜와 시간을 가져옵니다.
+    $currentDate = new DateTime();
+
+    // 생일 문자열을 DateTime 객체로 변환합니다.
+    $birthDate = new DateTime($birthdate);
+
+    // 나이를 계산합니다.
+    $age = $currentDate->diff($birthDate)->y;
+
+    // 나이대를 계산합니다.
+    $ageGroup = \floor($age / 10) * 10;
+
+    // 언어별 형식 정의
+    $formats = [
+        'en' => function ($ageGroup) {
+            return ($ageGroup >= 100) ? '100 and above' : $ageGroup . 's';
+        },
+        'ko' => function ($ageGroup) {
+            return ($ageGroup >= 100) ? '100세 이상' : $ageGroup . '대';
+        },
+        'ja' => function ($ageGroup) {
+            return ($ageGroup >= 100) ? '100歳以上' : $ageGroup . '代';
+        },
+        'zh' => function ($ageGroup) {
+            return ($ageGroup >= 100) ? '100岁及以上' : $ageGroup . '多岁';
+        },
+        // 다른 언어를 여기에 추가할 수 있습니다.
+    ];
+
+    // 지원하지 않는 언어의 경우 영어를 기본값으로 사용합니다.
+    if (!isset($formats[$language])) {
+        $language = 'en';
+    }
+
+    // 해당 언어의 형식에 따라 나이대를 반환합니다.
+    return $formats[$language]($ageGroup);
+}
+function thumb_url($url, $param)
+{
+    // URL 파싱
+    $parsedUrl = \parse_url($url);
+
+    // 경로와 쿼리 문자열 분리
+    $path = $parsedUrl['path'];
+
+    // 새로운 경로 생성
+    $newPath = '/' . $param . $path;
+
+    // 새로운 URL 조합
+    return (isset($parsedUrl['scheme']) ? $parsedUrl['scheme'] . '://' : '')
+              . (isset($parsedUrl['host']) ? $parsedUrl['host'] : '')
+              . $newPath
+              . (isset($parsedUrl['query']) ? '?' . $parsedUrl['query'] : '')
+              . (isset($parsedUrl['fragment']) ? '#' . $parsedUrl['fragment'] : '');
+}
+
 // 사용 예시
 // Base: /a/b/c, Relative: .
 //   keepCurrent false: /a/b
@@ -28,40 +204,42 @@ function ___($domain, $string, $a, $b)
 //   keepCurrent false: /a
 //   keepCurrent true:  /a/b
 
-function adjust_path($basePath, $relativePath, $keepCurrent = true) {
-    $basePath = '/' . trim($basePath, '/');
-    $parts = array_filter(explode('/', $basePath), 'strlen');
+function adjust_path($basePath, $relativePath, $keepCurrent = true)
+{
+    $basePath = '/' . \trim($basePath, '/');
+    $parts    = \array_filter(explode('/', $basePath), 'strlen');
 
-    if ($relativePath === '' || ($relativePath === '.' && $keepCurrent)) {
-        return '/' . implode('/', $parts);
+    if ('' === $relativePath || ('.' === $relativePath && $keepCurrent)) {
+        return '/' . \implode('/', $parts);
     }
 
     $relativeParts = explode('/', $relativePath);
-    $skipCount = 0;
+    $skipCount     = 0;
 
-    foreach (array_reverse($relativeParts) as $part) {
-        if ($part === '.' && !$keepCurrent) {
+    foreach (\array_reverse($relativeParts) as $part) {
+        if ('.' === $part && !$keepCurrent) {
             continue;
-        } elseif ($part === '..') {
-            $skipCount++;
+        }
+
+        if ('..' === $part) {
+            ++$skipCount;
         } else {
             if ($skipCount > 0) {
-                $skipCount--;
+                --$skipCount;
             } else {
-                array_unshift($parts, $part);
+                \array_unshift($parts, $part);
             }
         }
     }
 
     if ($keepCurrent) {
-        $parts = array_slice($parts, 0, count($parts) - $skipCount);
+        $parts = \array_slice($parts, 0, count($parts) - $skipCount);
     } else {
-        $parts = array_slice($parts, $skipCount);
+        $parts = \array_slice($parts, $skipCount);
     }
 
-    return '/' . implode('/', $parts);
+    return '/' . \implode('/', $parts);
 }
-
 
 function utc_date($format)
 {
@@ -1510,7 +1688,7 @@ function qsa($key, $value = null)
             $queryString[$key] = $value;
         }
     }
-    $query = http_build_query($queryString);
+    $query = \http_build_query($queryString);
 
     return $query ? '?' . $query : '';
 }
@@ -1794,7 +1972,14 @@ function is_hx_swap_paging()
 
     return false;
 }
+function is_hx_swap_change()
+{
+    if (isset($_SERVER['HTTP_HX_SWAP_TYPE']) && 'change' == $_SERVER['HTTP_HX_SWAP_TYPE']) {
+        return true;
+    }
 
+    return false;
+}
 function parser_reseponce_json_message($response)
 {
     if (\is_string($response)) {

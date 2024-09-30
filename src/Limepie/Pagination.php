@@ -208,7 +208,6 @@ class Pagination
         $totalCount = $countModel->getCount();
 
         if (!$urlPattern) {
-
             $qs = $_SERVER['QUERY_STRING'] ?? '';
 
             if (0 < \strlen($qs)) {
@@ -239,8 +238,8 @@ class Pagination
         $totalPages = (0 === $recordsPerPage ? 0 : (int) \ceil($totalCount / $recordsPerPage));
 
         if ($totalPages && $currentPage > $totalPages) {
-            if($returnTypeNull) {
-                return [null, null];
+            if ($returnTypeNull) {
+                return [null, null, null, null];
             }
             // $currentPage = $totalPages;
 
@@ -259,7 +258,7 @@ class Pagination
             exit;
         }
         $offset     = ($currentPage - 1) * $recordsPerPage;
-        $pagination = \Limepie\Pagination::getHtml($totalCount, $currentPage, $recordsPerPage, $pagesPerBlock, $urlPattern);
+        $pagination = Pagination::getHtml($totalCount, $currentPage, $recordsPerPage, $pagesPerBlock, $urlPattern);
         $listModels = $listModel->limit($offset, $recordsPerPage)->gets();
 
         return [$listModels, $pagination, $totalCount, $totalPages];
@@ -286,7 +285,7 @@ class Pagination
             $currentPage = $totalPages;
         }
         $offset     = ($currentPage - 1) * $recordsPerPage;
-        $pagination = \Limepie\Pagination::getHtml($totalCount, $currentPage, $recordsPerPage, $pagesPerBlock, $urlPattern);
+        $pagination = Pagination::getHtml($totalCount, $currentPage, $recordsPerPage, $pagesPerBlock, $urlPattern);
 
         return [$pagination, $offset, $recordsPerPage, $totalPages];
     }

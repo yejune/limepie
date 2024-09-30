@@ -275,6 +275,13 @@ class Model extends ModelBase
                 if ($leftKeyValue && true === isset($data[$leftKeyValue]) && $data[$leftKeyValue]) {
                     $data[$leftKeyValue]->deleteLock = $class->deleteLock;
                     // $data[$attr]->parentNode = $class->parentNode;
+
+                    // match 한다음 match키를 삭제하는지?
+                    // match후 parentNode로 갈경우 같은 키 때문에 문제될수 있는것 방지
+                    if (false === $class->matchKeyRemove && 'seq' !== $rightKeyName) {
+                        // prx($leftKeyName, $rightKeyName, $data);
+                        unset($data[$leftKeyValue][$rightKeyName]);
+                    }
                 }
 
                 if ($parentTableName) {
@@ -356,13 +363,15 @@ class Model extends ModelBase
                         $rightKeyMapValueByLeftKey = [];
 
                         foreach ($rightKeyMapValues[$leftKeyValue] as $key => $value) {
-                            if (false === \in_array($remapKey, $value->allColumns, true)) {
-                                throw new Exception($remapKey . ' column not found #3');
-                            }
+                            // parent node에서 온것을 허용하기 위해
+                            // 어차피 value에 없으면 오류가 나기때문에
+                            // if (false === \in_array($remapKey, $value->allColumns, true)) {
+                            //     throw new Exception($remapKey . ' column not found #3');
+                            // }
 
-                            if (false === \array_key_exists($remapKey, $value->attributes)) {
-                                throw new Exception($remapKey . ' column is null, not match');
-                            }
+                            // if (false === \array_key_exists($remapKey, $value->attributes)) {
+                            //     throw new Exception($remapKey . ' column is null, not match');
+                            // }
 
                             if ($class->secondKeyName) {
                                 $rightKeyMapValueByLeftKey[$value[$remapKey]][$value[$class->secondKeyName]] = $value;
@@ -479,6 +488,11 @@ class Model extends ModelBase
             if ($this->sequenceName === $column) {
             } else {
                 if ('created_ts' === $column || 'updated_ts' === $column) {
+                    if ($this->attributes[$column] ?? false) {
+                        $columns[]            = '`' . $column . '`';
+                        $values[]             = ':' . $column;
+                        $binds[':' . $column] = $this->attributes[$column];
+                    }
                 } elseif ('ip' === $column) {
                     $columns[]            = '`' . $column . '`';
                     $binds[':' . $column] = $this->attributes[$column] ?? \Limepie\getIp();
@@ -703,6 +717,10 @@ class Model extends ModelBase
             if ($this->sequenceName === $column) {
             } else {
                 if ('created_ts' === $column || 'updated_ts' === $column) {
+                    if ($this->attributes[$column] ?? false) {
+                        $this->changeColumns[]            = "`{$this->tableName}`." . '`' . $column . '` = :' . $column;
+                        $this->changeBinds[':' . $column] = $this->attributes[$column];
+                    }
                 } elseif ('ip' === $column) {
                     $this->changeColumns[]            = "`{$this->tableName}`." . '`' . $column . '` = inet6_aton(:' . $column . ')';
                     $this->changeBinds[':' . $column] = $this->attributes[$column] ?? \Limepie\getIp();
@@ -1072,7 +1090,7 @@ class Model extends ModelBase
                 }
             }
 
-            $keyName = '';
+            // $keyName = '';
         }
 
         if ($condition) {
@@ -1080,9 +1098,14 @@ class Model extends ModelBase
         }
 
         if (true === $isGroup) {
+            if ($this->groupKey) {
+                $group = $this->groupBy . ' AS ' . $this->groupKey;
+            } else {
+                $group = $this->groupBy;
+            }
             $sql = <<<SQL
                 SELECT
-                    {$this->groupBy},
+                    {$group},
                     COUNT(*) as row_count
                 FROM
                     `{$this->tableName}` AS `{$this->tableAliasName}`
@@ -1128,6 +1151,7 @@ class Model extends ModelBase
                 $attributes = [];
                 $class      = \get_called_class();
 
+                // group by 한 키네임
                 foreach ($data as $index => &$row) {
                     if ($this->keyName) {
                         $attributes[$row[$this->keyName]] = new $class($this->getConnect(), $row);
@@ -1185,7 +1209,7 @@ class Model extends ModelBase
                 }
             }
 
-            $keyName = '';
+            // $keyName = '';
         }
 
         if ($condition) {
@@ -1258,7 +1282,7 @@ class Model extends ModelBase
                 }
             }
 
-            $keyName = '';
+            // $keyName = '';
         }
 
         if ($condition) {
@@ -1318,10 +1342,23 @@ class Model extends ModelBase
                 $join .= 'INNER';
             }
 
+            if (isset($joinModel['target']) && $joinModel['target']) {
+                $targetTableName = $joinModel['target']->tableAliasName;
+            } else {
+                $targetTableName = $this->tableAliasName;
+            }
+
             $join .= ' JOIN'
                    . PHP_EOL . '         `' . $tableName . '` AS `' . $tableAliasName . '`'
                    . PHP_EOL . '    ON'
-                   . PHP_EOL . '        `' . $this->tableAliasName . '`.`' . $joinLeft . '` = `' . $tableAliasName . '`.`' . $joinRight . '`';
+                   . PHP_EOL . '        `' . $targetTableName . '`.`' . $joinLeft . '` = `' . $tableAliasName . '`.`' . $joinRight . '`';
+
+            if ($class->onCondition) {
+                $join .= ' AND ' . $class->onCondition;
+                $binds += $class->onConditionBinds;
+            }
+            // \prx($class->onCondition);
+
             $join .= ' ' . \implode(', ', $class->forceIndexes);
 
             $selectColumns .= PHP_EOL . '        , ' . $class->getSelectColumns($tableAliasName, isCount: $isCount);
@@ -1407,7 +1444,8 @@ class Model extends ModelBase
                     }
                 }
 
-                $keyName = '';
+                // 조인시 왜 keyname을 무력화 했던것인가?
+                // $keyName = '';
             }
 
             if ($condition) {
@@ -1490,12 +1528,24 @@ class Model extends ModelBase
                     $parentTableName = $joinModel->tableName . '_model';
                 }
 
-                $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
+                if ($joinModel->parentNode) {
+                    // parentNode가 true일 경우, 부모에게 자식을 붙인다.
+                    foreach ($tmp ?? [] as $key => $value) {
+                        if ('seq' !== $key) {
+                            $row[$key] = $value;
+                        }
+                    }
+                    // $attribute->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
+                } else {
+                    $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
 
-                if ($row[$parentTableName]) {
-                    $row[$parentTableName]->deleteLock = $joinModel->deleteLock;
-                    // $row[$parentTableName]->parentNode = $joinModel->parentNode;
+                    if ($row[$parentTableName]) {
+                        $row[$parentTableName]->deleteLock = $joinModel->deleteLock;
+                        // $row[$parentTableName]->parentNode = $joinModel->parentNode;
+                    }
                 }
+
+                // $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
 
                 if ($joinModel->oneToOne) {
                     $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
@@ -1514,6 +1564,7 @@ class Model extends ModelBase
             //         }
             //     }
             // }
+            // \prx($keyName);
 
             if ($keyName) {
                 if (false === \array_key_exists($this->keyName, $row)) {
@@ -1592,7 +1643,7 @@ class Model extends ModelBase
                     }
                 }
 
-                $keyName = '';
+                // $keyName = '';
             }
 
             if ($condition) {
@@ -1669,11 +1720,21 @@ class Model extends ModelBase
                     $parentTableName = $joinModel->tableName . '_model';
                 }
 
-                $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
+                if ($joinModel->parentNode) {
+                    // parentNode가 true일 경우, 부모에게 자식을 붙인다.
+                    foreach ($tmp ?? [] as $key => $value) {
+                        if ('seq' !== $key) {
+                            $attributes[$key] = $value;
+                        }
+                    }
+                    // $attribute->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
+                } else {
+                    $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
 
-                if ($attributes[$parentTableName]) {
-                    $attributes[$parentTableName]->deleteLock = $joinModel->deleteLock;
-                    // $attributes[$parentTableName]->parentNode = $joinModel->parentNode;
+                    if ($attributes[$parentTableName]) {
+                        $attributes[$parentTableName]->deleteLock = $joinModel->deleteLock;
+                        // $attributes[$parentTableName]->parentNode = $joinModel->parentNode;
+                    }
                 }
 
                 if ($joinModel->oneToOne) {
@@ -1750,6 +1811,22 @@ class Model extends ModelBase
         $this->orderBy = \implode(', ', $orderBy);
 
         return $this;
+    }
+
+    private function isValidSeqArgument(string $operator, mixed $argument) : bool
+    {
+        if ('seq' !== \strtolower(\substr($operator, -3))) {
+            return true; // Not a Seq operator, so it's valid
+        }
+
+        if (\is_array($argument)) {
+            // Check if all elements in the array are numeric
+            return \array_reduce($argument, function (bool $allNumeric, mixed $element) {
+                return $allNumeric && \is_numeric($element);
+            }, true);
+        }
+
+        return \is_numeric($argument) || null === $argument;
     }
 
     protected function buildAnd(string $name, array $arguments, int $offset = 3) : self
@@ -1866,6 +1943,8 @@ class Model extends ModelBase
             $binds     = [];
             $conds     = [];
 
+            // \prx($name, $arguments);
+
             foreach ($splitKeys as $index => $splitKey) {
                 ++$this->bindcount;
 
@@ -1875,6 +1954,13 @@ class Model extends ModelBase
 
                 if (true === \is_object($arguments)) {
                     throw (new Exception($this->tableName . ' ' . $key . ' argument error'))->setDebugMessage('page not found', __FILE__, __LINE__);
+                }
+
+                // orperator의 마지막이 seq로 끝난다면, 숫자가 아니라면 처리하지 않음
+                if (!$this->isValidSeqArgument($key, $arguments[$index] ?? null)) {
+                    // \prx($this->tableName, $this->condition, $name, $arguments, $index, $key, $arguments[$index] ?? null);
+
+                    continue;
                 }
 
                 if (false === \array_key_exists($index, $arguments)) {
@@ -2064,7 +2150,7 @@ class Model extends ModelBase
                 }
             }
 
-            $keyName = '';
+            // $keyName = '';
         }
 
         if ($condition) {
@@ -2135,12 +2221,24 @@ class Model extends ModelBase
                     $parentTableName = $joinModel->tableName . '_model';
                 }
 
-                $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
+                if ($joinModel->parentNode) {
+                    // parentNode가 true일 경우, 부모에게 자식을 붙인다.
+                    foreach ($tmp ?? [] as $key => $value) {
+                        if ('seq' !== $key) {
+                            $attributes[$key] = $value;
+                        }
+                    }
+                    // $attribute->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
+                } else {
+                    $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
 
-                if ($attributes[$parentTableName]) {
-                    $attributes[$parentTableName]->deleteLock = $joinModel->deleteLock;
-                    // $attributes[$parentTableName]->parentNode = $joinModel->parentNode;
+                    if ($attributes[$parentTableName]) {
+                        $attributes[$parentTableName]->deleteLock = $joinModel->deleteLock;
+                        // $attributes[$parentTableName]->parentNode = $joinModel->parentNode;
+                    }
                 }
+
+                // $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
 
                 if ($joinModel->oneToOne) {
                     $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
@@ -2270,11 +2368,21 @@ class Model extends ModelBase
                     $parentTableName = $joinModel->tableName . '_model';
                 }
 
-                $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
+                if ($joinModel->parentNode) {
+                    // parentNode가 true일 경우, 부모에게 자식을 붙인다.
+                    foreach ($tmp ?? [] as $key => $value) {
+                        if ('seq' !== $key) {
+                            $row[$key] = $value;
+                        }
+                    }
+                    // $attribute->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
+                } else {
+                    $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
 
-                if ($row[$parentTableName]) {
-                    $row[$parentTableName]->deleteLock = $joinModel->deleteLock;
-                    // $row[$parentTableName]->parentNode = $joinModel->parentNode;
+                    if ($row[$parentTableName]) {
+                        $row[$parentTableName]->deleteLock = $joinModel->deleteLock;
+                        // $row[$parentTableName]->parentNode = $joinModel->parentNode;
+                    }
                 }
 
                 if ($joinModel->oneToOne) {
@@ -2288,7 +2396,7 @@ class Model extends ModelBase
 
             if ($keyName) {
                 if (false === \array_key_exists($this->keyName, $row)) {
-                    \pr($keyName, $this->keyName, $row);
+                    \prx($keyName, $this->keyName, $row);
 
                     throw new Exception('gets by ' . $this->tableName . ' "' . $keyName . '" column not found #7');
                 }

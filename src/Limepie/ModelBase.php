@@ -60,6 +60,8 @@ class ModelBase extends ArrayObject
 
     public $rightKeyName = '';
 
+    public $matchKeyRemove = true;
+
     public $and = [];
 
     public $condition = '';
@@ -94,6 +96,8 @@ class ModelBase extends ArrayObject
 
     public $parentNode = false;
 
+    public $parentNodeFlag = 0;
+
     public $callbackColumns = [];
 
     // update시 변경된 컬럼
@@ -102,9 +106,15 @@ class ModelBase extends ArrayObject
     // update시 변경된 변수
     public $changeBinds = [];
 
+    public $onCondition = '';
+
+    public $onConditionBinds = [];
+
     // public $sameColumns = [];
 
     public $groupBy;
+
+    public $groupKey;
 
     public function __construct(?\PDO $pdo = null, array|ArrayObject $attributes = [])
     {
@@ -134,6 +144,8 @@ class ModelBase extends ArrayObject
 
     public function __call(string $name, array $arguments = [])
     {
+        //        prx($name, $arguments);
+
         if (0 === \strpos($name, 'groupBy')) {
             return $this->buildGroupBy($name, $arguments, 7);
         }
@@ -182,6 +194,7 @@ class ModelBase extends ArrayObject
             return $this->buildForceIndex($name, $arguments, 10);
         }
 
+        // match하면서 addAllColumns 같이 하기
         if (0 === \strpos($name, 'matchAll')) {
             $this->addAllColumns();
 
@@ -190,6 +203,18 @@ class ModelBase extends ArrayObject
 
         if (0 === \strpos($name, 'match')) {
             return $this->buildMatch($name, $arguments);
+        }
+
+        if (0 === \strpos($name, 'relations')) {
+            return $this->buildRelation($name, $arguments, true);
+        }
+
+        if (0 === \strpos($name, 'relation')) {
+            return $this->buildRelation($name, $arguments, false);
+        }
+
+        if (0 === \strpos($name, 'on')) {
+            return $this->buildJoinOn($name, $arguments);
         }
 
         if (0 === \strpos($name, 'join')) {
@@ -549,9 +574,10 @@ class ModelBase extends ArrayObject
         return $sql;
     }
 
-    public function groupBy(string $groupBy) : self
+    public function groupBy(string $groupBy, $groupKey) : self
     {
-        $this->groupBy = $groupBy;
+        $this->groupBy  = $groupBy;
+        $this->groupKey = $groupKey;
 
         return $this;
     }
@@ -697,10 +723,11 @@ class ModelBase extends ArrayObject
 
         if (1 === \preg_match('#(?P<type>left)?(j|J)oin(?P<leftKeyName>.*)With(?P<rightKeyName>.*)#', $name, $m)) {
             $this->joinModels[] = [
-                'model' => $arguments[0],
-                'left'  => \Limepie\decamelize($m['leftKeyName']),
-                'right' => \Limepie\decamelize($m['rightKeyName']),
-                'type'  => $m['type'] ? true : false,
+                'model'  => $arguments[0],
+                'left'   => \Limepie\decamelize($m['leftKeyName']),
+                'right'  => \Limepie\decamelize($m['rightKeyName']),
+                'type'   => $m['type'] ? true : false,
+                'target' => $arguments[1] ?? null,
             ];
         } else {
             throw new Exception('"' . $name . '" syntax error', 1999);
@@ -890,9 +917,10 @@ class ModelBase extends ArrayObject
         return $this->create();
     }
 
-    public function parentNode()
+    public function parentNode($flag = 0)
     {
-        $this->parentNode = true;
+        $this->parentNode     = true;
+        $this->parentNodeFlag = $flag;
 
         return $this;
     }
@@ -1094,6 +1122,22 @@ class ModelBase extends ArrayObject
 
             $this->condition .= \implode(' ', $conds);
             $this->binds += $binds;
+        }
+
+        return $this;
+    }
+
+    protected function buildJoinOn(string $name, array $arguments = [], int $offset = 2) : self
+    {
+        $operator = \substr($name, $offset);
+
+        if (true === \in_array($operator, [')', '('], true) && false === isset($arguments[0])) {
+            $this->onCondition .= $operator;
+        } else {
+            [$conds, $binds] = $this->getConditions($name, $arguments, $offset);
+
+            $this->onCondition .= \implode(' ', $conds);
+            $this->onConditionBinds += $binds;
         }
 
         return $this;
@@ -1389,11 +1433,35 @@ class ModelBase extends ArrayObject
 
     protected function buildMatch(string $name, $arguments) : self
     {
+        if (true === isset($arguments[0])) {
+            $this->matchKeyRemove = $arguments[0];
+        }
+
         if (1 === \preg_match('#match(All)?(?P<leftKeyName>.*)With(?P<rightKeyName>.*)$#U', $name, $m)) {
             $this->leftKeyName  = \Limepie\decamelize($m['leftKeyName']);
             $this->rightKeyName = \Limepie\decamelize($m['rightKeyName']);
         } else {
             throw new Exception('"' . $name . '" syntax error', 1999);
+        }
+
+        return $this;
+    }
+
+    protected function buildRelation(string $name, array $arguments = [], $isMulti = false) : self
+    {
+        $class = $arguments[0];
+
+        if (1 === \preg_match('#relation(s)?(?P<leftKeyName>.*)With(?P<rightKeyName>.*)$#U', $name, $m)) {
+            $class->leftKeyName  = \Limepie\decamelize($m['leftKeyName']);
+            $class->rightKeyName = \Limepie\decamelize($m['rightKeyName']);
+        } else {
+            throw new Exception('"' . $name . '" syntax error', 1999);
+        }
+
+        if ($isMulti) {
+            $this->oneToMany($class);
+        } else {
+            $this->oneToOne($class);
         }
 
         return $this;

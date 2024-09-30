@@ -163,7 +163,7 @@ class Search extends Fields
                 if ((string) $value === (string) $itemValue) {
                     $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemValue . '" selected="selected"' . $disabled2 . '>' . $itemText . '</option>';
                 } else {
-                    $option .= '<option value="' . $itemValue . '" ' . $disabled2 . '>' . $itemText . '</option>';
+                    $option .= '<option  data-cover-url="' . $coverUrl . '" value="' . $itemValue . '" ' . $disabled2 . '>' . $itemText . '</option>';
                 }
                 // }
             }

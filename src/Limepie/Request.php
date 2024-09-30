@@ -76,7 +76,7 @@ class Request
             return $this->buildGet(\Limepie\decamelize(\substr($name, 9)), $arguments);
         }
 
-        throw (new \Limepie\Exception('"' . $name . '" method not found', 404))
+        throw (new Exception('"' . $name . '" method not found', 404))
             ->setDebugMessage('error', __FILE__, __LINE__)
             ->setDebugMessage('유효하지 않은 요청입니다. 잠시후 다시 시도하세요.')
         ;
@@ -85,7 +85,7 @@ class Request
     public function buildGet($name, $arguments)
     {
         if (false === isset($this->pathStore[$name])) {
-            throw new \Limepie\Exception('"' . $name . '" path not found');
+            throw new Exception('"' . $name . '" path not found');
         }
 
         if ($arguments) {
@@ -124,12 +124,27 @@ class Request
         return $this->targetEndpoint;
     }
 
-    public function setLocale($language)
+    public function setLanguage($language)
+    {
+        return $this->setLocale($language);
+    }
+
+    public function getLanguage()
+    {
+        return $this->language;
+    }
+
+    public function setLocale($language, $default = 'ko')
     {
         $this->language = \explode('_', $language)[0];
 
         if (true === isset($this->locales[$this->language])) {
             $this->locale = $this->locales[$this->language];
+        } else {
+            if (true === isset($this->locales[$default])) {
+                $this->language = $default;
+                $this->locale   = $this->locales[$default];
+            }
         }
     }
 
@@ -476,7 +491,7 @@ class Request
         return $returnMethod;
     }
 
-    public function getHeader($key) : null|string
+    public function getHeader($key) : ?string
     {
         return $this->getServer($key);
     }
@@ -1036,11 +1051,11 @@ class Request
     final protected function getQualityHeader(?string $serverIndex, ?string $name) : array
     {
         $returnedParts = [];
-        $parts         = \preg_split('/,\\s*/', (string) $this->getServer($serverIndex), -1, \PREG_SPLIT_NO_EMPTY);
+        $parts         = \preg_split('/,\s*/', (string) $this->getServer($serverIndex), -1, \PREG_SPLIT_NO_EMPTY);
 
         foreach ($parts as $part) {
             $headerParts = [];
-            $tmp         = \preg_split('/\\s*;\\s*/', \trim($part), -1, \PREG_SPLIT_NO_EMPTY);
+            $tmp         = \preg_split('/\s*;\s*/', \trim($part), -1, \PREG_SPLIT_NO_EMPTY);
 
             foreach ($tmp as $headerPart) {
                 if (false !== \strpos($headerPart, '=')) {

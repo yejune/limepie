@@ -16,6 +16,14 @@ class Tinymce extends Fields
         if (0 === \strlen($value) && true === isset($property['default'])) {
             $value = \htmlspecialchars((string) $property['default']);
         }
+        $readonly = '';
+
+        if (true === isset($property['readonly'])) {
+            $readonly = $property['readonly'] ? 'true' : 'false';
+        } else {
+            $readonly = 'false';
+        }
+
         $default = $property['default'] ?? '';
         $rows    = $property['rows']    ?? 3;
         $height  = $property['height']  ?? 300;
@@ -31,8 +39,9 @@ class Tinymce extends Fields
             var id = '#tinymce{$id}';
             var height = {$height};
             var upload = '{$upload}';
+            var readonly = {$readonly};
 
-            editor_tinymce(id, height, upload);
+            editor_tinymce(id, height, upload, readonly);
         });
         </script>
         EOT;
