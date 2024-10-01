@@ -239,7 +239,7 @@ class Pagination
 
         if ($totalPages && $currentPage > $totalPages) {
             if ($returnTypeNull) {
-                return [null, null, null, null];
+                return [null, null, $totalCount, $totalPages];
             }
             // $currentPage = $totalPages;
 
