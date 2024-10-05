@@ -655,37 +655,12 @@ class Model extends ModelBase
         ];
 
         foreach ($this->allColumns as $column) {
-            // if (
-            //     true === isset($this->originAttributes[$column])
-            //     && false == isset($this->rawAttributes[$column])
-            // ) {
-            //     \pr($column);
-
-            //     // null일 경우에는 0과 비교할 가능성이 있으므로
-            //     if (
-            //         null    === $this->attributes[$column]
-            //         || null === $this->originAttributes[$column]
-            //     ) {
-            //         if (null !== $this->attributes[$column] && $this->attributes[$column] === $this->originAttributes[$column]) {
-            //             continue;
-            //         }
-            //     } else {
-            //         if (null !== $this->attributes[$column] && $this->attributes[$column] == $this->originAttributes[$column]) {
-            //             continue;
-            //         }
-            //     }
-            // }
-
             // raw가 아니고 값이 같으면 업데이트 안함
-            // db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 말기
+            // db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 않음
 
             if (false === isset($this->rawAttributes[$column])) {
                 $attr     = $this->attributes[$column]       ?? null;
                 $origAttr = $this->originAttributes[$column] ?? null;
-
-                // if ('quest_mission_type' == $this->tableName) {
-                //     \prx($column, $attr, $origAttr, $this->originAttributes);
-                // }
 
                 // attr과 originAttr가 같으면 continue
                 if ($attr === $origAttr) {
@@ -696,7 +671,7 @@ class Model extends ModelBase
             }
 
             if (true === isset($this->dataStyles[$column])
-                && 'jsons' == $this->dataStyles[$column]) { // json을 jsons로 바꿈
+                && 'jsons' == $this->dataStyles[$column]) {
                 if (true === isset($this->originAttributes[$column]) && $this->originAttributes[$column]) {
                     if ($this->originAttributes[$column] instanceof ArrayObject) {
                         $target = $this->originAttributes[$column]->attributes;
@@ -1154,7 +1129,13 @@ class Model extends ModelBase
                 // group by 한 키네임
                 foreach ($data as $index => &$row) {
                     if ($this->keyName) {
-                        $attributes[$row[$this->keyName]] = new $class($this->getConnect(), $row);
+                        if (\is_callable($this->keyName)) {
+                            $keyName = ($this->keyName)($row);
+                        } else {
+                            $keyName = $row[$this->keyName];
+                        }
+
+                        $attributes[$keyName] = new $class($this->getConnect(), $row);
                     } else {
                         $attributes[] = new $class($this->getConnect(), $row);
                     }
@@ -1386,375 +1367,9 @@ class Model extends ModelBase
         ];
     }
 
-    public function gets(null|array|string $sql = null, array $binds = []) : ?self
-    {
-        $this->attributes      = [];
-        $this->primaryKeyValue = '';
-        $keyName               = $this->keyName;
-
-        if (false === \is_string($sql)) {
-            $args          = $sql;
-            $orderBy       = $this->getOrderBy($args['order'] ?? null);
-            $limit         = $this->getLimit();
-            $condition     = '';
-            $binds         = [];
-            $join          = '';
-            $selectColumns = $this->getSelectColumns(isCount: false);
-
-            if (true === isset($args['condition'])) {
-                $condition = ' ' . $args['condition'];
-            } else {
-                if ($this->condition) {
-                    $condition = '  ' . $this->condition;
-                }
-
-                if ($this->binds) {
-                    $binds = $this->binds;
-                }
-            }
-
-            if (true === isset($args['binds'])) {
-                $binds = $args['binds'];
-            }
-
-            if (!$condition && $this->condition) {
-                $condition = '' . $this->condition;
-                $binds     = $this->binds;
-            }
-
-            if ($this->joinModels) {
-                $joinInfomation = $this->getJoin();
-                $join           = $joinInfomation['join'];
-                $selectColumns .= $joinInfomation['selectColumns'];
-                $binds += $joinInfomation['binds'];
-
-                if ($joinInfomation['condition']) {
-                    if ($condition) {
-                        $condition .= ' ' . $joinInfomation['condition'];
-                    } else {
-                        $condition = $joinInfomation['condition'];
-                    }
-                }
-
-                if ($joinInfomation['orderBy']) {
-                    if ($orderBy) {
-                        $orderBy .= ', ' . $joinInfomation['orderBy'];
-                    } else {
-                        $orderBy = $this->getOrderBy($joinInfomation['orderBy']);
-                    }
-                }
-
-                // 조인시 왜 keyname을 무력화 했던것인가?
-                // $keyName = '';
-            }
-
-            if ($condition) {
-                $condition = ' WHERE ' . $condition;
-            }
-            $forceIndex = \implode(', ', $this->forceIndexes);
-
-            $groupBy = $this->getGroupBy();
-
-            if ($this->rawColumnString) {
-                $selectColumns .= ',' . $this->rawColumnString;
-            }
-
-            $sql = <<<SQL
-                SELECT
-                    {$selectColumns}
-                FROM
-                    `{$this->tableName}` AS `{$this->tableAliasName}`
-                {$forceIndex}
-                {$join}
-                {$condition}
-                {$groupBy}
-                {$orderBy}
-                {$limit}
-            SQL;
-            $this->condition = $condition;
-        } else {
-            $orderBy = $this->getOrderBy($args['order'] ?? null);
-            $limit   = $this->getLimit();
-
-            $sql .= <<<SQL
-                {$orderBy}
-                {$limit}
-            SQL;
-        }
-
-        $this->query = $sql;
-        $this->binds = $binds;
-
-        if (static::$debug) {
-            $this->print(null, null);
-            Timer::start();
-        }
-
-        $data = $this->getConnect()->gets($sql, $binds, false);
-
-        if (static::$debug) {
-            echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
-        }
-
-        $class = \get_called_class();
-
-        $attributes = [];
-
-        foreach ($data as $index => &$row) {
-            foreach ($this->callbackColumns as $callbackColumn) {
-                $row[$callbackColumn['alias']] = $callbackColumn['callback']($row[$callbackColumn['column']]);
-            }
-
-            foreach ($this->joinModels as $joinModelInfomation) {
-                $joinModel          = $joinModelInfomation['model'];
-                $joinClassAliasName = $joinModel->tableAliasName;
-                $joinClassName      = $joinModel->tableName;
-
-                $tmp = [];
-
-                foreach ($row as $innerFieldName => &$innerFieldValue) {
-                    if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
-                        $tmp[\Limepie\str_replace_first($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
-
-                        unset($row[$innerFieldName]);
-                    }
-                }
-
-                unset($innerFieldValue);
-
-                if ($joinModel->newTableName) {
-                    $parentTableName = $joinModel->newTableName;
-                } else {
-                    $parentTableName = $joinModel->tableName . '_model';
-                }
-
-                if ($joinModel->parentNode) {
-                    // parentNode가 true일 경우, 부모에게 자식을 붙인다.
-                    foreach ($tmp ?? [] as $key => $value) {
-                        if ('seq' !== $key) {
-                            $row[$key] = $value;
-                        }
-                    }
-                    // $attribute->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
-                } else {
-                    $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
-
-                    if ($row[$parentTableName]) {
-                        $row[$parentTableName]->deleteLock = $joinModel->deleteLock;
-                        // $row[$parentTableName]->parentNode = $joinModel->parentNode;
-                    }
-                }
-
-                // $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
-
-                if ($joinModel->oneToOne) {
-                    $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
-                }
-
-                if ($joinModel->oneToMany) {
-                    $this->oneToManies[$parentTableName] = $joinModel->oneToMany;
-                }
-            }
-
-            // if (12803 == Di::getLoginUserModel(null)?->getSeq(0)) {
-            //     foreach ($row as $r => $d) {
-            //         if (false !== \strpos($r, '_seq')) {
-            //             \pr($r);
-            //             unset($row[$r]);
-            //         }
-            //     }
-            // }
-            // \prx($keyName);
-
-            if ($keyName) {
-                if (false === \array_key_exists($this->keyName, $row)) {
-                    throw new Exception('gets ' . $this->tableName . ' "' . $this->keyName . '" column not found #5');
-                }
-
-                $attributes[$row[$keyName]] = new $class($this->getConnect(), $row);
-            } else {
-                $attributes[] = new $class($this->getConnect(), $row);
-            }
-        }
-
-        if ($attributes) {
-            $attributes       = $this->getRelations($attributes);
-            $this->attributes = $attributes;
-            // $this->originAttributes = $this->attributes;
-
-            return $this;
-        }
-
-        return $this->empty();
-    }
-
     public function get1(null|array|string $sql = null, array $binds = []) : ?self
     {
         throw new Exception('not support get1');
-    }
-
-    public function get(null|array|string $sql = null, array $binds = []) : ?self
-    {
-        $this->attributes      = [];
-        $this->primaryKeyValue = '';
-
-        if (true === \is_array($sql) || null === $sql) {
-            $args          = $sql;
-            $selectColumns = $this->getSelectColumns();
-            $condition     = '';
-            $join          = '';
-            $binds         = [];
-            $orderBy       = $this->getOrderBy();
-
-            if (true === isset($args['condition'])) {
-                $condition = ' ' . $args['condition'];
-            } else {
-                if ($this->condition) {
-                    $condition = '  ' . $this->condition;
-                }
-
-                if ($this->binds) {
-                    $binds = $this->binds;
-                }
-            }
-
-            if (true === isset($args['binds'])) {
-                $binds = $args['binds'];
-            }
-
-            if (!$condition && $this->condition) {
-                $condition = '' . $this->condition;
-                $binds     = $this->binds;
-            }
-
-            // $selectColumns = $this->getSelectColumns();
-
-            if ($this->joinModels) {
-                $joinInfomation = $this->getJoin();
-                $join           = $joinInfomation['join'];
-                $selectColumns .= $joinInfomation['selectColumns'];
-                $binds += $joinInfomation['binds'];
-
-                if ($joinInfomation['condition']) {
-                    if ($condition) {
-                        $condition .= ' ' . $joinInfomation['condition'];
-                    } else {
-                        $condition = $joinInfomation['condition'];
-                    }
-                }
-
-                // $keyName = '';
-            }
-
-            if ($condition) {
-                $condition = ' WHERE ' . $condition;
-            }
-
-            if ($this->rawColumnString) {
-                $selectColumns .= ',' . $this->rawColumnString;
-            }
-            $sql = <<<SQL
-                SELECT
-                    {$selectColumns}
-                FROM
-                    `{$this->tableName}` AS `{$this->tableAliasName}`
-                {$join}
-                {$condition}
-                {$orderBy}
-                LIMIT 1
-            SQL;
-
-            $this->condition = $condition;
-        }
-
-        $this->query = $sql;
-        $this->binds = $binds;
-
-        if (static::$debug) {
-            $this->print(null, null);
-            Timer::start();
-        }
-
-        if ($this->getConnect() instanceof \PDO) {
-            if (static::$debug) {
-                $this->print(null, null);
-                Timer::start();
-            }
-
-            $attributes = $this->getConnect()->get($sql, $binds, false);
-
-            foreach ($this->callbackColumns as $callbackColumn) {
-                $attributes[$callbackColumn['alias']] = $callbackColumn['callback']($attributes[$callbackColumn['column']]);
-            }
-
-            if (static::$debug) {
-                echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
-            }
-        } else {
-            throw new Exception('lost connection');
-        }
-
-        if ($attributes) {
-            $attributes = $this->buildDataType($attributes);
-
-            foreach ($this->joinModels as $joinModelInfomation) {
-                $joinModel          = $joinModelInfomation['model'];
-                $joinClassAliasName = $joinModel->tableAliasName;
-                $joinClassName      = $joinModel->tableName;
-
-                $tmp = [];
-
-                foreach ($attributes as $innerFieldName => &$innerFieldValue) {
-                    if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
-                        $tmp[\Limepie\str_replace_first($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
-
-                        unset($attributes[$innerFieldName]);
-                    }
-                }
-
-                unset($innerFieldValue);
-
-                if ($joinModel->newTableName) {
-                    $parentTableName = $joinModel->newTableName;
-                } else {
-                    $parentTableName = $joinModel->tableName . '_model';
-                }
-
-                if ($joinModel->parentNode) {
-                    // parentNode가 true일 경우, 부모에게 자식을 붙인다.
-                    foreach ($tmp ?? [] as $key => $value) {
-                        if ('seq' !== $key) {
-                            $attributes[$key] = $value;
-                        }
-                    }
-                    // $attribute->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
-                } else {
-                    $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
-
-                    if ($attributes[$parentTableName]) {
-                        $attributes[$parentTableName]->deleteLock = $joinModel->deleteLock;
-                        // $attributes[$parentTableName]->parentNode = $joinModel->parentNode;
-                    }
-                }
-
-                if ($joinModel->oneToOne) {
-                    $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
-                }
-
-                if ($joinModel->oneToMany) {
-                    $this->oneToManies[$parentTableName] = $joinModel->oneToMany;
-                }
-            }
-
-            $this->attributes       = $this->getRelation($attributes);
-            $this->originAttributes = $this->attributes;
-
-            $this->primaryKeyValue = $this->attributes[$this->primaryKeyName] ?? null;
-
-            return $this;
-        }
-
-        return $this->empty();
     }
 
     protected function buildGroupBy(string $groupByString, array $arguments) : self
@@ -1956,7 +1571,7 @@ class Model extends ModelBase
                     throw (new Exception($this->tableName . ' ' . $key . ' argument error'))->setDebugMessage('page not found', __FILE__, __LINE__);
                 }
 
-                // orperator의 마지막이 seq로 끝난다면, 숫자가 아니라면 처리하지 않음
+                // orperator의 마지막이 seq로 끝날경우, 값이 숫자나 null이 아니라면 처리하지 않음
                 if (!$this->isValidSeqArgument($key, $arguments[$index] ?? null)) {
                     // \prx($this->tableName, $this->condition, $name, $arguments, $index, $key, $arguments[$index] ?? null);
 
@@ -2120,6 +1735,91 @@ class Model extends ModelBase
         return [$conds, $binds];
     }
 
+    public function get(null|array|string $sql = null, array $binds = []) : ?self
+    {
+        $this->attributes      = [];
+        $this->primaryKeyValue = '';
+
+        if (true === \is_array($sql) || null === $sql) {
+            $args          = $sql;
+            $selectColumns = $this->getSelectColumns();
+            $condition     = '';
+            $join          = '';
+            $binds         = [];
+            $orderBy       = $this->getOrderBy();
+
+            if (true === isset($args['condition'])) {
+                $condition = ' ' . $args['condition'];
+            } else {
+                if ($this->condition) {
+                    $condition = '  ' . $this->condition;
+                }
+
+                if ($this->binds) {
+                    $binds = $this->binds;
+                }
+            }
+
+            if (true === isset($args['binds'])) {
+                $binds = $args['binds'];
+            }
+
+            if (!$condition && $this->condition) {
+                $condition = '' . $this->condition;
+                $binds     = $this->binds;
+            }
+
+            // $selectColumns = $this->getSelectColumns();
+
+            if ($this->joinModels) {
+                $joinInfomation = $this->getJoin();
+                $join           = $joinInfomation['join'];
+                $selectColumns .= $joinInfomation['selectColumns'];
+                $binds += $joinInfomation['binds'];
+
+                if ($joinInfomation['condition']) {
+                    if ($condition) {
+                        $condition .= ' ' . $joinInfomation['condition'];
+                    } else {
+                        $condition = $joinInfomation['condition'];
+                    }
+                }
+
+                // $keyName = '';
+            }
+
+            if ($condition) {
+                $condition = ' WHERE ' . $condition;
+            }
+
+            if ($this->rawColumnString) {
+                $selectColumns .= ',' . $this->rawColumnString;
+            }
+            $sql = <<<SQL
+                SELECT
+                    {$selectColumns}
+                FROM
+                    `{$this->tableName}` AS `{$this->tableAliasName}`
+                {$join}
+                {$condition}
+                {$orderBy}
+                LIMIT 1
+            SQL;
+
+            $this->condition = $condition;
+        }
+
+        $this->query = $sql;
+        $this->binds = $binds;
+
+        if (static::$debug) {
+            $this->print(null, null);
+            Timer::start();
+        }
+
+        return $this->executeGet($sql, $binds);
+    }
+
     protected function buildGetBy(string $name, array $arguments, int $offset) : ?self
     {
         $this->attributes = [];
@@ -2176,6 +1876,11 @@ class Model extends ModelBase
         $this->query     = $sql;
         $this->binds     = $binds;
 
+        return $this->executeGet($sql, $binds);
+    }
+
+    public function executeGet(string $sql, array $binds = []) : ?self
+    {
         if ($this->getConnect() instanceof \PDO) {
             if (static::$debug) {
                 $this->print(null, null);
@@ -2275,7 +1980,6 @@ class Model extends ModelBase
         $limit      = $this->getLimit();
         $join       = '';
         $forceIndex = \implode(', ', $this->forceIndexes);
-        $keyName    = $this->keyName;
 
         if ($this->joinModels) {
             $joinInfomation = $this->getJoin();
@@ -2330,15 +2034,126 @@ class Model extends ModelBase
             Timer::start();
         }
 
+        return $this->executeGets($sql, $binds);
+    }
+
+    public function gets(null|array|string $sql = null, array $binds = []) : ?self
+    {
+        $this->attributes      = [];
+        $this->primaryKeyValue = '';
+
+        if (false === \is_string($sql)) {
+            $args          = $sql;
+            $orderBy       = $this->getOrderBy($args['order'] ?? null);
+            $limit         = $this->getLimit();
+            $condition     = '';
+            $binds         = [];
+            $join          = '';
+            $selectColumns = $this->getSelectColumns(isCount: false);
+
+            if (true === isset($args['condition'])) {
+                $condition = ' ' . $args['condition'];
+            } else {
+                if ($this->condition) {
+                    $condition = '  ' . $this->condition;
+                }
+
+                if ($this->binds) {
+                    $binds = $this->binds;
+                }
+            }
+
+            if (true === isset($args['binds'])) {
+                $binds = $args['binds'];
+            }
+
+            if (!$condition && $this->condition) {
+                $condition = '' . $this->condition;
+                $binds     = $this->binds;
+            }
+
+            if ($this->joinModels) {
+                $joinInfomation = $this->getJoin();
+                $join           = $joinInfomation['join'];
+                $selectColumns .= $joinInfomation['selectColumns'];
+                $binds += $joinInfomation['binds'];
+
+                if ($joinInfomation['condition']) {
+                    if ($condition) {
+                        $condition .= ' ' . $joinInfomation['condition'];
+                    } else {
+                        $condition = $joinInfomation['condition'];
+                    }
+                }
+
+                if ($joinInfomation['orderBy']) {
+                    if ($orderBy) {
+                        $orderBy .= ', ' . $joinInfomation['orderBy'];
+                    } else {
+                        $orderBy = $this->getOrderBy($joinInfomation['orderBy']);
+                    }
+                }
+
+                // 조인시 왜 keyname을 무력화 했던것인가?
+                // $keyName = '';
+            }
+
+            if ($condition) {
+                $condition = ' WHERE ' . $condition;
+            }
+            $forceIndex = \implode(', ', $this->forceIndexes);
+
+            $groupBy = $this->getGroupBy();
+
+            if ($this->rawColumnString) {
+                $selectColumns .= ',' . $this->rawColumnString;
+            }
+
+            $sql = <<<SQL
+                SELECT
+                    {$selectColumns}
+                FROM
+                    `{$this->tableName}` AS `{$this->tableAliasName}`
+                {$forceIndex}
+                {$join}
+                {$condition}
+                {$groupBy}
+                {$orderBy}
+                {$limit}
+            SQL;
+            $this->condition = $condition;
+        } else {
+            $orderBy = $this->getOrderBy($args['order'] ?? null);
+            $limit   = $this->getLimit();
+
+            $sql .= <<<SQL
+                {$orderBy}
+                {$limit}
+            SQL;
+        }
+
+        $this->query = $sql;
+        $this->binds = $binds;
+
+        if (static::$debug) {
+            $this->print(null, null);
+            Timer::start();
+        }
+
+        return $this->executeGets($sql, $binds);
+    }
+
+    public function executeGets(string $sql, array $binds = []) : ?self
+    {
         $data = $this->getConnect()->gets($sql, $binds, false);
 
         if (static::$debug) {
             echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
         }
 
-        $attributes = [];
-
         $class = \get_called_class();
+
+        $attributes = [];
 
         foreach ($data as $index => &$row) {
             foreach ($this->callbackColumns as $callbackColumn) {
@@ -2385,6 +2200,8 @@ class Model extends ModelBase
                     }
                 }
 
+                // $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
+
                 if ($joinModel->oneToOne) {
                     $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
                 }
@@ -2394,22 +2211,33 @@ class Model extends ModelBase
                 }
             }
 
-            if ($keyName) {
-                if (false === \array_key_exists($this->keyName, $row)) {
-                    \prx($keyName, $this->keyName, $row);
-
-                    throw new Exception('gets by ' . $this->tableName . ' "' . $keyName . '" column not found #7');
+            if ($this->keyName) {
+                if (\is_callable($this->keyName)) {
+                    $keyName = ($this->keyName)($row);
+                } else {
+                    if (false === \array_key_exists($this->keyName, $row)) {
+                        throw new Exception('gets ' . $this->tableName . ' "' . $this->keyName . '" column not found #5');
+                    }
+                    $keyName = $row[$this->keyName];
                 }
-
-                $attributes[$row[$keyName]] = new $class($this->getConnect(), $row);
             } else {
-                $attributes[$row[$this->primaryKeyName]] = new $class($this->getConnect(), $row);
+                $keyName = $row[$this->primaryKeyName];
             }
+
+            $attributes[$keyName] = new $class($this->getConnect(), $row);
         }
         unset($row);
 
         if ($attributes) {
-            $this->attributes = $this->getRelations($attributes);
+            $attributes = $this->getRelations($attributes);
+
+            if (\is_callable($this->valueName)) {
+                foreach ($attributes as $key => $attribute) {
+                    $attributes[$key] = ($this->valueName)($attribute);
+                }
+            }
+
+            $this->attributes = $attributes;
             // $this->originAttributes = $this->attributes;
 
             return $this;

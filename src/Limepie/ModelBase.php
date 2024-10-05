@@ -44,6 +44,8 @@ class ModelBase extends ArrayObject
 
     public $keyName = '';
 
+    public $valueName; 
+    
     public $offset;
 
     public $limit;
@@ -661,7 +663,21 @@ class ModelBase extends ArrayObject
         return $this;
     }
 
-    public function keyName(string $keyName, ?string $secondKeyName = null) : self
+    public function setKey(callable $callback) : self
+    {
+        $this->keyName = $callback;
+
+        return $this;
+    }
+
+    public function setValue(callable $callback) : self
+    {
+        $this->valueName = $callback;
+
+        return $this;
+    }
+
+    public function keyName(string|callable $keyName, ?string $secondKeyName = null) : self
     {
         $this->keyName = $keyName;
 
@@ -681,9 +697,6 @@ class ModelBase extends ArrayObject
                         ->addColumnIsCloseAliasBbbb('LENGTH(INSTR(%s, 1))')
                 )
                 ->leftJoinSangpumDealSeqWithSangpumDealSeq(new SangpumDealItemExtend)
-                ->relation(
-                    (new SangpumDeal)->matchEwSangpumDealSeqWithSeq()
-                )
                 ->getsByIsSale(1)
             ;
 
@@ -694,27 +707,21 @@ class ModelBase extends ArrayObject
                         ->andIsClose(0)
                         ->addColumnSeqAliasAaaa()
                         ->addColumnIsCloseAliasBbbb('LENGTH(INSTR(%s, 1))')
-                        ->relation(
-                            (new SangpumDealItemExpose())
-                                ->matchSeqWithSangpumDealItemSeq(),
-                        )
                 )
                 ->leftJoinSangpumDealSeqWithSangpumDealSeq(new SangpumDealItemExtend)
 
                 ->getsByIsSale(1)
             ;
 
+            // source model을 바꾸는 경우
             $joinModels = (new SangpumDeal($slave1))
-                ->relation(
-                    (new SangpumType)->matchSangpumTypeSeqWithSeq()->aliasType()
-                )
                 ->joinSangpumSeqWithSeq(
                     $sangpumModel = (new Sangpum())
                         ->andIsSale(1)
                         ->aliasSangpum()
                 )
-                ->relation(
-                    (new SangpumType)->matchSangpumTypeSeqWithSeq()->aliasType2()
+                ->leftJoinSangpumSeqWithSeq(
+                    (new SangpumType)
                     , $sangpumModel
                 )
                 ->getsByIsSaleAndLtSaleStartDtAndGtSaleEndDt(1, \date('Y-m-d H:i:s'), \date('Y-m-d H:i:s'))

@@ -48,7 +48,7 @@ class Searchbox extends Fields
         $api_server = '';
 
         if (isset($property['api_server']) && $property['api_server']) {
-            $api_server = $property['api_server'];
+            $api_server = \Limepie\minify_js($property['api_server']);
         }
 
         $placeholder = 'keyword';
@@ -74,10 +74,7 @@ class Searchbox extends Fields
 
         $expend  = '';
         $scripts = <<<SCRIPT
-        <script nonce="{$_SESSION['nonce']}">
-            select2('{$id}');
-            {$callback}
-        </script>
+        <script nonce="{$_SESSION['nonce']}">select2('{$id}');{$callback}</script>
         SCRIPT;
 
         $prepend = '';

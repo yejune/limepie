@@ -374,6 +374,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return \count($this->attributes);
     }
 
+    // 첫번째 값을 빼서 리턴
     public function shift($default = null)
     {
         if ($this->attributes) {
@@ -383,6 +384,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return $default;
     }
 
+    // key에 해당하는 값을 리턴
     public function pull($key, $default = null)
     {
         if (isset($this->attributes[$key]) && $this->attributes[$key]) {

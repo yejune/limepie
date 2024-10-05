@@ -50,18 +50,18 @@ class Datetime extends Fields
             if ($type) {
                 foreach ($type as $event) {
                     if ('onchange' === $event) {
-                        $onchange .= ' onchange="' . \str_replace('"', '\"', $function) . '"';
+                        $onchange .= ' onchange="' . \Limepie\minify_js(\str_replace('"', '\"', $function)) . '"';
                     }
 
                     if ('onload' === $event) {
-                        $onchange .= ' data-onload="' . \str_replace('"', '\"', $function) . '"';
+                        $onchange .= ' data-onload="' . \Limepie\minify_js(\str_replace('"', '\"', $function)) . '"';
                     }
                 }
             }
         }
 
         if (isset($property['onchange']) && $property['onchange']) {
-            $onchange .= ' onchange="' . \str_replace('"', '\"', $property['onchange']) . '"';
+            $onchange .= ' onchange="' . \Limepie\minify_js(\str_replace('"', '\"', $property['onchange'])) . '"';
         }
 
         return <<<EOT

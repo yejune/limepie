@@ -404,7 +404,9 @@ class Fields
             $innerHtml .= '<span class="btn-group input-group-btn' . $class . '">' . $btnGroupHtml . '</span>';
         }
 
-        return '<div data-uniqid="' . $parentId . '" class="input-group-wrapper ' . (1 < $index ? 'clone-element' : '') . '' . $wrapperClass . '" style="' . $wrapperStyle . '">' . $innerHtml . '</div>';
+        return '<div data-uniqid="' . $parentId . '" class="input-group-wrapper'
+            . (1 < $index ? ' clone-element' : '') . ''
+            . ($wrapperClass ? ' ' . $wrapperClass : '') . '" style="' . $wrapperStyle . '">' . $innerHtml . '</div>';
     }
 
     public static function readElement($innerHtml, int $index = 1)
