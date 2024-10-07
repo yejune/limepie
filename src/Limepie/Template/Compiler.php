@@ -334,6 +334,12 @@ class Compiler
         }
 
         $source = \implode('', $newTokens);
+        $this->saveResult($cplPath . '.original.php', $source, $cplHead, '*/ ?>');
+
+        if ($this->postfilter) {
+            $source = $this->filter($source, 'post');
+        }
+
         $this->saveResult($cplPath, $source, $cplHead, '*/ ?>');
     }
 
@@ -1215,10 +1221,6 @@ class Compiler
 
     private function saveResult($cplPath, $source, $cplHead, $initCode)
     {
-        if ($this->postfilter) {
-            $source = $this->filter($source, 'post');
-        }
-
         $sourceSize = \strlen($cplHead) + 9 + \strlen($initCode) + \strlen($source);
         $source     = $cplHead . \str_pad((string) $sourceSize, 9, '0', \STR_PAD_LEFT) . $initCode . $source;
 

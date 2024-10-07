@@ -67,7 +67,7 @@ class Model extends ModelBase
         return $attributes;
     }
 
-    public function getRelationData($class, $attribute, $functionName, $parentTableName = '', $isSingle = true)
+    public function getRelationData(Model $class, $attribute, $functionName, $parentTableName = '', $isSingle = true)
     {
         if ($class->pdo) {
             $connect = $class->pdo;
@@ -117,7 +117,7 @@ class Model extends ModelBase
         $data = \call_user_func_array([$class($connect), $functionName], $args);
         // \pr($class->tableName, $functionName, $args, $isSingle);
 
-        if ($data) {
+        if ($data instanceof Model) {
             $data->deleteLock = $class->deleteLock;
             // $data->parentNode = $class->parentNode;
         }
@@ -304,9 +304,11 @@ class Model extends ModelBase
             try {
                 // right에 primary key name으로 relation[s]으로 매칭되는 배열을 만든다.
                 $rightKeyMapValues = [];
+                // \prx($rightKeyName, $data, $data->originAttributes);
 
                 foreach ($data ?? [] as $key => $row) {
-                    $rightKeyMapValues[$row[$rightKeyName]][$key] = $row;
+                    $keyName                           = $row->originAttributes[$rightKeyName];
+                    $rightKeyMapValues[$keyName][$key] = $row;
                 }
             } catch (\Throwable $e) {
                 // \pr($this->tableName, $rightKeyName);
@@ -850,7 +852,7 @@ class Model extends ModelBase
             SQL;
 
             $binds = [
-                $this->primaryKeyName => $this->attributes[$this->primaryKeyName],
+                $this->primaryKeyName => $this->originAttributes[$this->primaryKeyName],
             ];
 
             if (static::$debug) {
@@ -882,7 +884,7 @@ class Model extends ModelBase
             SQL;
 
             $binds = [
-                $object->primaryKeyName => $object->attributes[$object->primaryKeyName],
+                $object->primaryKeyName => $object->originAttributes[$object->primaryKeyName],
             ];
 
             if (static::$debug) {
@@ -905,6 +907,7 @@ class Model extends ModelBase
         if ($result) {
             $this->primaryKeyValue = '';
             $this->attributes      = [];
+            // 삭제해도 origin은 보관
             // $this->originAttributes = [];
 
             return $this;
@@ -1073,7 +1076,7 @@ class Model extends ModelBase
         }
 
         if (true === $isGroup) {
-            if ($this->groupKey) {
+            if ($this->groupKey) { // 이 케이스는 아래 select시 문제될듯, 전수조사 필요.
                 $group = $this->groupBy . ' AS ' . $this->groupKey;
             } else {
                 $group = $this->groupBy;
@@ -1126,10 +1129,10 @@ class Model extends ModelBase
                 $attributes = [];
                 $class      = \get_called_class();
 
-                // group by 한 키네임
+                // group by 한 키네임, 보통 특정 keyName을 기반으로 한다.
                 foreach ($data as $index => &$row) {
                     if ($this->keyName) {
-                        if (\is_callable($this->keyName)) {
+                        if ($this->keyName instanceof \Closure) {
                             $keyName = ($this->keyName)($row);
                         } else {
                             $keyName = $row[$this->keyName];
@@ -1137,6 +1140,7 @@ class Model extends ModelBase
 
                         $attributes[$keyName] = new $class($this->getConnect(), $row);
                     } else {
+                        // primary가 없다.
                         $attributes[] = new $class($this->getConnect(), $row);
                     }
                 }
@@ -1820,7 +1824,7 @@ class Model extends ModelBase
         return $this->executeGet($sql, $binds);
     }
 
-    protected function buildGetBy(string $name, array $arguments, int $offset) : ?self
+    protected function buildGetBy(string $name, array $arguments, int $offset)
     {
         $this->attributes = [];
 
@@ -1879,7 +1883,7 @@ class Model extends ModelBase
         return $this->executeGet($sql, $binds);
     }
 
-    public function executeGet(string $sql, array $binds = []) : ?self
+    public function executeGet(string $sql, array $binds = [])
     {
         if ($this->getConnect() instanceof \PDO) {
             if (static::$debug) {
@@ -1937,7 +1941,7 @@ class Model extends ModelBase
                 } else {
                     $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
 
-                    if ($attributes[$parentTableName]) {
+                    if ($attributes[$parentTableName] instanceof self) {
                         $attributes[$parentTableName]->deleteLock = $joinModel->deleteLock;
                         // $attributes[$parentTableName]->parentNode = $joinModel->parentNode;
                     }
@@ -1954,9 +1958,12 @@ class Model extends ModelBase
                 }
             }
 
-            $this->attributes       = $this->getRelation($attributes);
-            $this->originAttributes = $this->attributes;
-            $this->primaryKeyValue  = $this->attributes[$this->primaryKeyName] ?? null;
+            $this->originAttributes = $this->attributes = $this->getRelation($attributes);
+            $this->primaryKeyValue  = $this->originAttributes[$this->primaryKeyName] ?? null;
+
+            if ($this->valueName instanceof \Closure) {
+                return $this->attributes = ($this->valueName)($this->attributes);
+            }
 
             return $this;
         }
@@ -2194,7 +2201,7 @@ class Model extends ModelBase
                 } else {
                     $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
 
-                    if ($row[$parentTableName]) {
+                    if ($row[$parentTableName] instanceof Model) {
                         $row[$parentTableName]->deleteLock = $joinModel->deleteLock;
                         // $row[$parentTableName]->parentNode = $joinModel->parentNode;
                     }
@@ -2212,7 +2219,7 @@ class Model extends ModelBase
             }
 
             if ($this->keyName) {
-                if (\is_callable($this->keyName)) {
+                if ($this->keyName instanceof \Closure) {
                     $keyName = ($this->keyName)($row);
                 } else {
                     if (false === \array_key_exists($this->keyName, $row)) {
@@ -2224,6 +2231,9 @@ class Model extends ModelBase
                 $keyName = $row[$this->primaryKeyName];
             }
 
+            // if ('key' == $this->keyName) {
+            //     \prx($this->keyName, $keyName, \is_callable($this->keyName));
+            // }
             $attributes[$keyName] = new $class($this->getConnect(), $row);
         }
         unset($row);
@@ -2231,13 +2241,14 @@ class Model extends ModelBase
         if ($attributes) {
             $attributes = $this->getRelations($attributes);
 
-            if (\is_callable($this->valueName)) {
+            if ($this->valueName instanceof \Closure) {
                 foreach ($attributes as $key => $attribute) {
-                    $attributes[$key] = ($this->valueName)($attribute);
+                    $attributes[$key]->attributes = ($this->valueName)($attribute);
                 }
             }
 
             $this->attributes = $attributes;
+            // gets에서는 원본 속성을 저장하지 않음, 원본속성은 개별 모델에 존재함
             // $this->originAttributes = $this->attributes;
 
             return $this;

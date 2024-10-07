@@ -12,7 +12,8 @@
         "files": [
             "src/Limepie.php",
             "src/Limepie/arr.php",
-            "src/Limepie/dt.php"
+            "src/Limepie/dt.php",
+            "src/Limepie/tag.php"
         ]
     }
 }
