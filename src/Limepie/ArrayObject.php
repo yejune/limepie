@@ -34,9 +34,27 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return isset($this->attributes[$name]);
     }
 
-    public function __debugInfo() : array
+    public function __debugInfo()
     {
-        return $this->attributes;
+        if ($this->attributes) {
+            $data = [];
+
+            if (
+                true    === isset($this->primaryKeyName)
+                && true === isset($this->primaryKeyValue)
+                && $this->primaryKeyName
+                && $this->primaryKeyValue
+            ) {
+                $data[$this->primaryKeyName] = $this->primaryKeyValue;
+            }
+
+            $data['attributes'] = $this->attributes;
+            // $data['orgiginal_attributes'] = $this->originAttributes ?? [];
+
+            return $data;
+        }
+
+        return [];
     }
 
     public function __call(string $name, array $arguments = [])
@@ -66,6 +84,11 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         }
 
         throw new Exception(\get_called_class() . ': Column "' . $name . '" not found #9', 500);
+    }
+
+    public function exists() : bool
+    {
+        return $this->attributes ? true : false;
     }
 
     public function isExists() : bool
@@ -132,14 +155,6 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         if (!$name) {
             throw new Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #2', 500);
         }
-
-        // if ('cartItems' == $name) {
-        //     \print_r([
-        //         $name,
-        //         $this->attributes[$fieldName] ?? '',
-        //         \array_key_exists(0, $arguments),
-        //     ]);
-        // }
 
         if (
             (
@@ -326,7 +341,11 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
     private function buildArray($d)
     {
         if ($d instanceof ArrayObject) {
-            $d = \array_map(__METHOD__, $d->attributes);
+            if (\is_array($d->attributes)) {
+                $d = \array_map(__METHOD__, $d->attributes);
+            } else {
+                $d = $d->attributes;
+            }
         }
 
         if (true === \is_object($d)) {
@@ -374,6 +393,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return \count($this->attributes);
     }
 
+    // 첫번째 값을 빼서 리턴
     public function shift($default = null)
     {
         if ($this->attributes) {
@@ -383,10 +403,11 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return $default;
     }
 
+    // key에 해당하는 값을 리턴
     public function pull($key, $default = null)
     {
         if (isset($this->attributes[$key]) && $this->attributes[$key]) {
-            return \Limepie\arr\shift($this->attributes, $key);
+            return \Limepie\arr\pull($this->attributes, $key);
         }
 
         return $default;

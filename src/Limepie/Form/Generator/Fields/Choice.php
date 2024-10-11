@@ -58,34 +58,34 @@ class Choice extends Fields
         $onchange = $onclick = $initload = $changeEvent = '';
 
         // script 테그에 넣으면 dynamic copy시 동작안하므로 inline script 사용
-        if (true === isset($property['onchange'])) {
-            $onchange = ' onchange="' . \Limepie\minify_js($property['onchange']) . '" ';
+        if (true === isset($property['onchange']) && $property['onchange']) {
+            $onchange = ' onchange="' . \Limepie\minify_js($property['onchange']) . '"';
             // $changeEvent = \Limepie\minify_js($property['onchange']);
         }
 
-        if (true === isset($property['onclick'])) {
-            $onclick = ' onclick="' . \Limepie\minify_js($property['onclick']) . '" ';
+        if (true === isset($property['onclick']) && $property['onclick']) {
+            $onclick = ' onclick="' . \Limepie\minify_js($property['onclick']) . '"';
             // $changeEvent = \Limepie\minify_js($property['onchange']);
         }
 
-        if (true === isset($property['data-init-change'])) {
+        if (true === isset($property['data-init-change']) && $property['data-init-change']) {
             $initload = ' data-init-change="true" ';
             // $changeEvent = \Limepie\minify_js($property['onchange']);
         }
         $buttonClass = '';
 
-        if (true === isset($property['button_class'])) {
+        if (true === isset($property['button_class']) && $property['button_class']) {
             $buttonClass = ' ' . $property['button_class'];
         }
 
         $elementClass = '';
 
-        if (true === isset($property['element_class'])) {
+        if (true === isset($property['element_class']) && $property['element_class']) {
             $elementClass = ' ' . $property['element_class'];
         }
         $inputClass = '';
 
-        if (true === isset($property['input_class'])) {
+        if (true === isset($property['input_class']) && $property['input_class']) {
             $inputClass = ' ' . $property['input_class'];
         }
 
@@ -120,7 +120,7 @@ class Choice extends Fields
                     $defaultId = $id;
                 }
 
-                $checked = (string) $value === (string) $k1 ? 'checked="checked"' : '';
+                $checked = (string) $value === (string) $k1 ? ' checked="checked"' : '';
 
                 // if (1 == $property['default'] && false !== \strpos($key, 'is_yoil_price')) {
                 //     \pr($key, $default, $value, $k1, $checked);
@@ -131,7 +131,7 @@ class Choice extends Fields
                 }
 
                 $buttons .= <<<EOD
-                <input id="{$id}" class="valid-target btn-check{$inputClass}" type="radio" name="{$key}" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$k1}" data-is-default="{$checkdefault}" {$onchange}  {$onclick} {$initload} {$checked}><label for="{$id}" class="btn btn-switch {$elementClass}"  ><span>{$v1}</span></label>
+                <input id="{$id}" class="valid-target btn-check{$inputClass}" type="radio" name="{$key}" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$k1}" data-is-default="{$checkdefault}"{$onchange}{$onclick}{$initload}{$checked}><label for="{$id}" class="btn btn-switch {$elementClass}"><span>{$v1}</span></label>
                 EOD;
 
                 // if ($changeEvent) {

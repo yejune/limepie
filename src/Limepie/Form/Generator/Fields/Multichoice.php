@@ -74,9 +74,7 @@ class Multichoice extends Fields
             }
 
             $html = <<<EOT
-            <div class="btn-group flex-wrap btn-group-toggle">
-            {$buttons}
-            </div>
+            <div class="btn-group flex-wrap btn-group-toggle">{$buttons}</div>
             EOT;
         } else {
             $html = '<input type="text" class="form-control" value="application에서 설정하세요." />';

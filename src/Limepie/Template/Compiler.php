@@ -334,6 +334,12 @@ class Compiler
         }
 
         $source = \implode('', $newTokens);
+        $this->saveResult($cplPath . '.original.php', $source, $cplHead, '*/ ?>');
+
+        if ($this->postfilter) {
+            $source = $this->filter($source, 'post');
+        }
+
         $this->saveResult($cplPath, $source, $cplHead, '*/ ?>');
     }
 
@@ -378,21 +384,24 @@ class Compiler
                 case '#':
                     // scope a b:c => $a, $b = $c;
 
-                    if (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                    if (1 === \preg_match('`^#\s?(?P<filename>[^ ]+\.tpl)(\s+(?P<scope>.*))?$`', $statement, $tmp)) {
+                        // #a.tpl scope variable
+                        $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 333)];
+                    } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
                         // #define_id scope variable
                         $result = [2, $this->compileDefine('#' . $tmp['define'], $line, $tmp['scope'] ?? '')];
                     } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?:\'|")(?P<filename>[^ ]+)(?:\'|")(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
                         // #define_id "a.tpl" scope variable
-                        $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
+                        $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 444)];
                     } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
                         // #define_id a.tpl scope variable
-                        $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
+                        $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 555)];
                     } elseif (1 === \preg_match('`^#([\s+])?(?:\'|")(?P<filename>[^"\']+)(?:\'|")(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
                         // #"a.tpl" scope variable
-                        $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
+                        $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 111)];
                     } elseif (1 === \preg_match('`^#([\s+])?(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
                         // #a.tpl scope variable
-                        $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '')];
+                        $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 222)];
                     } else {
                         $result = [1, $statement];
                     }
@@ -482,7 +491,7 @@ class Compiler
         return $result;
     }
 
-    public function compileInDefine($statement, $file, $line, $scope = '')
+    public function compileInDefine($statement, $file, $line, $scope = '', $echo = '')
     {
         if ($scope) {
             $scopeDefines = '';
@@ -503,10 +512,10 @@ class Compiler
             }
             $scopeVars = '[' . \implode(',', $parts) . ']';
 
-            return $scopeDefines . "self::define('" . \trim(\substr($statement, 1)) . "', '" . $file . "');self::printContents('" . \trim(\substr($statement, 1)) . "', [], " . $scopeVars . ')';
+            return $scopeDefines . "self::define('" . \trim(\substr($statement, 1)) . "', '" . $file . "');/*" . $echo . "*/;self::printContents('" . \trim(\substr($statement, 1)) . "', [], " . $scopeVars . ')';
         }
 
-        return "self::define('" . \trim(\substr($statement, 1)) . "', '" . $file . "');self::printContents('" . \trim(\substr($statement, 1)) . "')";
+        return "self::define('" . \trim(\substr($statement, 1)) . "', '" . $file . "');/*" . $echo . "*/;self::printContents('" . \trim(\substr($statement, 1)) . "')";
     }
 
     public function compileDefine($statement, $line, $scope = '')
@@ -1215,10 +1224,6 @@ class Compiler
 
     private function saveResult($cplPath, $source, $cplHead, $initCode)
     {
-        if ($this->postfilter) {
-            $source = $this->filter($source, 'post');
-        }
-
         $sourceSize = \strlen($cplHead) + 9 + \strlen($initCode) + \strlen($source);
         $source     = $cplHead . \str_pad((string) $sourceSize, 9, '0', \STR_PAD_LEFT) . $initCode . $source;
 
