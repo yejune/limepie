@@ -246,9 +246,9 @@ EOD;
                             }
 
                             if ((string) $value === (string) $subItemValue) {
-                                $option .= '<option value="' . $subItemValue . '" selected="selected"' . $disabled2 . '>' . $itemValue . ' > ' . $subItemText . '</option>';
+                                $option .= '<option value="' . $subItemValue . '" selected="selected"' . $disabled2 . '>' . $itemValue . ($subItemText ? ' > ' . $subItemText : '') . '</option>';
                             } else {
-                                $option .= '<option value="' . $subItemValue . '" ' . $disabled2 . '>' . $itemValue . ' > ' . $subItemText . '</option>';
+                                $option .= '<option value="' . $subItemValue . '" ' . $disabled2 . '>' . $itemValue . ($subItemText ? ' > ' . $subItemText : '') . '</option>';
                             }
                         }
                         $option .= '</optgroup>';

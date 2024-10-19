@@ -81,9 +81,7 @@ class Template
 
     public $_current_scope = '';
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function assignAndDefine($arr)
     {
@@ -92,8 +90,6 @@ class Template
     }
 
     /**
-     * @param $key
-     * @param $value
      * @param mixed $arg
      */
     public function assign($arg)
@@ -111,7 +107,6 @@ class Template
     }
 
     /**
-     * @param $fid
      * @param mixed $fids
      * @param mixed $path
      */
@@ -331,7 +326,7 @@ class Template
             ;
         }
         // ( 24 + 1 + 40 + 1 ) + ( 11 + 1 )
-        $cplHead = '<?php /* Peanut\\Template ' . \sha1_file($tplPath, false) . ' ' . \date('Y/m/d H:i:s', \filemtime($tplPath)) . ' ' . $tplPath . ' ';
+        $cplHead = '<?php /* Peanut\Template ' . \sha1_file($tplPath, false) . ' ' . \date('Y/m/d H:i:s', \filemtime($tplPath)) . ' ' . $tplPath . ' ';
 
         if ('dev' !== $this->compileCheck && false !== $cplPath) {
             if (true === \file_exists($cplPath)) {
@@ -393,8 +388,40 @@ class Template
         }
         \extract($addAssign);
 
-        if (true === \file_exists($tplPath)) {
+        if (!\file_exists($tplPath)) {
+            throw new Exception('cannot find defined template "' . $tplPath . '"', 404);
+        }
+
+        // require $tplPath;
+
+        $isDevMode = ('dev' == $this->compileCheck);
+
+        if ($isDevMode) {
+            $content = '';
+            \ob_start();
+        }
+
+        try {
             require $tplPath;
+
+            if ($isDevMode) {
+                $content = \ob_get_clean();
+                echo $content;
+            }
+        } catch (\Throwable $e) {
+            if ($isDevMode) {
+                try {
+                    require $tplPath . '.original.php';
+                    $content = \ob_get_clean();
+                    echo $content;
+                } catch (\Throwable $e) {
+                    \ob_end_clean();
+
+                    throw $e;
+                }
+            } else {
+                throw $e;
+            }
         }
     }
 }

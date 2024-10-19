@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Limepie\Pdo\Driver;
 
+use Limepie\ArrayObject;
 use Limepie\Pdo\Exception;
 use Limepie\Timer;
 
@@ -515,12 +516,20 @@ class Mysql extends \Limepie\Pdo
         foreach ($bindParameters as $key => $value) {
             if (true === \is_array($value)) {
                 foreach ($value as $r) {
-                    $binds[$key] = $r;
+                    if ($r instanceof ArrayObject) {
+                        $binds[$key] = $r->attributes;
+                    } else {
+                        $binds[$key] = $r;
+                    }
 
                     break;
                 }
             } else {
-                $binds[$key] = $value;
+                if ($value instanceof ArrayObject) {
+                    $binds[$key] = $value->attributes;
+                } else {
+                    $binds[$key] = $value;
+                }
             }
         }
 

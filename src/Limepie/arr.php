@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Limepie\arr;
 
 use Limepie\ArrayObject;
+use Limepie\Di;
 use Limepie\Exception;
 
 /**
@@ -1350,20 +1351,37 @@ function refparse($arr = [], $basepath = '') : array
                     } else {
                         $label = '';
                     }
-                    $langProperties = [
-                        'ko' => ['label' => \Limepie\__('core', '한국어'), 'prepend' => '<i class="fi fi-kr"></i>'] + $default2,
-                        'en' => ['label' => \Limepie\__('core', '영어'), 'prepend' => '<i class="fi fi-us"></i>']  + $default2,
-                        'ja' => ['label' => \Limepie\__('core', '일본어'), 'prepend' => '<i class="fi fi-jp"></i>'] + $default2,
-                        'zh' => ['label' => \Limepie\__('core', '중국어'), 'prepend' => '<i class="fi fi-cn"></i>'] + $default2,
-                    ];
+
+                    $languageModels = Di::getLanguageModels(null);
+
+                    // 1개면 하나의 언어만 service lang에 세팅되어있다.
+                    if ($languageModels?->toCount() > 1) {
+                        $desiredOrder = [];
+
+                        foreach ($languageModels as $languageModel) {
+                            $desiredOrder[]                          = $languageModel->getId();
+                            $langProperties[$languageModel->getId()] = [
+                                'label'   => \Limepie\__('core', $languageModel->getName()),
+                                'prepend' => '<i class="fi fi-' . $languageModel->getLocaleId() . '"></i>',
+                            ] + $default2;
+                        }
+                    } else {
+                        $langProperties = [
+                            'ko' => ['label' => \Limepie\__('core', '한국어'), 'prepend' => '<i class="fi fi-kr"></i>'] + $default2,
+                            'en' => ['label' => \Limepie\__('core', '영어'), 'prepend' => '<i class="fi fi-us"></i>']  + $default2,
+                            'ja' => ['label' => \Limepie\__('core', '일본어'), 'prepend' => '<i class="fi fi-jp"></i>'] + $default2,
+                            'zh' => ['label' => \Limepie\__('core', '중국어'), 'prepend' => '<i class="fi fi-cn"></i>'] + $default2,
+                        ];
+                        // 원하는 순서 배열을 정의합니다.
+
+                        $desiredOrder = ['ko', 'ja', 'en', 'zh'];
+                    }
+                    // \prx($langProperties);
 
                     if (isset($value['langs']) && $value['langs']) {
                         $newLangProperties = [];
 
                         if (\Limepie\arr\is_assoc($value['langs'])) {
-                            // 원하는 순서 배열을 정의합니다.
-                            $desiredOrder = ['ko', 'ja', 'en', 'zh'];
-
                             // 익명 함수와 use 키워드를 사용하여 배열 정렬
                             \uksort($value['langs'], function ($a, $b) use ($desiredOrder) {
                                 $posA = \array_search($a, $desiredOrder);
@@ -1397,11 +1415,23 @@ function refparse($arr = [], $basepath = '') : array
                     }
                     // pr($langProperties);
 
+                    $langClass = '';
+
+                    if ($value['class'] ?? '') {
+                        $langClass .= ' ' . $value['class'];
+                    }
+
+                    $langGroupClass = '';
+
+                    if ($value['lang_group_class'] ?? '') {
+                        $langGroupClass .= ' ' . $value['lang_group_class'];
+                    }
                     $value = [
-                        'label'      => ($label ?? '') . ' - ' . \Limepie\__('core', '언어팩'),
-                        'type'       => 'group',
-                        'class'      => $value['class'] ?? '',
-                        'properties' => $langProperties,
+                        'label'       => ($label ?? '') . ' - ' . \Limepie\__('core', '언어팩'),
+                        'type'        => 'group',
+                        'class'       => \trim($langClass),
+                        'group_class' => \trim($langGroupClass),
+                        'properties'  => $langProperties,
                     ];
                     $return[$key . '_langs'] = \Limepie\arr\refparse($value, $basepath);
                 } else {

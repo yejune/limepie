@@ -19,6 +19,20 @@ function ___($domain, $string, $a, $b)
     return \dngettext($domain, $string, $a, $b);
 }
 
+function str_to_array($inputString, $mainDelimiter = '|', $keyValueDelimiter = '=') {
+    $result = [];
+    $parts = explode($mainDelimiter, $inputString);
+
+    foreach ($parts as $part) {
+        $keyValue = explode($keyValueDelimiter, $part, 2);
+            $key = trim($keyValue[0]);
+            $value = trim($keyValue[1]);
+            $result[$key] = $value;
+    }
+
+    return $result;
+}
+
 function get_filename_from_url(string $url) : string
 {
     $path = \parse_url($url, PHP_URL_PATH) ?? '';

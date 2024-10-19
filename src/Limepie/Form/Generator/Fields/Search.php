@@ -51,7 +51,7 @@ class Search extends Fields
         $api_server = '';
 
         if (isset($property['api_server']) && $property['api_server']) {
-            $api_server = $property['api_server'];
+            $api_server = \Limepie\minify_js($property['api_server']);
         }
 
         $placeholder = 'keyword';
@@ -93,9 +93,7 @@ class Search extends Fields
 
         $expend  = '';
         $scripts = <<<SCRIPT
-        <script nonce="{$_SESSION['nonce']}">
-        select2('{$id}', '{$keyword_min_length}', '{$delay}');{$callback}
-        </script>
+        <script nonce="{$_SESSION['nonce']}">select2('{$id}', '{$keyword_min_length}', '{$delay}');{$callback}</script>
         SCRIPT;
 
         $prepend = '';

@@ -22,7 +22,7 @@ class ModelBase extends ArrayObject
 
     public $sequenceName;
 
-    public $primaryKeyValue;
+    public $primaryKeyValue; // insert update 판단
 
     public $normalColumns = [];
 
@@ -43,6 +43,8 @@ class ModelBase extends ArrayObject
     public $orderBy = '';
 
     public $keyName = '';
+
+    public $valueName;
 
     public $offset;
 
@@ -110,13 +112,13 @@ class ModelBase extends ArrayObject
 
     public $onConditionBinds = [];
 
-    // public $sameColumns = [];
+    public $sameColumns = []; // not used
 
     public $groupBy;
 
     public $groupKey;
 
-    public function __construct(?\PDO $pdo = null, array|ArrayObject $attributes = [])
+    public function __construct(?\PDO $pdo = null, $attributes = null)
     {
         if ($pdo) {
             $this->setConnect($pdo);
@@ -129,7 +131,7 @@ class ModelBase extends ArrayObject
         $this->keyName = $this->primaryKeyName;
     }
 
-    public function __invoke(?\PDO $pdo = null, array|ArrayObject $attributes = [])
+    public function __invoke(?\PDO $pdo = null, $attributes = null)
     {
         if ($pdo) {
             $this->setConnect($pdo);
@@ -355,35 +357,13 @@ class ModelBase extends ArrayObject
         return $this->attributes[$offset];
     }
 
-    // public function setAttribute(string $column, array $attribute = [])
-    // {
-    //     $this->attributes[$column]       = $attribute;
-    //     $this->originAttributes[$column] = $attribute;
-    // }
-
-    // public function setAttributeses(array|ArrayObject $attributes = [])
-    // {
-    //     $class = \get_called_class();
-
-    //     if ($attributes instanceof ArrayObject) {
-    //         $attributes = $attributes->attributes;
-    //     }
-
-    //     foreach ($attributes as $attribute) {
-    //         $this->attributes[] = new $class($this->pdo, $attribute);
-    //         $this->originAttributes[] = new $class($this->pdo, $attribute);
-    //     }
-
-    //     return $this;
-    // }
-
-    public function setAttributes(array|ArrayObject $attributes = [])
+    public function setAttributes($attributes = null)
     {
         if ($attributes instanceof ArrayObject) {
             $attributes = $attributes->attributes;
         }
 
-        if ($attributes) {
+        if (\is_array($attributes)) {
             $type = 0;
 
             // 정해진 필드만
@@ -399,8 +379,7 @@ class ModelBase extends ArrayObject
                     }
                 }
             } else {
-                $this->attributes = $this->buildDataType($attributes);
-
+                $this->attributes       = $this->buildDataType($attributes);
                 $this->originAttributes = $this->attributes;
 
                 // if ('quest_mission_type' == $this->tableName) {
@@ -410,6 +389,8 @@ class ModelBase extends ArrayObject
                 // }
             }
             $this->primaryKeyValue = $this->attributes[$this->primaryKeyName] ?? null;
+        } else {
+            $this->attributes = $attributes;
         }
     }
 
@@ -420,9 +401,9 @@ class ModelBase extends ArrayObject
         return (float) $usec + (float) $sec;
     }
 
-    public function buildDataType(array $attributes = [])
+    public function buildDataType(array|string $attributes = [])
     {
-        if ($attributes) {
+        if (\is_array($attributes)) {
             foreach ($attributes as $column => &$value) {
                 if (true === isset($this->dataStyles[$column])) {
                     switch ($this->dataStyles[$column]) {
@@ -549,12 +530,12 @@ class ModelBase extends ArrayObject
                     }
                 }
             }
-
-            return $attributes;
         }
+
+        return $attributes;
     }
 
-    public static function newInstance(?\PDO $pdo = null, array|ArrayObject $attributes = []) : self
+    public static function newInstance(?\PDO $pdo = null, $attributes = null) : self
     {
         return new self($pdo, $attributes);
     }
@@ -661,7 +642,21 @@ class ModelBase extends ArrayObject
         return $this;
     }
 
-    public function keyName(string $keyName, ?string $secondKeyName = null) : self
+    public function fetchKey(callable $callback) : self
+    {
+        $this->keyName = $callback;
+
+        return $this;
+    }
+
+    public function fetchValue(callable $callback) : self
+    {
+        $this->valueName = $callback;
+
+        return $this;
+    }
+
+    public function keyName(callable|string $keyName, ?string $secondKeyName = null) : self
     {
         $this->keyName = $keyName;
 
@@ -681,9 +676,6 @@ class ModelBase extends ArrayObject
                         ->addColumnIsCloseAliasBbbb('LENGTH(INSTR(%s, 1))')
                 )
                 ->leftJoinSangpumDealSeqWithSangpumDealSeq(new SangpumDealItemExtend)
-                ->relation(
-                    (new SangpumDeal)->matchEwSangpumDealSeqWithSeq()
-                )
                 ->getsByIsSale(1)
             ;
 
@@ -694,27 +686,21 @@ class ModelBase extends ArrayObject
                         ->andIsClose(0)
                         ->addColumnSeqAliasAaaa()
                         ->addColumnIsCloseAliasBbbb('LENGTH(INSTR(%s, 1))')
-                        ->relation(
-                            (new SangpumDealItemExpose())
-                                ->matchSeqWithSangpumDealItemSeq(),
-                        )
                 )
                 ->leftJoinSangpumDealSeqWithSangpumDealSeq(new SangpumDealItemExtend)
 
                 ->getsByIsSale(1)
             ;
 
+            // source model을 바꾸는 경우
             $joinModels = (new SangpumDeal($slave1))
-                ->relation(
-                    (new SangpumType)->matchSangpumTypeSeqWithSeq()->aliasType()
-                )
                 ->joinSangpumSeqWithSeq(
                     $sangpumModel = (new Sangpum())
                         ->andIsSale(1)
                         ->aliasSangpum()
                 )
-                ->relation(
-                    (new SangpumType)->matchSangpumTypeSeqWithSeq()->aliasType2()
+                ->leftJoinSangpumSeqWithSeq(
+                    (new SangpumType)
                     , $sangpumModel
                 )
                 ->getsByIsSaleAndLtSaleStartDtAndGtSaleEndDt(1, \date('Y-m-d H:i:s'), \date('Y-m-d H:i:s'))
@@ -1190,6 +1176,7 @@ class ModelBase extends ArrayObject
         } else {
             $this->keyName = \Limepie\decamelize(\substr($name, 7));
         }
+        // \prx($this->tableName, $name, $this->keyName);
 
         //    \pr($this->keyName);
 
@@ -1244,6 +1231,11 @@ class ModelBase extends ArrayObject
 
         if (false === \array_key_exists(0, $arguments)) {
             throw new Exception($columnName . ' not found.');
+        }
+
+        // setvalue에 의해 attributes가 배열이 아닌 경우가 있음. set하는 경우 origin으로 복원
+        if (false === \is_array($this->attributes)) {
+            $this->attributes = $this->originAttributes;
         }
 
         $this->attributes[$columnName] = $arguments[0];

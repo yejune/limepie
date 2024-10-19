@@ -710,7 +710,7 @@ class Group extends Fields
             }
 
             if ($title) {
-                $titleHtml .= '<label class="' . $labelClass . '">' . $title . '</label>';
+                $titleHtml .= '<h6 class="' . $labelClass . '">' . $title . '</h6>';
             }
 
             if ($description) {
@@ -762,7 +762,7 @@ class Group extends Fields
                 }
 
                 $innerhtml .= <<<EOT
-                <div class="{$addClassString}" name="{$nextLineName}-layer"><div class="checkbox"><label>{$elements}</label>{$d}</div></div>
+                <div class="{$addClassString}" name="{$nextLineName}-layer"><div class="checkbox"><h6>{$elements}</h6>{$d}</div></div>
                 EOT;
             } else {
                 $innerhtml .= <<<EOT
@@ -904,7 +904,7 @@ class Group extends Fields
 
             $language = $propertyValue['label'][static::getLanguage()] ?? $elementName;
             // $multipleHtml = true === isset($propertyValue['multiple']) ? static::getMultipleHtml($parentId) : '';
-            $titleHtml = '<label>' . $language . '</label>';
+            $titleHtml = '<h6>' . $language . '</h6>';
 
             if ('hidden' === $propertyValue['type']) {
                 $innerhtml .= <<<EOT

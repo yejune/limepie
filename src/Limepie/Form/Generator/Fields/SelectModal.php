@@ -86,22 +86,22 @@ class SelectModal extends Fields
                 if ($value == $itemValue) {
                     $check      = "checked='checked'";
                     $selectText = $item['name'];
-                    $checkClass = 'select-model-selected';
+                    $checkClass = 'select-modal-selected';
                 }
-                $html .= <<<HTML
-                <label class="select-modal-label {$checkClass}">
-                    <div class="fs-5 mb-2">
-                        <input type="radio" name="select-model{$id}" onclick="selectModalItem(this, '{$itemValue}')" data-bs-dismiss="modal" {$check}>
-                        <span class="title">{$item['name']}</span>
-                    </div>
-                    <div class="border border-2 rounded rounded-3 p-3">
-                        <div class="short_description mb-3">{$item['short_description']}</div>
-                        <div class="">
-                            <img src="{$item['cover_url']}" width="100%">
-                        </div>
-                    </div>
-                </label>
-                HTML;
+                $html .= \str_replace(PHP_EOL, '', <<<HTML
+                <h6 class="select-modal-label {$checkClass}">
+                <div class="fs-5 mb-2">
+                <input type="radio" name="select-modal{$id}" onclick="selectModalItem(this, '{$itemValue}')" data-bs-dismiss="modal" {$check}>
+                <span class="title">{$item['name']}</span>
+                </div>
+                <div class="border border-2 rounded rounded-3 p-3">
+                <div class="short_description mb-3">{$item['short_description']}</div>
+                <div class="">
+                <img src="{$item['cover_url']}" width="100%">
+                </div>
+                </div>
+                </h6>
+                HTML);
             }
         } else {
             $html = 'no items.';

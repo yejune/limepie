@@ -34,16 +34,7 @@ class Tinymce extends Fields
 
         return <<<EOT
         <textarea id="tinymce{$id}" class="valid-target form-control tinymcearea" name="{$key}" data-type="{$type}"  data-height="{$height}" data-upload-server="{$upload}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}" rows="{$rows}">{$value}</textarea>
-        <script class="clone-element" nonce="{$_SESSION['nonce']}">
-        $(function() {
-            var id = '#tinymce{$id}';
-            var height = {$height};
-            var upload = '{$upload}';
-            var readonly = {$readonly};
-
-            editor_tinymce(id, height, upload, readonly);
-        });
-        </script>
+        <script class="clone-element" nonce="{$_SESSION['nonce']}">$(function() {editor_tinymce('#tinymce{$id}', {$height}, '{$upload}', {$readonly});});</script>
         EOT;
     }
 

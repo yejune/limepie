@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Limepie;
 
@@ -67,7 +69,7 @@ class Model extends ModelBase
         return $attributes;
     }
 
-    public function getRelationData($class, $attribute, $functionName, $parentTableName = '', $isSingle = true)
+    public function getRelationData(Model $class, $attribute, $functionName, $parentTableName = '', $isSingle = true)
     {
         if ($class->pdo) {
             $connect = $class->pdo;
@@ -117,7 +119,7 @@ class Model extends ModelBase
         $data = \call_user_func_array([$class($connect), $functionName], $args);
         // \pr($class->tableName, $functionName, $args, $isSingle);
 
-        if ($data) {
+        if ($data instanceof Model) {
             $data->deleteLock = $class->deleteLock;
             // $data->parentNode = $class->parentNode;
         }
@@ -304,9 +306,11 @@ class Model extends ModelBase
             try {
                 // right에 primary key name으로 relation[s]으로 매칭되는 배열을 만든다.
                 $rightKeyMapValues = [];
+                // \prx($rightKeyName, $data, $data->originAttributes);
 
                 foreach ($data ?? [] as $key => $row) {
-                    $rightKeyMapValues[$row[$rightKeyName]][$key] = $row;
+                    $keyName                           = $row->originAttributes[$rightKeyName];
+                    $rightKeyMapValues[$keyName][$key] = $row;
                 }
             } catch (\Throwable $e) {
                 // \pr($this->tableName, $rightKeyName);
@@ -476,7 +480,9 @@ class Model extends ModelBase
         return $attributes;
     }
 
-    public function replace() {}
+    public function replace()
+    {
+    }
 
     public function create($on_duplicate_key_update = null)
     {
@@ -644,59 +650,39 @@ class Model extends ModelBase
 
     public function update($checkUpdatedTs = false)
     {
-        $this->changeColumns = [];
 
         if (false === isset($this->attributes[$this->primaryKeyName])) {
             $debug = \debug_backtrace()[0];
 
-            throw (new Exception('not found ' . $this->primaryKeyName))->setDebugMessage('models update?', $debug['file'], $debug['line']);
+            throw (new Exception('not found ' . $this->primaryKeyName))
+                ->setDebugMessage('models update?', $debug['file'], $debug['line']);
         }
-        $this->changeBinds = [
-        ];
+
+        $this->changeBinds = [];
+        $this->changeColumns = [];
+        $this->sameColumns   = [];
 
         foreach ($this->allColumns as $column) {
-            // if (
-            //     true === isset($this->originAttributes[$column])
-            //     && false == isset($this->rawAttributes[$column])
-            // ) {
-            //     \pr($column);
+            // db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 않음
 
-            //     // null일 경우에는 0과 비교할 가능성이 있으므로
-            //     if (
-            //         null    === $this->attributes[$column]
-            //         || null === $this->originAttributes[$column]
-            //     ) {
-            //         if (null !== $this->attributes[$column] && $this->attributes[$column] === $this->originAttributes[$column]) {
-            //             continue;
-            //         }
-            //     } else {
-            //         if (null !== $this->attributes[$column] && $this->attributes[$column] == $this->originAttributes[$column]) {
-            //             continue;
-            //         }
-            //     }
-            // }
+            $attr      = $this->attributes[$column]       ?? null;
+            $origAttr  = $this->originAttributes[$column] ?? null;
 
-            // raw가 아니고 값이 같으면 업데이트 안함
-            // db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 말기
+            // attr과 originAttr가 같고 raw, plus,  minus가 아니면 continue,
+            // raw, plus, minus가 있으면 값은 변동되지 않아도 업데이트 함
+            if ($attr === $origAttr
+                && false === isset($this->plusAttributes[$column])
+                && false === isset($this->minusAttributes[$column])
+                && false === isset($this->rawAttributes[$column])
+            ) {
+                // $this->sameColumns[$column] = $origAttr;
 
-            if (false === isset($this->rawAttributes[$column])) {
-                $attr     = $this->attributes[$column]       ?? null;
-                $origAttr = $this->originAttributes[$column] ?? null;
-
-                // if ('quest_mission_type' == $this->tableName) {
-                //     \prx($column, $attr, $origAttr, $this->originAttributes);
-                // }
-
-                // attr과 originAttr가 같으면 continue
-                if ($attr === $origAttr) {
-                    // $this->sameColumns[$column] = $origAttr;
-
-                    continue;
-                }
+                continue;
             }
 
+
             if (true === isset($this->dataStyles[$column])
-                && 'jsons' == $this->dataStyles[$column]) { // json을 jsons로 바꿈
+                && 'jsons' == $this->dataStyles[$column]) {
                 if (true === isset($this->originAttributes[$column]) && $this->originAttributes[$column]) {
                     if ($this->originAttributes[$column] instanceof ArrayObject) {
                         $target = $this->originAttributes[$column]->attributes;
@@ -858,7 +844,7 @@ class Model extends ModelBase
         return $this;
     }
 
-    public function doDelete() : bool|self
+    public function doDelete(): bool|self
     {
         if (true == $this->deleteLock) {
             return true;
@@ -875,7 +861,7 @@ class Model extends ModelBase
             SQL;
 
             $binds = [
-                $this->primaryKeyName => $this->attributes[$this->primaryKeyName],
+                $this->primaryKeyName => $this->originAttributes[$this->primaryKeyName],
             ];
 
             if (static::$debug) {
@@ -907,7 +893,7 @@ class Model extends ModelBase
             SQL;
 
             $binds = [
-                $object->primaryKeyName => $object->attributes[$object->primaryKeyName],
+                $object->primaryKeyName => $object->originAttributes[$object->primaryKeyName],
             ];
 
             if (static::$debug) {
@@ -930,6 +916,7 @@ class Model extends ModelBase
         if ($result) {
             $this->primaryKeyValue = '';
             $this->attributes      = [];
+            // 삭제해도 origin은 보관
             // $this->originAttributes = [];
 
             return $this;
@@ -938,7 +925,7 @@ class Model extends ModelBase
         return false;
     }
 
-    protected function getSelectColumns(string $prefixString = '', $isCount = false) : string
+    protected function getSelectColumns(string $prefixString = '', $isCount = false): string
     {
         $prefix = '';
 
@@ -1098,7 +1085,7 @@ class Model extends ModelBase
         }
 
         if (true === $isGroup) {
-            if ($this->groupKey) {
+            if ($this->groupKey) { // 이 케이스는 아래 select시 문제될듯, 전수조사 필요.
                 $group = $this->groupBy . ' AS ' . $this->groupKey;
             } else {
                 $group = $this->groupBy;
@@ -1151,11 +1138,18 @@ class Model extends ModelBase
                 $attributes = [];
                 $class      = \get_called_class();
 
-                // group by 한 키네임
+                // group by 한 키네임, 보통 특정 keyName을 기반으로 한다.
                 foreach ($data as $index => &$row) {
                     if ($this->keyName) {
-                        $attributes[$row[$this->keyName]] = new $class($this->getConnect(), $row);
+                        if ($this->keyName instanceof \Closure) {
+                            $keyName = ($this->keyName)($row);
+                        } else {
+                            $keyName = $row[$this->keyName];
+                        }
+
+                        $attributes[$keyName] = new $class($this->getConnect(), $row);
                     } else {
+                        // primary가 없다.
                         $attributes[] = new $class($this->getConnect(), $row);
                     }
                 }
@@ -1173,7 +1167,7 @@ class Model extends ModelBase
         throw new Exception('lost connection');
     }
 
-    protected function buildGetSum(string $name, array $arguments, int $offset) : float|int
+    protected function buildGetSum(string $name, array $arguments, int $offset): float|int
     {
         $this->attributes = [];
 
@@ -1246,7 +1240,7 @@ class Model extends ModelBase
         throw new Exception('lost connection');
     }
 
-    protected function buildGetAvg(string $name, array $arguments, int $offset) : float|int
+    protected function buildGetAvg(string $name, array $arguments, int $offset): float|int
     {
         $this->attributes = [];
 
@@ -1319,7 +1313,7 @@ class Model extends ModelBase
         throw new Exception('lost connection');
     }
 
-    public function getJoin($isCount = false) : array
+    public function getJoin($isCount = false): array
     {
         $join          = '';
         $selectColumns = '';
@@ -1386,378 +1380,12 @@ class Model extends ModelBase
         ];
     }
 
-    public function gets(null|array|string $sql = null, array $binds = []) : ?self
-    {
-        $this->attributes      = [];
-        $this->primaryKeyValue = '';
-        $keyName               = $this->keyName;
-
-        if (false === \is_string($sql)) {
-            $args          = $sql;
-            $orderBy       = $this->getOrderBy($args['order'] ?? null);
-            $limit         = $this->getLimit();
-            $condition     = '';
-            $binds         = [];
-            $join          = '';
-            $selectColumns = $this->getSelectColumns(isCount: false);
-
-            if (true === isset($args['condition'])) {
-                $condition = ' ' . $args['condition'];
-            } else {
-                if ($this->condition) {
-                    $condition = '  ' . $this->condition;
-                }
-
-                if ($this->binds) {
-                    $binds = $this->binds;
-                }
-            }
-
-            if (true === isset($args['binds'])) {
-                $binds = $args['binds'];
-            }
-
-            if (!$condition && $this->condition) {
-                $condition = '' . $this->condition;
-                $binds     = $this->binds;
-            }
-
-            if ($this->joinModels) {
-                $joinInfomation = $this->getJoin();
-                $join           = $joinInfomation['join'];
-                $selectColumns .= $joinInfomation['selectColumns'];
-                $binds += $joinInfomation['binds'];
-
-                if ($joinInfomation['condition']) {
-                    if ($condition) {
-                        $condition .= ' ' . $joinInfomation['condition'];
-                    } else {
-                        $condition = $joinInfomation['condition'];
-                    }
-                }
-
-                if ($joinInfomation['orderBy']) {
-                    if ($orderBy) {
-                        $orderBy .= ', ' . $joinInfomation['orderBy'];
-                    } else {
-                        $orderBy = $this->getOrderBy($joinInfomation['orderBy']);
-                    }
-                }
-
-                // 조인시 왜 keyname을 무력화 했던것인가?
-                // $keyName = '';
-            }
-
-            if ($condition) {
-                $condition = ' WHERE ' . $condition;
-            }
-            $forceIndex = \implode(', ', $this->forceIndexes);
-
-            $groupBy = $this->getGroupBy();
-
-            if ($this->rawColumnString) {
-                $selectColumns .= ',' . $this->rawColumnString;
-            }
-
-            $sql = <<<SQL
-                SELECT
-                    {$selectColumns}
-                FROM
-                    `{$this->tableName}` AS `{$this->tableAliasName}`
-                {$forceIndex}
-                {$join}
-                {$condition}
-                {$groupBy}
-                {$orderBy}
-                {$limit}
-            SQL;
-            $this->condition = $condition;
-        } else {
-            $orderBy = $this->getOrderBy($args['order'] ?? null);
-            $limit   = $this->getLimit();
-
-            $sql .= <<<SQL
-                {$orderBy}
-                {$limit}
-            SQL;
-        }
-
-        $this->query = $sql;
-        $this->binds = $binds;
-
-        if (static::$debug) {
-            $this->print(null, null);
-            Timer::start();
-        }
-
-        $data = $this->getConnect()->gets($sql, $binds, false);
-
-        if (static::$debug) {
-            echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
-        }
-
-        $class = \get_called_class();
-
-        $attributes = [];
-
-        foreach ($data as $index => &$row) {
-            foreach ($this->callbackColumns as $callbackColumn) {
-                $row[$callbackColumn['alias']] = $callbackColumn['callback']($row[$callbackColumn['column']]);
-            }
-
-            foreach ($this->joinModels as $joinModelInfomation) {
-                $joinModel          = $joinModelInfomation['model'];
-                $joinClassAliasName = $joinModel->tableAliasName;
-                $joinClassName      = $joinModel->tableName;
-
-                $tmp = [];
-
-                foreach ($row as $innerFieldName => &$innerFieldValue) {
-                    if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
-                        $tmp[\Limepie\str_replace_first($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
-
-                        unset($row[$innerFieldName]);
-                    }
-                }
-
-                unset($innerFieldValue);
-
-                if ($joinModel->newTableName) {
-                    $parentTableName = $joinModel->newTableName;
-                } else {
-                    $parentTableName = $joinModel->tableName . '_model';
-                }
-
-                if ($joinModel->parentNode) {
-                    // parentNode가 true일 경우, 부모에게 자식을 붙인다.
-                    foreach ($tmp ?? [] as $key => $value) {
-                        if ('seq' !== $key) {
-                            $row[$key] = $value;
-                        }
-                    }
-                    // $attribute->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
-                } else {
-                    $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
-
-                    if ($row[$parentTableName]) {
-                        $row[$parentTableName]->deleteLock = $joinModel->deleteLock;
-                        // $row[$parentTableName]->parentNode = $joinModel->parentNode;
-                    }
-                }
-
-                // $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
-
-                if ($joinModel->oneToOne) {
-                    $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
-                }
-
-                if ($joinModel->oneToMany) {
-                    $this->oneToManies[$parentTableName] = $joinModel->oneToMany;
-                }
-            }
-
-            // if (12803 == Di::getLoginUserModel(null)?->getSeq(0)) {
-            //     foreach ($row as $r => $d) {
-            //         if (false !== \strpos($r, '_seq')) {
-            //             \pr($r);
-            //             unset($row[$r]);
-            //         }
-            //     }
-            // }
-            // \prx($keyName);
-
-            if ($keyName) {
-                if (false === \array_key_exists($this->keyName, $row)) {
-                    throw new Exception('gets ' . $this->tableName . ' "' . $this->keyName . '" column not found #5');
-                }
-
-                $attributes[$row[$keyName]] = new $class($this->getConnect(), $row);
-            } else {
-                $attributes[] = new $class($this->getConnect(), $row);
-            }
-        }
-
-        if ($attributes) {
-            $attributes       = $this->getRelations($attributes);
-            $this->attributes = $attributes;
-            // $this->originAttributes = $this->attributes;
-
-            return $this;
-        }
-
-        return $this->empty();
-    }
-
-    public function get1(null|array|string $sql = null, array $binds = []) : ?self
+    public function get1(null|array|string $sql = null, array $binds = []): ?self
     {
         throw new Exception('not support get1');
     }
 
-    public function get(null|array|string $sql = null, array $binds = []) : ?self
-    {
-        $this->attributes      = [];
-        $this->primaryKeyValue = '';
-
-        if (true === \is_array($sql) || null === $sql) {
-            $args          = $sql;
-            $selectColumns = $this->getSelectColumns();
-            $condition     = '';
-            $join          = '';
-            $binds         = [];
-            $orderBy       = $this->getOrderBy();
-
-            if (true === isset($args['condition'])) {
-                $condition = ' ' . $args['condition'];
-            } else {
-                if ($this->condition) {
-                    $condition = '  ' . $this->condition;
-                }
-
-                if ($this->binds) {
-                    $binds = $this->binds;
-                }
-            }
-
-            if (true === isset($args['binds'])) {
-                $binds = $args['binds'];
-            }
-
-            if (!$condition && $this->condition) {
-                $condition = '' . $this->condition;
-                $binds     = $this->binds;
-            }
-
-            // $selectColumns = $this->getSelectColumns();
-
-            if ($this->joinModels) {
-                $joinInfomation = $this->getJoin();
-                $join           = $joinInfomation['join'];
-                $selectColumns .= $joinInfomation['selectColumns'];
-                $binds += $joinInfomation['binds'];
-
-                if ($joinInfomation['condition']) {
-                    if ($condition) {
-                        $condition .= ' ' . $joinInfomation['condition'];
-                    } else {
-                        $condition = $joinInfomation['condition'];
-                    }
-                }
-
-                // $keyName = '';
-            }
-
-            if ($condition) {
-                $condition = ' WHERE ' . $condition;
-            }
-
-            if ($this->rawColumnString) {
-                $selectColumns .= ',' . $this->rawColumnString;
-            }
-            $sql = <<<SQL
-                SELECT
-                    {$selectColumns}
-                FROM
-                    `{$this->tableName}` AS `{$this->tableAliasName}`
-                {$join}
-                {$condition}
-                {$orderBy}
-                LIMIT 1
-            SQL;
-
-            $this->condition = $condition;
-        }
-
-        $this->query = $sql;
-        $this->binds = $binds;
-
-        if (static::$debug) {
-            $this->print(null, null);
-            Timer::start();
-        }
-
-        if ($this->getConnect() instanceof \PDO) {
-            if (static::$debug) {
-                $this->print(null, null);
-                Timer::start();
-            }
-
-            $attributes = $this->getConnect()->get($sql, $binds, false);
-
-            foreach ($this->callbackColumns as $callbackColumn) {
-                $attributes[$callbackColumn['alias']] = $callbackColumn['callback']($attributes[$callbackColumn['column']]);
-            }
-
-            if (static::$debug) {
-                echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
-            }
-        } else {
-            throw new Exception('lost connection');
-        }
-
-        if ($attributes) {
-            $attributes = $this->buildDataType($attributes);
-
-            foreach ($this->joinModels as $joinModelInfomation) {
-                $joinModel          = $joinModelInfomation['model'];
-                $joinClassAliasName = $joinModel->tableAliasName;
-                $joinClassName      = $joinModel->tableName;
-
-                $tmp = [];
-
-                foreach ($attributes as $innerFieldName => &$innerFieldValue) {
-                    if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
-                        $tmp[\Limepie\str_replace_first($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
-
-                        unset($attributes[$innerFieldName]);
-                    }
-                }
-
-                unset($innerFieldValue);
-
-                if ($joinModel->newTableName) {
-                    $parentTableName = $joinModel->newTableName;
-                } else {
-                    $parentTableName = $joinModel->tableName . '_model';
-                }
-
-                if ($joinModel->parentNode) {
-                    // parentNode가 true일 경우, 부모에게 자식을 붙인다.
-                    foreach ($tmp ?? [] as $key => $value) {
-                        if ('seq' !== $key) {
-                            $attributes[$key] = $value;
-                        }
-                    }
-                    // $attribute->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
-                } else {
-                    $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
-
-                    if ($attributes[$parentTableName]) {
-                        $attributes[$parentTableName]->deleteLock = $joinModel->deleteLock;
-                        // $attributes[$parentTableName]->parentNode = $joinModel->parentNode;
-                    }
-                }
-
-                if ($joinModel->oneToOne) {
-                    $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
-                }
-
-                if ($joinModel->oneToMany) {
-                    $this->oneToManies[$parentTableName] = $joinModel->oneToMany;
-                }
-            }
-
-            $this->attributes       = $this->getRelation($attributes);
-            $this->originAttributes = $this->attributes;
-
-            $this->primaryKeyValue = $this->attributes[$this->primaryKeyName] ?? null;
-
-            return $this;
-        }
-
-        return $this->empty();
-    }
-
-    protected function buildGroupBy(string $groupByString, array $arguments) : self
+    protected function buildGroupBy(string $groupByString, array $arguments): self
     {
         $part = \explode('And', \substr($groupByString, 7));
 
@@ -1785,7 +1413,7 @@ class Model extends ModelBase
         return $this;
     }
 
-    protected function buildOrderBy(string $orderByString, array $arguments) : self
+    protected function buildOrderBy(string $orderByString, array $arguments): self
     {
         $part = \explode('And', \substr($orderByString, 7));
 
@@ -1813,7 +1441,7 @@ class Model extends ModelBase
         return $this;
     }
 
-    private function isValidSeqArgument(string $operator, mixed $argument) : bool
+    private function isValidSeqArgument(string $operator, mixed $argument): bool
     {
         if ('seq' !== \strtolower(\substr($operator, -3))) {
             return true; // Not a Seq operator, so it's valid
@@ -1829,7 +1457,7 @@ class Model extends ModelBase
         return \is_numeric($argument) || null === $argument;
     }
 
-    protected function buildAnd(string $name, array $arguments, int $offset = 3) : self
+    protected function buildAnd(string $name, array $arguments, int $offset = 3): self
     {
         $operator = \substr($name, $offset);
 
@@ -1856,7 +1484,7 @@ class Model extends ModelBase
         return $this;
     }
 
-    protected function buildOr(string $name, array $arguments, int $offset = 2) : self
+    protected function buildOr(string $name, array $arguments, int $offset = 2): self
     {
         $operator = \substr($name, $offset);
 
@@ -1885,7 +1513,7 @@ class Model extends ModelBase
         return $this;
     }
 
-    protected function splitKey(string $name, int $offset = 0) : array
+    protected function splitKey(string $name, int $offset = 0): array
     {
         $orgKey = \substr($name, $offset);
 
@@ -1936,7 +1564,7 @@ class Model extends ModelBase
     }
 
     // where, and, or등의 추가 구문을 붙이지 않고 처리
-    protected function getConditions(string $name, array $arguments, int $offset = 0) : array
+    protected function getConditions(string $name, array $arguments, int $offset = 0): array
     {
         if (false === \strpos($name, ' ')) {
             $splitKeys = $this->splitKey($name, $offset);
@@ -1956,7 +1584,7 @@ class Model extends ModelBase
                     throw (new Exception($this->tableName . ' ' . $key . ' argument error'))->setDebugMessage('page not found', __FILE__, __LINE__);
                 }
 
-                // orperator의 마지막이 seq로 끝난다면, 숫자가 아니라면 처리하지 않음
+                // orperator의 마지막이 seq로 끝날경우, 값이 숫자나 null이 아니라면 처리하지 않음
                 if (!$this->isValidSeqArgument($key, $arguments[$index] ?? null)) {
                     // \prx($this->tableName, $this->condition, $name, $arguments, $index, $key, $arguments[$index] ?? null);
 
@@ -2120,7 +1748,92 @@ class Model extends ModelBase
         return [$conds, $binds];
     }
 
-    protected function buildGetBy(string $name, array $arguments, int $offset) : ?self
+    public function get(null|array|string $sql = null, array $binds = []): ?self
+    {
+        $this->attributes      = [];
+        $this->primaryKeyValue = '';
+
+        if (true === \is_array($sql) || null === $sql) {
+            $args          = $sql;
+            $selectColumns = $this->getSelectColumns();
+            $condition     = '';
+            $join          = '';
+            $binds         = [];
+            $orderBy       = $this->getOrderBy();
+
+            if (true === isset($args['condition'])) {
+                $condition = ' ' . $args['condition'];
+            } else {
+                if ($this->condition) {
+                    $condition = '  ' . $this->condition;
+                }
+
+                if ($this->binds) {
+                    $binds = $this->binds;
+                }
+            }
+
+            if (true === isset($args['binds'])) {
+                $binds = $args['binds'];
+            }
+
+            if (!$condition && $this->condition) {
+                $condition = '' . $this->condition;
+                $binds     = $this->binds;
+            }
+
+            // $selectColumns = $this->getSelectColumns();
+
+            if ($this->joinModels) {
+                $joinInfomation = $this->getJoin();
+                $join           = $joinInfomation['join'];
+                $selectColumns .= $joinInfomation['selectColumns'];
+                $binds += $joinInfomation['binds'];
+
+                if ($joinInfomation['condition']) {
+                    if ($condition) {
+                        $condition .= ' ' . $joinInfomation['condition'];
+                    } else {
+                        $condition = $joinInfomation['condition'];
+                    }
+                }
+
+                // $keyName = '';
+            }
+
+            if ($condition) {
+                $condition = ' WHERE ' . $condition;
+            }
+
+            if ($this->rawColumnString) {
+                $selectColumns .= ',' . $this->rawColumnString;
+            }
+            $sql = <<<SQL
+                SELECT
+                    {$selectColumns}
+                FROM
+                    `{$this->tableName}` AS `{$this->tableAliasName}`
+                {$join}
+                {$condition}
+                {$orderBy}
+                LIMIT 1
+            SQL;
+
+            $this->condition = $condition;
+        }
+
+        $this->query = $sql;
+        $this->binds = $binds;
+
+        if (static::$debug) {
+            $this->print(null, null);
+            Timer::start();
+        }
+
+        return $this->executeGet($sql, $binds);
+    }
+
+    protected function buildGetBy(string $name, array $arguments, int $offset)
     {
         $this->attributes = [];
 
@@ -2176,6 +1889,11 @@ class Model extends ModelBase
         $this->query     = $sql;
         $this->binds     = $binds;
 
+        return $this->executeGet($sql, $binds);
+    }
+
+    public function executeGet(string $sql, array $binds = [])
+    {
         if ($this->getConnect() instanceof \PDO) {
             if (static::$debug) {
                 $this->print(null, null);
@@ -2232,7 +1950,7 @@ class Model extends ModelBase
                 } else {
                     $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
 
-                    if ($attributes[$parentTableName]) {
+                    if ($attributes[$parentTableName] instanceof self) {
                         $attributes[$parentTableName]->deleteLock = $joinModel->deleteLock;
                         // $attributes[$parentTableName]->parentNode = $joinModel->parentNode;
                     }
@@ -2249,9 +1967,12 @@ class Model extends ModelBase
                 }
             }
 
-            $this->attributes       = $this->getRelation($attributes);
-            $this->originAttributes = $this->attributes;
-            $this->primaryKeyValue  = $this->attributes[$this->primaryKeyName] ?? null;
+            $this->originAttributes = $this->attributes = $this->getRelation($attributes);
+            $this->primaryKeyValue  = $this->originAttributes[$this->primaryKeyName] ?? null;
+
+            if ($this->valueName instanceof \Closure) {
+                return $this->attributes = ($this->valueName)($this->attributes);
+            }
 
             return $this;
         }
@@ -2259,7 +1980,7 @@ class Model extends ModelBase
         return $this->empty();
     }
 
-    protected function buildGetsBy(string $name, array $arguments, int $offset) : ?self
+    protected function buildGetsBy(string $name, array $arguments, int $offset): ?self
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -2275,7 +1996,6 @@ class Model extends ModelBase
         $limit      = $this->getLimit();
         $join       = '';
         $forceIndex = \implode(', ', $this->forceIndexes);
-        $keyName    = $this->keyName;
 
         if ($this->joinModels) {
             $joinInfomation = $this->getJoin();
@@ -2330,15 +2050,126 @@ class Model extends ModelBase
             Timer::start();
         }
 
+        return $this->executeGets($sql, $binds);
+    }
+
+    public function gets(null|array|string $sql = null, array $binds = []): ?self
+    {
+        $this->attributes      = [];
+        $this->primaryKeyValue = '';
+
+        if (false === \is_string($sql)) {
+            $args          = $sql;
+            $orderBy       = $this->getOrderBy($args['order'] ?? null);
+            $limit         = $this->getLimit();
+            $condition     = '';
+            $binds         = [];
+            $join          = '';
+            $selectColumns = $this->getSelectColumns(isCount: false);
+
+            if (true === isset($args['condition'])) {
+                $condition = ' ' . $args['condition'];
+            } else {
+                if ($this->condition) {
+                    $condition = '  ' . $this->condition;
+                }
+
+                if ($this->binds) {
+                    $binds = $this->binds;
+                }
+            }
+
+            if (true === isset($args['binds'])) {
+                $binds = $args['binds'];
+            }
+
+            if (!$condition && $this->condition) {
+                $condition = '' . $this->condition;
+                $binds     = $this->binds;
+            }
+
+            if ($this->joinModels) {
+                $joinInfomation = $this->getJoin();
+                $join           = $joinInfomation['join'];
+                $selectColumns .= $joinInfomation['selectColumns'];
+                $binds += $joinInfomation['binds'];
+
+                if ($joinInfomation['condition']) {
+                    if ($condition) {
+                        $condition .= ' ' . $joinInfomation['condition'];
+                    } else {
+                        $condition = $joinInfomation['condition'];
+                    }
+                }
+
+                if ($joinInfomation['orderBy']) {
+                    if ($orderBy) {
+                        $orderBy .= ', ' . $joinInfomation['orderBy'];
+                    } else {
+                        $orderBy = $this->getOrderBy($joinInfomation['orderBy']);
+                    }
+                }
+
+                // 조인시 왜 keyname을 무력화 했던것인가?
+                // $keyName = '';
+            }
+
+            if ($condition) {
+                $condition = ' WHERE ' . $condition;
+            }
+            $forceIndex = \implode(', ', $this->forceIndexes);
+
+            $groupBy = $this->getGroupBy();
+
+            if ($this->rawColumnString) {
+                $selectColumns .= ',' . $this->rawColumnString;
+            }
+
+            $sql = <<<SQL
+                SELECT
+                    {$selectColumns}
+                FROM
+                    `{$this->tableName}` AS `{$this->tableAliasName}`
+                {$forceIndex}
+                {$join}
+                {$condition}
+                {$groupBy}
+                {$orderBy}
+                {$limit}
+            SQL;
+            $this->condition = $condition;
+        } else {
+            $orderBy = $this->getOrderBy($args['order'] ?? null);
+            $limit   = $this->getLimit();
+
+            $sql .= <<<SQL
+                {$orderBy}
+                {$limit}
+            SQL;
+        }
+
+        $this->query = $sql;
+        $this->binds = $binds;
+
+        if (static::$debug) {
+            $this->print(null, null);
+            Timer::start();
+        }
+
+        return $this->executeGets($sql, $binds);
+    }
+
+    public function executeGets(string $sql, array $binds = []): ?self
+    {
         $data = $this->getConnect()->gets($sql, $binds, false);
 
         if (static::$debug) {
             echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
         }
 
-        $attributes = [];
-
         $class = \get_called_class();
+
+        $attributes = [];
 
         foreach ($data as $index => &$row) {
             foreach ($this->callbackColumns as $callbackColumn) {
@@ -2379,11 +2210,13 @@ class Model extends ModelBase
                 } else {
                     $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
 
-                    if ($row[$parentTableName]) {
+                    if ($row[$parentTableName] instanceof Model) {
                         $row[$parentTableName]->deleteLock = $joinModel->deleteLock;
                         // $row[$parentTableName]->parentNode = $joinModel->parentNode;
                     }
                 }
+
+                // $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
 
                 if ($joinModel->oneToOne) {
                     $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
@@ -2394,22 +2227,37 @@ class Model extends ModelBase
                 }
             }
 
-            if ($keyName) {
-                if (false === \array_key_exists($this->keyName, $row)) {
-                    \prx($keyName, $this->keyName, $row);
-
-                    throw new Exception('gets by ' . $this->tableName . ' "' . $keyName . '" column not found #7');
+            if ($this->keyName) {
+                if ($this->keyName instanceof \Closure) {
+                    $keyName = ($this->keyName)($row);
+                } else {
+                    if (false === \array_key_exists($this->keyName, $row)) {
+                        throw new Exception('gets ' . $this->tableName . ' "' . $this->keyName . '" column not found #5');
+                    }
+                    $keyName = $row[$this->keyName];
                 }
-
-                $attributes[$row[$keyName]] = new $class($this->getConnect(), $row);
             } else {
-                $attributes[$row[$this->primaryKeyName]] = new $class($this->getConnect(), $row);
+                $keyName = $row[$this->primaryKeyName];
             }
+
+            // if ('key' == $this->keyName) {
+            //     \prx($this->keyName, $keyName, \is_callable($this->keyName));
+            // }
+            $attributes[$keyName] = new $class($this->getConnect(), $row);
         }
         unset($row);
 
         if ($attributes) {
-            $this->attributes = $this->getRelations($attributes);
+            $attributes = $this->getRelations($attributes);
+
+            if ($this->valueName instanceof \Closure) {
+                foreach ($attributes as $key => $attribute) {
+                    $attributes[$key]->attributes = ($this->valueName)($attribute);
+                }
+            }
+
+            $this->attributes = $attributes;
+            // gets에서는 원본 속성을 저장하지 않음, 원본속성은 개별 모델에 존재함
             // $this->originAttributes = $this->attributes;
 
             return $this;
