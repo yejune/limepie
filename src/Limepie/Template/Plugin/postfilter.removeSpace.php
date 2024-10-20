@@ -80,29 +80,34 @@ function removeSpace($content, $tpl)
         }, $scriptContent);
 
         // 정규식 리터럴을 임시로 다른 문자열로 대체
-        $scriptContent = \preg_replace_callback('~
-            (?:
-                (?<=[\(\[{\s=,:;!&|?]|^)
-                /
-                (?:\\\.|[^/])+
-                /
-                [gimsuy]*
-            )
-        ~mx', function ($matches) use (&$placeholders, &$step) {
-            // \prx($matches);
+        $scriptContent = preg_replace_callback('~
+    (?<![\d\w])                    # 숫자나 문자가 앞에 오지 않음
+    (?:
+        (?<=[\(\[{\s=,:;!&|?]|^)   # 정규식이 올 수 있는 문맥 확인
+        /                           # 시작 구분자
+        (?:
+            [^\\/\n]|              # 슬래시나 줄바꿈이 아닌 문자
+            \\.                     # 또는 이스케이프된 문자
+        )+
+        /                          # 종료 구분자
+        [gimsuy]*                  # 정규식 플래그
+    )
+~mx', function ($matches) use (&$placeholders, &$step) {
             $placeholder = "###REGEX_PLACEHOLDER{$step}###";
-            ++$step;
             $placeholders[$placeholder] = $matches[0];
-
+            $step++;
             return $placeholder;
         }, $scriptContent);
-
+        // prx($scriptContent);
         // 주석 제거
         // 단일 행 주석
         $scriptContent = \preg_replace('/\/\/.*?(?=[\r\n]|$)/', '', $scriptContent);
-        // 다중 행 주석
+        // // 다중 행 주석
         $scriptContent = \preg_replace('/\/\*.*?\*\//s', '', $scriptContent);
+        // $scriptContent = preg_replace('/\/\/.*$/m', '', $scriptContent);  // 한 줄 주석
+        // $scriptContent = preg_replace('/\/\*.*?\*\//s', '', $scriptContent);  // 여러 줄 주석
 
+        // prx($scriptContent);
         // 줄바꿈 및 탭 제거
         $scriptContent = \str_replace(["\r", "\n", "\t"], '', $scriptContent);
         // 연속된 공백을 하나로
