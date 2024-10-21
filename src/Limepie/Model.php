@@ -136,22 +136,33 @@ class Model extends ModelBase
         }
 
         // \pr($class::class, $data);
-
+        // 부모 테이블이 있는 경우
         if ($parentTableName) {
-            $attribute[$parentTableName][$moduleName] = $data;
-        } else {
-            if ($class->parentNode) {
-                if ($isSingle) { // single일때만 적용된다. 싱글이 아니면 seq를 비교할수 없다.
-                    foreach ($data ?? [] as $key => $value) {
-                        if ('seq' !== $key) {
-                            $attribute[$key] = $value;
-                        }
-                        // $attribute[$key] = $value;
+            // parentNode가 있고 single인 경우 ,single일때만 적용된다. 싱글이 아니면 seq를 비교할수 없다.
+            if ($class->parentNode && $isSingle) {
+                foreach ($data ?? [] as $key => $value) {
+                    if ('seq' !== $key) {
+                        $attribute[$parentTableName][$key] = $value;
                     }
-                } else {
-                    $attribute[$moduleName] = $data;
                 }
-            } else {
+            }
+            // 그 외의 경우
+            else {
+                $attribute[$parentTableName][$moduleName] = $data;
+            }
+        }
+        // 부모 테이블이 없는 경우
+        else {
+            // parentNode가 있고 single인 경우,single일때만 적용된다. 싱글이 아니면 seq를 비교할수 없다.
+            if ($class->parentNode && $isSingle) {
+                foreach ($data ?? [] as $key => $value) {
+                    if ('seq' !== $key) {
+                        $attribute[$key] = $value;
+                    }
+                }
+            }
+            // 그 외의 경우
+            else {
                 $attribute[$moduleName] = $data;
             }
         }
@@ -287,7 +298,19 @@ class Model extends ModelBase
                 }
 
                 if ($parentTableName) {
-                    $attribute[$parentTableName]->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
+                    // $attribute[$parentTableName]->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
+
+                    if ($class->parentNode) {
+                        // parentNode가 true일 경우, 부모에게 자식을 붙인다.
+                        foreach ($data[$leftKeyValue] ?? [] as $key => $value) {
+                            if ('seq' !== $key) {
+                                $attribute[$parentTableName][$key] = $value;
+                            }
+                        }
+                        // $attribute->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
+                    } else {
+                        $attribute[$parentTableName]->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
+                    }
                 } else {
                     if ($class->parentNode) {
                         // parentNode가 true일 경우, 부모에게 자식을 붙인다.
@@ -392,7 +415,17 @@ class Model extends ModelBase
                     // //\pr($class::class, $rightKeyMapValueByLeftKey);
 
                     if ($parentTableName) {
-                        $attribute[$parentTableName]->offsetSet($moduleName, $instance);
+                        // $attribute[$parentTableName]->offsetSet($moduleName, $instance);
+
+                        if ($class->parentNode) { // parent로 옮길때는 seq까지 옮기면 덮어 쓴다.
+                            foreach ($rightKeyMapValueByLeftKey ?? [] as $key => $value) {
+                                if ('seq' !== $key) {
+                                    $attribute[$parentTableName][$key] = $value;
+                                }
+                            }
+                        } else {
+                            $attribute[$parentTableName]->offsetSet($moduleName, $instance);
+                        }
                     } else {
                         if ($class->parentNode) { // parent로 옮길때는 seq까지 옮기면 덮어 쓴다.
                             foreach ($rightKeyMapValueByLeftKey ?? [] as $key => $value) {
@@ -480,9 +513,7 @@ class Model extends ModelBase
         return $attributes;
     }
 
-    public function replace()
-    {
-    }
+    public function replace() {}
 
     public function create($on_duplicate_key_update = null)
     {
@@ -650,27 +681,27 @@ class Model extends ModelBase
 
     public function update($checkUpdatedTs = false)
     {
-
         if (false === isset($this->attributes[$this->primaryKeyName])) {
             $debug = \debug_backtrace()[0];
 
             throw (new Exception('not found ' . $this->primaryKeyName))
-                ->setDebugMessage('models update?', $debug['file'], $debug['line']);
+                ->setDebugMessage('models update?', $debug['file'], $debug['line'])
+            ;
         }
 
-        $this->changeBinds = [];
+        $this->changeBinds   = [];
         $this->changeColumns = [];
         $this->sameColumns   = [];
 
         foreach ($this->allColumns as $column) {
             // db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 않음
 
-            $attr      = $this->attributes[$column]       ?? null;
-            $origAttr  = $this->originAttributes[$column] ?? null;
+            $attr     = $this->attributes[$column]       ?? null;
+            $origAttr = $this->originAttributes[$column] ?? null;
 
             // attr과 originAttr가 같고 raw, plus,  minus가 아니면 continue,
             // raw, plus, minus가 있으면 값은 변동되지 않아도 업데이트 함
-            if ($attr === $origAttr
+            if ($attr    === $origAttr
                 && false === isset($this->plusAttributes[$column])
                 && false === isset($this->minusAttributes[$column])
                 && false === isset($this->rawAttributes[$column])
@@ -679,7 +710,6 @@ class Model extends ModelBase
 
                 continue;
             }
-
 
             if (true === isset($this->dataStyles[$column])
                 && 'jsons' == $this->dataStyles[$column]) {
@@ -844,7 +874,7 @@ class Model extends ModelBase
         return $this;
     }
 
-    public function doDelete(): bool|self
+    public function doDelete() : bool|self
     {
         if (true == $this->deleteLock) {
             return true;
@@ -925,7 +955,7 @@ class Model extends ModelBase
         return false;
     }
 
-    protected function getSelectColumns(string $prefixString = '', $isCount = false): string
+    protected function getSelectColumns(string $prefixString = '', $isCount = false) : string
     {
         $prefix = '';
 
@@ -1167,7 +1197,7 @@ class Model extends ModelBase
         throw new Exception('lost connection');
     }
 
-    protected function buildGetSum(string $name, array $arguments, int $offset): float|int
+    protected function buildGetSum(string $name, array $arguments, int $offset) : float|int
     {
         $this->attributes = [];
 
@@ -1240,7 +1270,7 @@ class Model extends ModelBase
         throw new Exception('lost connection');
     }
 
-    protected function buildGetAvg(string $name, array $arguments, int $offset): float|int
+    protected function buildGetAvg(string $name, array $arguments, int $offset) : float|int
     {
         $this->attributes = [];
 
@@ -1313,7 +1343,7 @@ class Model extends ModelBase
         throw new Exception('lost connection');
     }
 
-    public function getJoin($isCount = false): array
+    public function getJoin($isCount = false) : array
     {
         $join          = '';
         $selectColumns = '';
@@ -1380,12 +1410,12 @@ class Model extends ModelBase
         ];
     }
 
-    public function get1(null|array|string $sql = null, array $binds = []): ?self
+    public function get1(null|array|string $sql = null, array $binds = []) : ?self
     {
         throw new Exception('not support get1');
     }
 
-    protected function buildGroupBy(string $groupByString, array $arguments): self
+    protected function buildGroupBy(string $groupByString, array $arguments) : self
     {
         $part = \explode('And', \substr($groupByString, 7));
 
@@ -1413,7 +1443,7 @@ class Model extends ModelBase
         return $this;
     }
 
-    protected function buildOrderBy(string $orderByString, array $arguments): self
+    protected function buildOrderBy(string $orderByString, array $arguments) : self
     {
         $part = \explode('And', \substr($orderByString, 7));
 
@@ -1441,7 +1471,7 @@ class Model extends ModelBase
         return $this;
     }
 
-    private function isValidSeqArgument(string $operator, mixed $argument): bool
+    private function isValidSeqArgument(string $operator, mixed $argument) : bool
     {
         if ('seq' !== \strtolower(\substr($operator, -3))) {
             return true; // Not a Seq operator, so it's valid
@@ -1457,7 +1487,7 @@ class Model extends ModelBase
         return \is_numeric($argument) || null === $argument;
     }
 
-    protected function buildAnd(string $name, array $arguments, int $offset = 3): self
+    protected function buildAnd(string $name, array $arguments, int $offset = 3) : self
     {
         $operator = \substr($name, $offset);
 
@@ -1484,7 +1514,7 @@ class Model extends ModelBase
         return $this;
     }
 
-    protected function buildOr(string $name, array $arguments, int $offset = 2): self
+    protected function buildOr(string $name, array $arguments, int $offset = 2) : self
     {
         $operator = \substr($name, $offset);
 
@@ -1513,7 +1543,7 @@ class Model extends ModelBase
         return $this;
     }
 
-    protected function splitKey(string $name, int $offset = 0): array
+    protected function splitKey(string $name, int $offset = 0) : array
     {
         $orgKey = \substr($name, $offset);
 
@@ -1564,7 +1594,7 @@ class Model extends ModelBase
     }
 
     // where, and, or등의 추가 구문을 붙이지 않고 처리
-    protected function getConditions(string $name, array $arguments, int $offset = 0): array
+    protected function getConditions(string $name, array $arguments, int $offset = 0) : array
     {
         if (false === \strpos($name, ' ')) {
             $splitKeys = $this->splitKey($name, $offset);
@@ -1748,7 +1778,7 @@ class Model extends ModelBase
         return [$conds, $binds];
     }
 
-    public function get(null|array|string $sql = null, array $binds = []): ?self
+    public function get(null|array|string $sql = null, array $binds = []) : ?self
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -1980,7 +2010,7 @@ class Model extends ModelBase
         return $this->empty();
     }
 
-    protected function buildGetsBy(string $name, array $arguments, int $offset): ?self
+    protected function buildGetsBy(string $name, array $arguments, int $offset) : ?self
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -2053,7 +2083,7 @@ class Model extends ModelBase
         return $this->executeGets($sql, $binds);
     }
 
-    public function gets(null|array|string $sql = null, array $binds = []): ?self
+    public function gets(null|array|string $sql = null, array $binds = []) : ?self
     {
         $this->attributes      = [];
         $this->primaryKeyValue = '';
@@ -2159,7 +2189,7 @@ class Model extends ModelBase
         return $this->executeGets($sql, $binds);
     }
 
-    public function executeGets(string $sql, array $binds = []): ?self
+    public function executeGets(string $sql, array $binds = []) : ?self
     {
         $data = $this->getConnect()->gets($sql, $binds, false);
 
