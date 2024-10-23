@@ -179,6 +179,19 @@ function ago($enddate, $format = '$d day $H:$i:$s')
     return $day . '일하고, ' . $hour . ':' . $minute . ':' . $second . '';
 }
 
+function dday_count($targetDate, $is_zero_return = false)
+{
+    $dDay = \ceil((\strtotime($targetDate) - \time()) / 86400);
+
+    // D-Day가 0일일 경우 처리
+    if (0 == $dDay) {
+        return $is_zero_return ? '' : 0;
+    }
+
+    // D-Day가 양수 또는 음수일 경우 처리
+    return \abs($dDay);
+}
+
 function period($start, $end, $after_today = false, $include_end_date = true)
 {
     if ($start instanceof \DateTime) {
