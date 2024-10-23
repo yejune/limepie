@@ -1,7 +1,6 @@
 <?php
 
 declare(strict_types=1);
-// use WyriHaximus\HtmlCompress\Factory;
 
 function removeSpace($content, $tpl)
 {
@@ -54,7 +53,7 @@ function removeSpace($content, $tpl)
     // 2. 공백을 유지해야 하는 태그의 내용을 임시로 다른 문자열로 대체
     foreach ($preservePatterns['tag'] as $tag) {
         $escapedTag = \preg_quote($tag, '/');
-        $content    = \preg_replace_callback("/(<{$escapedTag}\\b[^>]*>)(.*?)(<\\/{$escapedTag}>)/is", function ($matches) use (&$placeholders, &$step) {
+        $content    = \preg_replace_callback("/(<\\s*{$escapedTag}\\s*\\b[^>]*>)(.*?)(<\\s*\\/\\s*{$escapedTag}\\s*>)/is", function ($matches) use (&$placeholders, &$step) {
             $placeholder = "###TAG_PLACEHOLDER{$step}###";
             ++$step;
             $placeholders[$placeholder] = $matches[2];
@@ -64,50 +63,74 @@ function removeSpace($content, $tpl)
     }
 
     // 3. <script> 태그 처리
-    $content = \preg_replace_callback('/(<script\b[^>]*>)(.*?)(<\/script>)/is', function ($matches) use (&$placeholders, &$step) {
+    $content = \preg_replace_callback('/(<\s*script\s*\b[^>]*>)(.*?)(<\s*\/\s*script\s*>)/is', function ($matches) use (&$placeholders, &$step) {
         $openTag       = $matches[1];
         $scriptContent = $matches[2];
         $closeTag      = $matches[3];
 
-        // 문자열 리터럴을 임시로 다른 문자열로 대체
-        $scriptContent = \preg_replace_callback('/([\'"`])((?:\\\.|[^\\\])*?)\1/', function ($matches) use (&$placeholders, &$step) {
-            // \prx($matches);
-            $placeholder = "###STRING_PLACEHOLDER{$step}###";
+        // 백틱(템플릿 문자열)을 처리
+        $scriptContent = \preg_replace_callback('/`((?:\\\.|[^\\\]|[\r\n])*?)`/', function ($matches) use (&$placeholders, &$step) {
+            $placeholder = "###TEMPLATE_PLACEHOLDER{$step}###";
             ++$step;
             $placeholders[$placeholder] = $matches[0];
 
             return $placeholder;
         }, $scriptContent);
 
-        // 정규식 리터럴을 임시로 다른 문자열로 대체
-        $scriptContent = preg_replace_callback('~
-    (?<![\d\w])                    # 숫자나 문자가 앞에 오지 않음
-    (?:
-        (?<=[\(\[{\s=,:;!&|?]|^)   # 정규식이 올 수 있는 문맥 확인
-        /                           # 시작 구분자
-        (?:
-            [^\\/\n]|              # 슬래시나 줄바꿈이 아닌 문자
-            \\.                     # 또는 이스케이프된 문자
-        )+
-        /                          # 종료 구분자
-        [gimsuy]*                  # 정규식 플래그
-    )
-~mx', function ($matches) use (&$placeholders, &$step) {
-            $placeholder = "###REGEX_PLACEHOLDER{$step}###";
-            $placeholders[$placeholder] = $matches[0];
-            $step++;
+        // 일반 문자열(싱글/더블 쿼트)을 처리
+        $scriptContent = \preg_replace_callback('/([\'"])((?:[^\1\\\\\r\n]|\\\.)*)\1/', function ($matches) use (&$placeholders, &$step) {
+            $fullString = $matches[0];
+            $quote      = $matches[1];
+            $content    = $matches[2];
+
+            // 현재 쿼트 타입의 수만 체크 (다른 타입은 무시)
+            // 문자열 내 이스케이프되지 않은 따옴표를 정확하게 찾음
+            $backslash  = '\\\\';  // 정규식에서 단일 백슬래시를 나타내기 위한 패턴
+            $quoteCount = \preg_match_all(
+                '/' . \preg_quote('(?<!' . $backslash . ')', '/') . \preg_quote($quote, '/') . '/',
+                $fullString
+            );
+
+            if (0 !== $quoteCount % 2) {
+                return $fullString;
+            }
+
+            $placeholder = "###STRING_PLACEHOLDER{$step}###";
+            ++$step;
+            $placeholders[$placeholder] = $fullString;
+
             return $placeholder;
         }, $scriptContent);
-        // prx($scriptContent);
+
+        // 정규식 리터럴을 임시로 다른 문자열로 대체
+        $scriptContent = \preg_replace_callback('~
+            (?<![\d\w])                    # 숫자나 문자가 앞에 오지 않음
+            (?:
+                (?<=[\(\[{\s=,:;!&|?]|^)   # 정규식이 올 수 있는 문맥 확인
+                /                          # 시작 구분자
+                (?:
+                    [^\/\n]|               # 슬래시나 줄바꿈이 아닌 문자
+                    \.                     # 또는 이스케이프된 문자
+                )+
+                /                          # 종료 구분자
+                [gimsuy]*                  # 정규식 플래그
+            )
+        ~mx', function ($matches) use (&$placeholders, &$step) {
+            $placeholder                = "###REGEX_PLACEHOLDER{$step}###";
+            $placeholders[$placeholder] = $matches[0];
+            ++$step;
+
+            return $placeholder;
+        }, $scriptContent);
+
         // 주석 제거
         // 단일 행 주석
         $scriptContent = \preg_replace('/\/\/.*?(?=[\r\n]|$)/', '', $scriptContent);
-        // // 다중 행 주석
+        // // // 다중 행 주석
         $scriptContent = \preg_replace('/\/\*.*?\*\//s', '', $scriptContent);
-        // $scriptContent = preg_replace('/\/\/.*$/m', '', $scriptContent);  // 한 줄 주석
-        // $scriptContent = preg_replace('/\/\*.*?\*\//s', '', $scriptContent);  // 여러 줄 주석
+        // $scriptContent = \preg_replace('/\/\/.*/', '', $scriptContent);  // 한 줄 주석
+        // $scriptContent = \preg_replace('/\/\*.*?\*\//s', '', $scriptContent);  // 여러 줄 주석
 
-        // prx($scriptContent);
         // 줄바꿈 및 탭 제거
         $scriptContent = \str_replace(["\r", "\n", "\t"], '', $scriptContent);
         // 연속된 공백을 하나로
@@ -118,7 +141,7 @@ function removeSpace($content, $tpl)
     }, $content);
 
     // 4. <style> 태그 처리
-    $content = \preg_replace_callback('/(<style\b[^>]*>)(.*?)(<\/style>)/is', function ($matches) {
+    $content = \preg_replace_callback('/(<\s*style\s*\b[^>]*>)(.*?)(<\s*\/\s*style\s*>)/is', function ($matches) {
         $openTag      = $matches[1];
         $styleContent = $matches[2];
         $closeTag     = $matches[3];
@@ -142,10 +165,10 @@ function removeSpace($content, $tpl)
     $content = \str_replace(["\r", "\n", "\t"], ' ', $content);
 
     // 순수 테그 주변 공백 제거, php는 치환되지 않은 상태
-    $content = \preg_replace('/>\s+</', '><', $content);
-    $content = \preg_replace('/> +/', '>', $content);
-    $content = \preg_replace('/ +</', '<', $content);
-
+    // -> 주변 공백을 제거하면 의도한 공백들이 문제될수 있어서 제거
+    // $content = \preg_replace('/>\s+</', '><', $content);
+    // $content = \preg_replace('/> +/', '>', $content);
+    // $content = \preg_replace('/ +</', '<', $content);
 
     // 7. 연속된 공백을 하나로
     $content = \preg_replace('/\s+/', ' ', $content);
