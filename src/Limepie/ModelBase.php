@@ -219,9 +219,17 @@ class ModelBase extends ArrayObject
             return $this->buildJoinOn($name, $arguments);
         }
 
+        // if (0 === \strpos($name, 'joins')) {
+        //     return $this->buildJoin($name, $arguments);
+        // }
+
         if (0 === \strpos($name, 'join')) {
             return $this->buildJoin($name, $arguments);
         }
+
+        // if (0 === \strpos($name, 'leftJoins')) {
+        //     return $this->buildJoin($name, $arguments);
+        // }
 
         if (0 === \strpos($name, 'leftJoin')) {
             return $this->buildJoin($name, $arguments);
@@ -707,13 +715,14 @@ class ModelBase extends ArrayObject
             ;
         */
 
-        if (1 === \preg_match('#(?P<type>left)?(j|J)oin(?P<leftKeyName>.*)With(?P<rightKeyName>.*)#', $name, $m)) {
+        if (1 === \preg_match('#(?P<type>left)?(j|J)oin(?P<multi>s)?(?P<leftKeyName>.*)With(?P<rightKeyName>.*)#', $name, $m)) {
             $this->joinModels[] = [
                 'model'  => $arguments[0],
                 'left'   => \Limepie\decamelize($m['leftKeyName']),
                 'right'  => \Limepie\decamelize($m['rightKeyName']),
                 'type'   => $m['type'] ? true : false,
                 'target' => $arguments[1] ?? null,
+                'multi'  => $m['multi'] ? true : false,
             ];
         } else {
             throw new Exception('"' . $name . '" syntax error', 1999);

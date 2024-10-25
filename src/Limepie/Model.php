@@ -233,6 +233,11 @@ class Model extends ModelBase
                     $seqs[] = $row[$leftKeyName];
                 }
             } else {
+                // \prx($parentTableName, $leftKeyName, $attribute, $row);
+                if ($parentTableName) {
+                    throw new Exception($this->tableName . ' table > ' . $parentTableName . ' table ' . $leftKeyName . ' column not found #2');
+                }
+
                 throw new Exception($this->tableName . ' table ' . $leftKeyName . ' column not found #2');
             }
         }
@@ -2262,6 +2267,10 @@ class Model extends ModelBase
                     $keyName = ($this->keyName)($row);
                 } else {
                     if (false === \array_key_exists($this->keyName, $row)) {
+                        if ($parentTableName) {
+                            throw new Exception('gets ' . $this->tableName . ' "> ' . $parentTableName . ' ' . $this->keyName . '" column not found #5');
+                        }
+
                         throw new Exception('gets ' . $this->tableName . ' "' . $this->keyName . '" column not found #5');
                     }
                     $keyName = $row[$this->keyName];

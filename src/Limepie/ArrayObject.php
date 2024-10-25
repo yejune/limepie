@@ -371,14 +371,50 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return $this;
     }
 
-    public function first()
+    /**
+     * 배열의 row를 가져오는 메서드.
+     *
+     * @param string      $method   array_key_first|array_key_last|array_rand
+     * @param null|string $key      특정 키값을 가져올 경우
+     * @param bool        $nullable null 허용 여부
+     */
+    private function getRow(string $method, ?string $key = null, bool $nullable = true)
     {
-        return $this->attributes[\array_key_first($this->attributes)];
+        $row = $this->attributes[$method($this->attributes)];
+
+        if (!$key) {
+            return $row;
+        }
+
+        if ($nullable) {
+            return $row[$key] ?? null;
+        }
+
+        return $row[$key];
     }
 
-    public function last()
+    /**
+     * 배열의 첫번째 row 가져오기.
+     */
+    public function first(?string $key = null, bool $nullable = true)
     {
-        return $this->attributes[\array_key_last($this->attributes)];
+        return $this->getRow('array_key_first', $key, $nullable);
+    }
+
+    /**
+     * 배열의 마지막 row 가져오기.
+     */
+    public function last(?string $key = null, bool $nullable = true)
+    {
+        return $this->getRow('array_key_last', $key, $nullable);
+    }
+
+    /**
+     * 배열의 랜덤 row 가져오기.
+     */
+    public function random(?string $key = null, bool $nullable = true)
+    {
+        return $this->getRow('array_rand', $key, $nullable);
     }
 
     public function set($attributes)
