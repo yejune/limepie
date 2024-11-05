@@ -6,6 +6,121 @@ namespace Limepie\dt;
 
 use Limepie\Exception;
 
+// Example usage:
+// echo formatRange('2024-11-02 10:00:00', '2024-12-05 18:00:00', 'ko');
+// 2024년 11월 2일 ~ 12월 5일
+// echo formatRange('2024-11-02 10:00:00', '2024-12-05 18:00:00', 'en');
+// 2024 11/02 ~ 12/05
+// echo formatRange('2024-11-02 10:00:00', '2024-12-05 18:00:00', 'ja');
+// 2024年 11月 2日 ~ 12月 5日
+// echo formatRange('2024-11-02 10:00:00', '2024-12-05 18:00:00', 'zh');
+// 2024年 11月 2日 ~ 12月 5日
+
+function format_range(?string $start_dt, ?string $end_dt, string $lang = 'ko') : string
+{
+    if (null === $start_dt || null === $end_dt) {
+        return '';
+    }
+
+    // Date formats by language
+    $formats = [
+        'ko' => [
+            'full'       => '%s년 %s월 %s일 ~ %s년 %s월 %s일',
+            'same_year'  => '%s년 %s월 %s일 ~ %s월 %s일',
+            'same_month' => '%s년 %s월 %s일 ~ %s일',
+        ],
+        'en' => [
+            'full'       => '%s/%s/%s ~ %s/%s/%s',
+            'same_year'  => '%s %s/%s ~ %s/%s',
+            'same_month' => '%s %s/%s ~ %s',
+        ],
+        'ja' => [
+            'full'       => '%s年 %s月 %s日 ~ %s年 %s月 %s日',
+            'same_year'  => '%s年 %s月 %s日 ~ %s月 %s日',
+            'same_month' => '%s年 %s月 %s日 ~ %s日',
+        ],
+        'zh' => [
+            'full'       => '%s年 %s月 %s日 ~ %s年 %s月 %s日',
+            'same_year'  => '%s年 %s月 %s日 ~ %s月 %s日',
+            'same_month' => '%s年 %s月 %s日 ~ %s日',
+        ],
+    ];
+
+    // Use English format as fallback
+    $format = $formats[$lang] ?? $formats['en'];
+
+    $start = new \DateTime($start_dt);
+    $end   = new \DateTime($end_dt);
+
+    // Get components
+    $startYear  = $start->format('Y');
+    $startMonth = 'en' === $lang ? $start->format('m') : $start->format('n');
+    $startDay   = 'en' === $lang ? $start->format('d') : $start->format('j');
+    $endYear    = $end->format('Y');
+    $endMonth   = 'en' === $lang ? $end->format('m') : $end->format('n');
+    $endDay     = 'en' === $lang ? $end->format('d') : $end->format('j');
+
+    // Different years
+    if ($startYear !== $endYear) {
+        return \sprintf(
+            $format['full'],
+            $startYear,
+            $startMonth,
+            $startDay,
+            $endYear,
+            $endMonth,
+            $endDay
+        );
+    }
+
+    // Same year, different months
+    if ($startMonth !== $endMonth) {
+        return \sprintf(
+            $format['same_year'],
+            $startYear,
+            $startMonth,
+            $startDay,
+            $endMonth,
+            $endDay
+        );
+    }
+
+    // Same year and month
+    return \sprintf(
+        $format['same_month'],
+        $startYear,
+        $startMonth,
+        $startDay,
+        $endDay
+    );
+}
+
+/**
+ * Check if current time is between start and end timestamps.
+ *
+ * @param null|string $start_dt timestamp string
+ * @param null|string $end_dt   timestamp string
+ *
+ * @return bool Returns true if current time is between start and end times
+ */
+function inside(?string $start_dt, ?string $end_dt) : bool
+{
+    // If either date is null, return false
+    if (null === $start_dt || null === $end_dt) {
+        return false;
+    }
+
+    // Get current timestamp
+    $now = \time();
+
+    // Convert MySQL timestamps to Unix timestamps
+    $start = \strtotime($start_dt);
+    $end   = \strtotime($end_dt);
+
+    // Check if current time is between start and end times
+    return $now >= $start && $now <= $end;
+}
+
 /*
 $testCases = [
     ['2023-12-01', '1D'],

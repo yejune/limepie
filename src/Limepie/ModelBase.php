@@ -811,6 +811,7 @@ class ModelBase extends ArrayObject
             echo '</table>';
         }
         echo '</td></tr></table>';
+        echo 'request time : ' . (\microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']) . '<br />';
         // exit;
     }
 

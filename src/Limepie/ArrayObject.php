@@ -8,6 +8,8 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 {
     public $attributes = [];
 
+    public $allColumns = [];
+
     public function __construct(null|array|ArrayObject|\stdClass $array)
     {
         if ($array instanceof ArrayObject) {
@@ -202,6 +204,9 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             // unknown column
 
             // \pr($this->attributes);
+            if (\in_array($fieldName, $this->allColumns ?? [])) {
+                return null;
+            }
 
             throw (new Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #1', 500))
                 ->setDebugMessage(\get_called_class() . ': Column "' . $fieldName . '" not found #1', __FILE__, __LINE__)

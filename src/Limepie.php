@@ -19,15 +19,16 @@ function ___($domain, $string, $a, $b)
     return \dngettext($domain, $string, $a, $b);
 }
 
-function str_to_array($inputString, $mainDelimiter = '|', $keyValueDelimiter = '=') {
+function str_to_array($inputString, $mainDelimiter = '|', $keyValueDelimiter = '=')
+{
     $result = [];
-    $parts = explode($mainDelimiter, $inputString);
+    $parts  = explode($mainDelimiter, $inputString);
 
     foreach ($parts as $part) {
-        $keyValue = explode($keyValueDelimiter, $part, 2);
-            $key = trim($keyValue[0]);
-            $value = trim($keyValue[1]);
-            $result[$key] = $value;
+        $keyValue     = explode($keyValueDelimiter, $part, 2);
+        $key          = \trim($keyValue[0]);
+        $value        = \trim($keyValue[1]);
+        $result[$key] = $value;
     }
 
     return $result;
@@ -1971,6 +1972,11 @@ function open_script_tag($nonce = null)
 function close_script_tag()
 {
     return close_tag('script');
+}
+
+function hx_target()
+{
+    return $_SERVER['HTTP_HX_TARGET'] ?? 'html';
 }
 
 function is_hx_request()
