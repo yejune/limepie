@@ -6,6 +6,94 @@ namespace Limepie\dt;
 
 use Limepie\Exception;
 
+/*
+echo get_time_ago('2023-11-13 10:00:00', 'ko'); // "3일 전"
+echo get_time_ago('2023-11-13 10:00:00', 'en'); // "3 days ago"
+echo get_time_ago('2023-11-13 10:00:00', 'ja'); // "3日前"
+echo get_time_ago('2023-11-13 10:00:00', 'zh'); // "3天前"
+echo get_time_ago('2023-11-13 10:00:00', 'uz'); // "3 kun oldin"
+*/
+function get_time_ago($timestamp, $lang = 'ko')
+{
+    $current_time    = \time();
+    $time_difference = $current_time - \strtotime($timestamp);
+
+    $language = [
+        'ko' => [
+            'just_now'  => '방금 전',
+            'min_ago'   => '분 전',
+            'hour_ago'  => '시간 전',
+            'day_ago'   => '일 전',
+            'month_ago' => '달 전',
+            'year_ago'  => '년 전',
+        ],
+        'en' => [
+            'just_now'  => 'just now',
+            'min_ago'   => 'minutes ago',
+            'hour_ago'  => 'hours ago',
+            'day_ago'   => 'days ago',
+            'month_ago' => 'months ago',
+            'year_ago'  => 'years ago',
+        ],
+        'ja' => [
+            'just_now'  => '先ほど',
+            'min_ago'   => '分前',
+            'hour_ago'  => '時間前',
+            'day_ago'   => '日前',
+            'month_ago' => 'ヶ月前',
+            'year_ago'  => '年前',
+        ],
+        'zh' => [
+            'just_now'  => '刚刚',
+            'min_ago'   => '分钟前',
+            'hour_ago'  => '小时前',
+            'day_ago'   => '天前',
+            'month_ago' => '个月前',
+            'year_ago'  => '年前',
+        ],
+        'uz' => [
+            'just_now'  => 'hozirgina',
+            'min_ago'   => 'daqiqa oldin',
+            'hour_ago'  => 'soat oldin',
+            'day_ago'   => 'kun oldin',
+            'month_ago' => 'oy oldin',
+            'year_ago'  => 'yil oldin',
+        ],
+    ];
+
+    // 언어가 없는 경우 한국어로 기본 설정
+    if (!isset($language[$lang])) {
+        $lang = 'ko';
+    }
+
+    $condition = [
+        12 * 30 * 24 * 60 * 60 => function ($time) use ($language, $lang) {
+            return \floor($time / (12 * 30 * 24 * 60 * 60)) . $language[$lang]['year_ago'];
+        },
+        30 * 24 * 60 * 60 => function ($time) use ($language, $lang) {
+            return \floor($time / (30 * 24 * 60 * 60)) . $language[$lang]['month_ago'];
+        },
+        24 * 60 * 60 => function ($time) use ($language, $lang) {
+            return \floor($time / (24 * 60 * 60)) . $language[$lang]['day_ago'];
+        },
+        60 * 60 => function ($time) use ($language, $lang) {
+            return \floor($time / (60 * 60)) . $language[$lang]['hour_ago'];
+        },
+        60 => function ($time) use ($language, $lang) {
+            return \floor($time / 60) . $language[$lang]['min_ago'];
+        },
+        0 => function ($time) use ($language, $lang) {
+            return $language[$lang]['just_now'];
+        },
+    ];
+
+    foreach ($condition as $secs => $callback) {
+        if ($time_difference >= $secs) {
+            return $callback($time_difference);
+        }
+    }
+}
+
 // Example usage:
 // echo formatRange('2024-11-02 10:00:00', '2024-12-05 18:00:00', 'ko');
 // 2024년 11월 2일 ~ 12월 5일

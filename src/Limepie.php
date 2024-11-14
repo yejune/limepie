@@ -80,6 +80,67 @@ function highlight_keyword($text, $keywords, $useHash = false, $className = 'hig
         return '<span class="' . \htmlspecialchars($className) . '">' . \htmlspecialchars($matches[0]) . '</span>';
     }, $text);
 }
+
+function get_level($points)
+{
+    $level_config = [
+        1  => 2000,     // 1-20
+        21 => 3000,     // 21-40
+        41 => 4000,     // 41-60
+        61 => 5000,     // 61-80
+        81 => 6000,     // 81+
+    ];
+
+    $current_points = $points;
+    $level          = 1;      // 시작이 1레벨
+
+    foreach ($level_config as $start_level => $point) {
+        $points_needed = $point;
+
+        while ($current_points >= $points_needed) {
+            $current_points -= $points_needed;
+            ++$level;
+        }
+
+        if ($current_points < $points_needed) {
+            break;
+        }
+    }
+
+    return $level;
+}
+
+/*
+
+function get_level($points)
+{
+    $level_config = [
+        1  => 2000,     // 1-20 레벨: 2000포인트씩
+        21 => 3000,     // 21-40 레벨: 3000포인트씩
+        41 => 4000,     // 41-60 레벨: 4000포인트씩
+        61 => 5000,     // 61-80 레벨: 5000포인트씩
+        81 => 6000,     // 81+ 레벨: 6000포인트씩
+    ];
+
+    $remaining_points = $points;
+    $current_level    = 1;
+
+    foreach ($level_config as $range_start => $points_per_level) {
+        $range_end = \next($level_config) ? \key($level_config) - 1 : PHP_INT_MAX;
+
+        // 현재 구간에서 레벨업이 가능한 동안 반복
+        while ($current_level >= $range_start
+               && $current_level <= $range_end
+               && $remaining_points >= $points_per_level) {
+            $remaining_points -= $points_per_level;
+            ++$current_level;
+        }
+    }
+
+    return $current_level;
+}
+
+*/
 function wrap_space_em($text)
 {
     // 첫 번째 공백을 찾습니다.
@@ -1981,7 +2042,16 @@ function hx_target()
 
 function is_hx_request()
 {
+    if (\Limepie\is_hx_boost()) {
+        return false;
+    }
+
     return isset($_SERVER['HTTP_HX_REQUEST']) && 'true' == $_SERVER['HTTP_HX_REQUEST'];
+}
+
+function is_hx_boost()
+{
+    return isset($_SERVER['HTTP_HX_BOOSTED']) && 'true' == $_SERVER['HTTP_HX_BOOSTED'];
 }
 
 function is_hx_swap_paging()
