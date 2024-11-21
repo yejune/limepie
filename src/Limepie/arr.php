@@ -8,6 +8,22 @@ use Limepie\ArrayObject;
 use Limepie\Di;
 use Limepie\Exception;
 
+function insert_random($items, $newItem, $max = null)
+{
+    // $items = [1, 2, 3, 4, 5];
+    // $newItem = 6
+    // 1 2 3 6 4 5
+
+    $count = \count($items);
+
+    // $position = \rand(0, \Limepie\get_max_multiple($count, $max + 1));
+    $position = \rand(0, $max ? $max : $count);
+
+    \array_splice($items, $position, 0, [$newItem]);
+
+    return $items;
+}
+
 /**
  * 배열의 첫 번째 요소를 제거하고 그 값을 반환합니다. 키는 유지되지 않습니다.
  * 원본 배열이 수정됩니다.
@@ -131,7 +147,7 @@ function get_percent_stars($reviewCounts)
     ];
 }
 
-function replace($description, array $row = [])
+function replace($description, $row = [])
 {
     // preg_replace_callback 함수를 사용하여 정규표현식 패턴에 맞는 부분을 찾아 치환합니다.
     return \preg_replace_callback(

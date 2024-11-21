@@ -423,7 +423,7 @@ class ModelBase extends ArrayObject
                                     throw $e;
                                 }
                             } else {
-                                $value = [];
+                                $value = null;
                             }
 
                             break;
@@ -435,7 +435,7 @@ class ModelBase extends ArrayObject
                                     throw $e;
                                 }
                             } else {
-                                $value = [];
+                                $value = null;
                             }
 
                             break;
@@ -447,7 +447,7 @@ class ModelBase extends ArrayObject
                                     throw $e;
                                 }
                             } else {
-                                $value = [];
+                                $value = null;
                             }
 
                             break;
@@ -455,7 +455,7 @@ class ModelBase extends ArrayObject
                             if ($value) {
                                 $value = new ArrayObject(\unserialize(\base64_decode($value, true)));
                             } else {
-                                $value = [];
+                                $value = null;
                             }
 
                             break;
@@ -464,10 +464,10 @@ class ModelBase extends ArrayObject
                                 if (\Limepie\is_binary($value)) {
                                     $value = new ArrayObject(\unserialize(\gzuncompress($value)));
                                 } else {
-                                    $value = [];
+                                    $value = null;
                                 }
                             } else {
-                                $value = [];
+                                $value = null;
                             }
 
                             break;
@@ -495,10 +495,10 @@ class ModelBase extends ArrayObject
                                 if ($body) {
                                     $value = new ArrayObject($body);
                                 } else {
-                                    $value = [];
+                                    $value = null;
                                 }
                             } else {
-                                $value = [];
+                                $value = null;
                             }
 
                             break;
@@ -509,7 +509,7 @@ class ModelBase extends ArrayObject
                                 if ($body) {
                                     $value = new ArrayObject($body);
                                 } else {
-                                    $value = [];
+                                    $value = null;
                                 }
                             } else {
                                 $value = null;
@@ -523,7 +523,7 @@ class ModelBase extends ArrayObject
                             if ($body) {
                                 $value = new ArrayObject($body);
                             } else {
-                                $value = [];
+                                $value = null;
                             }
                             // no break
                         case 'int':
@@ -812,6 +812,7 @@ class ModelBase extends ArrayObject
         }
         echo '</td></tr></table>';
         echo 'request time : ' . (\microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']) . '<br />';
+        echo 'memory usage : ' . \Limepie\readable_size(\memory_get_usage()) . '<br />';
         // exit;
     }
 

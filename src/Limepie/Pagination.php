@@ -199,11 +199,15 @@ class Pagination
         $hash = null,
         $currentPage = null,
         $urlPattern = null,
-        $returnTypeNull = null
+        $returnTypeNull = null,
+        ?int $maxPage = null, // 최대 페이지 제한 추가
+        $page = null
     ) : array {
         if (!$listModel) {
             $listModel = clone $countModel;
         }
+
+        $argPage = (int) ($page ?? $_REQUEST['page'] ?? 1);
 
         $totalCount = $countModel->getCount();
 
@@ -229,7 +233,7 @@ class Pagination
         if ($currentPage) {
             $currentPage = (int) $currentPage;
         } else {
-            $currentPage = (int) ($_REQUEST['page'] ?? 1);
+            $currentPage = (int) $argPage;
         }
 
         if ($currentPage < 1) {
@@ -237,19 +241,21 @@ class Pagination
         }
         $totalPages = (0 === $recordsPerPage ? 0 : (int) \ceil($totalCount / $recordsPerPage));
 
+        // 최대 페이지 제한 적용
+        if (null !== $maxPage && $totalPages > $maxPage) {
+            $totalPages = $maxPage;
+        }
+
         if ($totalPages && $currentPage > $totalPages) {
             if ($returnTypeNull) {
                 return [null, null, $totalCount, $totalPages];
             }
-            // $currentPage = $totalPages;
 
             $fixUrl = \str_replace('{=page}', (string) $totalPages, $urlPattern);
 
             if (!\headers_sent()) {
-                // 헤더가 아직 전송되지 않았으므로 header()를 사용하여 리디렉션
                 \header('Location: ' . $fixUrl);
             } else {
-                // 이미 출력이 시작되었으므로 JavaScript를 사용하여 리디렉션
                 echo '<script type="text/javascript">';
                 echo 'window.location.href="' . $fixUrl . '";';
                 echo '</script>';
@@ -257,6 +263,7 @@ class Pagination
 
             exit;
         }
+
         $offset     = ($currentPage - 1) * $recordsPerPage;
         $pagination = Pagination::getHtml($totalCount, $currentPage, $recordsPerPage, $pagesPerBlock, $urlPattern);
         $listModels = $listModel->limit($offset, $recordsPerPage)->gets();

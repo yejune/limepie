@@ -28,6 +28,8 @@ class Exception extends \Exception
 
     public $location;
 
+    public $refresh;
+
     public $class;
 
     public $function;
@@ -118,6 +120,24 @@ class Exception extends \Exception
     {
         if ($this->location) {
             return $this->location;
+        }
+
+        if ($default) {
+            return $default;
+        }
+    }
+
+    public function setRefresh($refresh)
+    {
+        $this->refresh = $refresh;
+
+        return $this;
+    }
+
+    public function getRefresh($default = null)
+    {
+        if ($this->refresh) {
+            return $this->refresh;
         }
 
         if ($default) {

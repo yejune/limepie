@@ -41,6 +41,16 @@ function get_filename_from_url(string $url) : string
     return \rawurlencode(\pathinfo($path, PATHINFO_BASENAME)) ?: '';
 }
 
+// $total보다 작은 max의 배수를 반환
+function get_max_multiple($total, $max)
+{
+    if ($max <= 0) {
+        throw new Exception('max는 0보다 커야 합니다.');
+    }
+
+    return \intdiv($total, $max) * $max;
+}
+
 function highlight_keyword($text, $keywords, $useHash = false, $className = 'highlight')
 {
     // keywords가 배열인지 확인
