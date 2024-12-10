@@ -34,6 +34,37 @@ function str_to_array($inputString, $mainDelimiter = '|', $keyValueDelimiter = '
     return $result;
 }
 
+function str_replace_placeholder($text, $replace)
+{
+    return \str_replace('{0}', $replace, $text);
+}
+/*
+// 테스트 케이스
+$tests = [
+    '<div>> <</div>',                     // 그대로 유지 (이미 공백 없음)
+    '<div> > < </div>',                   // <div>> <</div> 로 변환
+    '<테그> </테그>',                     // <테그></테그> 로 변환
+    '<div >콘텐츠</div >',               // <div>콘텐츠</div> 로 변환
+    '<div> > 콘텐츠 < </div>',           // <div>> 콘텐츠 <</div> 로 변환
+    '<태그>   </태그>',                  // <태그></태그> 로 변환
+];
+ */
+
+// 테그상의 > < 만 문제되므로 공백이 필요하면 &nbsp;를 사용하면 문제없을듯.
+function remove_tag_whitespace($text)
+{
+    return \preg_replace([
+        // '#\s+<#',         // 태그 시작 전 공백
+        // '#>\s+#',         // 태그 끝 후 공백
+        '#"\s+>#',        // 큰따옴표 끝과 태그 끝 사이 공백
+        "#'\\s+>#",       // 작은따옴표 끝과 태그 끝 사이 공백
+        '#\s+/>#',       // self-closing 태그 사이 공백
+        // '#\s+><#',         // 태그 사이 공백
+    ], [
+        '">', "'>", '/>',
+    ], $text);
+}
+
 function get_filename_from_url(string $url) : string
 {
     $path = \parse_url($url, PHP_URL_PATH) ?? '';

@@ -408,7 +408,13 @@ class Model extends ModelBase
                             if ($class->secondKeyName) {
                                 $rightKeyMapValueByLeftKey[$value[$remapKey]][$value[$class->secondKeyName]] = $value;
                             } else {
-                                $rightKeyMapValueByLeftKey[$value[$remapKey]] = $value;
+                                if ($remapKey instanceof \Closure) {
+                                    $innerKeyName = ($remapKey)($value);
+                                } else {
+                                    $innerKeyName = $value[$remapKey];
+                                }
+
+                                $rightKeyMapValueByLeftKey[$innerKeyName] = $value;
                             }
                         }
                     }

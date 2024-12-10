@@ -604,6 +604,8 @@ class Group extends Fields
 
                 $targetValue = parent::getValueByDot(static::$allData, $targetElementDotName);
 
+                // \prx($targetElementDotName, $targetValue, $data, static::$allData);
+
                 if (true === \is_object($targetValue)) {
                     if (true === \property_exists($targetValue, 'value')) {
                         $targetValue = $targetValue->value;
@@ -639,6 +641,7 @@ class Group extends Fields
                         $addClass[] = \trim($propertyValue['display_target_condition_class'][$targetValue]);
                     }
                 }
+                // $addStyle[] = $targetValue;
             }
 
             if ($displayUnique) {

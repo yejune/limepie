@@ -332,6 +332,14 @@ class ModelBase extends ArrayObject
     #[\ReturnTypeWillChange]
     public function offsetGet($offset)// : mixed
     {
+        // \prx($offset);
+        // if ($offset instanceof \Closure) {
+        //     $traces = \debug_backtrace();
+        //     \prx($traces);
+
+        //     exit;
+        // }
+
         if (false === \array_key_exists($offset, $this->attributes)) {
             $traces = \debug_backtrace();
 
@@ -563,7 +571,7 @@ class ModelBase extends ArrayObject
         return $sql;
     }
 
-    public function groupBy(string $groupBy, $groupKey) : self
+    public function groupBy(string $groupBy, $groupKey = null) : self
     {
         $this->groupBy  = $groupBy;
         $this->groupKey = $groupKey;

@@ -99,6 +99,14 @@ function is_same($array1, $array2)
     return $sorted1 === $sorted2;
 }
 
+function key_value($array, $separator = ': ', $delimiter = ', ') {
+    $result = [];
+    foreach ($array as $key => $value) {
+        $result[] = "$key$separator$value";
+    }
+    return implode($delimiter, $result);
+}
+
 function is_diff($array1, $array2)
 {
     return !\Limepie\arr\is_same($array1, $array2);

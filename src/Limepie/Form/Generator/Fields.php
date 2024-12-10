@@ -391,12 +391,19 @@ class Fields
                 $btnGroupHtml .= '<button  type="button" class="btn btn-move-down"' . $dynamicOnchangeScript . '>&nbsp;</button>';
             }
 
-            $btnGroupHtml .= '<button class="btn btn-plus" type="button"' . $dynamicOnchangeScript . '>&nbsp;</button>';
+            $plusBtn  = 'btn-plus';
+            $minusBtn = 'btn-minus';
+
+            if (true === isset($propertyValue['multiple_copy']) && $propertyValue['multiple_copy']) {
+                $plusBtn  = 'btn-copy';
+                $minusBtn = 'btn-minus btn-delete';
+            }
+            $btnGroupHtml .= '<button class="btn ' . $plusBtn . '" type="button"' . $dynamicOnchangeScript . '>&nbsp;</button>';
 
             if (1 < $index) {
-                $btnGroupHtml .= '<button class="btn btn-minus" type="button"' . $dynamicOnchangeScript . '>&nbsp;</button>';
+                $btnGroupHtml .= '<button class="btn ' . $minusBtn . '" type="button"' . $dynamicOnchangeScript . '>&nbsp;</button>';
             } else {
-                $btnGroupHtml .= '<button class="btn btn-minus" type="button"' . $dynamicOnchangeScript . '>&nbsp;</button>';
+                $btnGroupHtml .= '<button class="btn ' . $minusBtn . '" type="button"' . $dynamicOnchangeScript . '>&nbsp;</button>';
             }
         }
 

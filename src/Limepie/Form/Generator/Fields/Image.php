@@ -55,7 +55,7 @@ class Image extends Fields
             $value  = \htmlspecialchars((string) $data['name']);
             $button = '';
             $html   = <<<EOT
-            <input type="text" class='form-control form-control-file' value="{$value}" readonly="readonly" />
+            <div class="input-group">{$prepend}<input type="text" class='form-control form-control-file' value="{$value}" readonly="readonly" />
             EOT;
 
             foreach ($data as $key1 => $value1) {
@@ -76,6 +76,7 @@ class Image extends Fields
             }
 
             $html .= <<<EOT
+            </div>
             <div class='form-preview clone-element'><div><a href="{$data['url']}" target="_new"><img {$style} src='{$data['url']}' class='form-preview-image'></a></div></div>
             EOT;
             $button = <<<'EOT'

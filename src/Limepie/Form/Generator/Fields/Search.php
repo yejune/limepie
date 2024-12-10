@@ -13,9 +13,24 @@ class Search extends Fields
         if (true === isset($property['rule_name'])) {
             $ruleName = $property['rule_name'];
         }
+
         // if (true === \is_array($value)) {
         //     $value = null;
         // }
+        if (true === \is_array($value) && $value) {
+            if (false === isset($property['items']) || !$property['items']) {
+                $item = [
+                    'text' => $value['search_text'],
+                    'id'   => $value['search_id'],
+                ];
+
+                if (isset($value['search_cover_url'])) {
+                    $item['cover_url'] = $value['search_cover_url'];
+                }
+                $property['items'][$value['search_id']] = $item;
+            }
+            $value = $value['search_id'];
+        }
 
         // \pr($ruleName, $property['rule_name'] ?? '');
         if (0 === \strlen((string) $value)) {
@@ -161,7 +176,7 @@ class Search extends Fields
                 if ((string) $value === (string) $itemValue) {
                     $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemValue . '" selected="selected"' . $disabled2 . '>' . $itemText . '</option>';
                 } else {
-                    $option .= '<option  data-cover-url="' . $coverUrl . '" value="' . $itemValue . '" ' . $disabled2 . '>' . $itemText . '</option>';
+                    $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemValue . '" ' . $disabled2 . '>' . $itemText . '</option>';
                 }
                 // }
             }
