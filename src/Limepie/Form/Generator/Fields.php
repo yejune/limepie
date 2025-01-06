@@ -279,6 +279,8 @@ class Fields
                     }
                 } else {
                     // $id가 $id or $id[] 둘다 없다.
+                    // \prx($property);
+
                     throw (new Exception('not found key ' . $key))->setDebugMessage('not found key ' . $key, __FILE__, __LINE__);
                 }
 
@@ -393,12 +395,14 @@ class Fields
 
             $plusBtn  = 'btn-plus';
             $minusBtn = 'btn-minus';
+            $btnGroupHtml .= '<button class="btn ' . $plusBtn . '" type="button"' . $dynamicOnchangeScript . '>&nbsp;</button>';
 
             if (true === isset($propertyValue['multiple_copy']) && $propertyValue['multiple_copy']) {
-                $plusBtn  = 'btn-copy';
+                $plusBtn = 'btn-copy';
+                $btnGroupHtml .= '<button class="btn ' . $plusBtn . '" type="button"' . $dynamicOnchangeScript . '>&nbsp;</button>';
                 $minusBtn = 'btn-minus btn-delete';
+                $plusBtn  = 'btn-plus';
             }
-            $btnGroupHtml .= '<button class="btn ' . $plusBtn . '" type="button"' . $dynamicOnchangeScript . '>&nbsp;</button>';
 
             if (1 < $index) {
                 $btnGroupHtml .= '<button class="btn ' . $minusBtn . '" type="button"' . $dynamicOnchangeScript . '>&nbsp;</button>';

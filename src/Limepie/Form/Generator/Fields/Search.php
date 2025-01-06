@@ -114,11 +114,17 @@ class Search extends Fields
         $prepend = '';
 
         if (isset($property['prepend']) && $property['prepend']) {
+            $prepend_class = '';
+
+            if (isset($property['prepend_class']) && $property['prepend_class']) {
+                $prepend_class = ' ' . $property['prepend_class'];
+            }
             $prepend = <<<EOD
-            <span class="input-group-text">{$property['prepend']}</span>
+            <span class="input-group-text {$prepend_class}">{$property['prepend']}</span>
             EOD;
         }
 
+        $append = '<button type="button" class="btn btn-outline-secondary text-nowrap">리셋</button>';
         $append = '';
 
         if (isset($property['append']) && $property['append']) {

@@ -1,8 +1,9 @@
 <?php
 
 declare(strict_types=1);
-
-function removeSpace($content, $tpl)
+// $template->postfilter   = 'removeSpace & ' . (Di::getServiceSpecModel(null)?->getSpec(null)?->getIsTagWhitespaceRemove(null) ?? 0);
+// 이 옵션은 제거
+function removeSpace($content, $tpl) // , $isTagWhitespaceRemove = 0)
 {
     // 공백을 유지해야 하는 패턴 목록
     $preservePatterns = [
@@ -166,9 +167,6 @@ function removeSpace($content, $tpl)
 
     // 순수 테그 주변 공백 제거, php는 치환되지 않은 상태
     // -> 주변 공백을 제거하면 의도한 공백들이 문제될수 있어서 제거
-    // $content = \preg_replace('/>\s+</', '><', $content);
-    // $content = \preg_replace('/> +/', '>', $content);
-    // $content = \preg_replace('/ +</', '<', $content);
 
     // 7. 연속된 공백을 하나로
     $content = \preg_replace('/\s+/', ' ', $content);
@@ -180,6 +178,21 @@ function removeSpace($content, $tpl)
     foreach ($placeholders as $placeholder => $originalContent) {
         $content = \str_replace($placeholder, $originalContent, $content);
     }
+
+    // 더 이상 고민 말것. 깔끔하게 처리할수 없음.
+    // if (2 == $isTagWhitespaceRemove) {
+    //     // 1) `> ... <` 사이 공백 제거 (단, 바로 옆에 ?가 있으면 제외)
+    //     $content = \preg_replace('/(?<!\?)>\s+<(?!\?)/', '><', $content);
+
+    //     // 2) `> ...` 앞에 공백 제거 (단, 바로 옆에 ?가 있으면 제외)
+    //     $content = \preg_replace('/(?<!\?)>\s+/', '>', $content);
+
+    //     // 3) `... >` 뒤에 공백 제거 (단, 바로 옆에 ?가 있으면 제외)
+    //     $content = \preg_replace('/\s+>(?!\?)/', '>', $content);
+
+    //     // 4) `< ...` 앞에 공백 제거 (단, 바로 옆에 ?가 있으면 제외)
+    //     $content = \preg_replace('/\s+<(?!\?)/', '<', $content);
+    // }
 
     return \trim($content);
 }

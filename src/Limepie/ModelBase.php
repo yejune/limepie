@@ -118,6 +118,8 @@ class ModelBase extends ArrayObject
 
     public $groupKey;
 
+    public $joinTableAliasName;
+
     public function __construct(?\PDO $pdo = null, $attributes = null)
     {
         if ($pdo) {
@@ -128,7 +130,8 @@ class ModelBase extends ArrayObject
             $this->setAttributes($attributes);
         }
 
-        $this->keyName = $this->primaryKeyName;
+        $this->keyName        = $this->primaryKeyName;
+        $this->tableAliasName = $this->tableAliasName . ++$_SERVER['db_instance_count'];
     }
 
     public function __invoke(?\PDO $pdo = null, $attributes = null)
@@ -724,8 +727,10 @@ class ModelBase extends ArrayObject
         */
 
         if (1 === \preg_match('#(?P<type>left)?(j|J)oin(?P<multi>s)?(?P<leftKeyName>.*)With(?P<rightKeyName>.*)#', $name, $m)) {
+            $instance = $arguments[0];
+
             $this->joinModels[] = [
-                'model'  => $arguments[0],
+                'model'  => $instance,
                 'left'   => \Limepie\decamelize($m['leftKeyName']),
                 'right'  => \Limepie\decamelize($m['rightKeyName']),
                 'type'   => $m['type'] ? true : false,
@@ -738,6 +743,8 @@ class ModelBase extends ArrayObject
 
         return $this;
     }
+
+    public $joinTableIndexs = [];
 
     public function alias(string $tableName) : self
     {

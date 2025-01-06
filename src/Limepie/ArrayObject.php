@@ -376,6 +376,15 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return $this;
     }
 
+    public function uksort(callable $compareFunc) : self
+    {
+        if (true !== \uksort($this->attributes, $compareFunc)) {
+            throw new Exception('uksort() failed');
+        }
+
+        return $this;
+    }
+
     /**
      * 배열의 row를 가져오는 메서드.
      *

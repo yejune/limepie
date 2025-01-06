@@ -2,18 +2,16 @@
 
 function removeTemplate($html)
 {
-    $pattern = '/<([\w-]+)\s+([^>]*?)limepie-template=(["\'`])((?:\\\.|(?!\3).)*?)\3(.*?)(\s*\/?>)/s';
+    $pattern = '/\s+limepie-template=(["\'`])\s*([\s\S]*?)\s*\1/';
 
     return \preg_replace_callback($pattern, function ($matches) {
-        $tag        = $matches[1];
-        $beforeAttr = $matches[2];
-        $content    = $matches[4];
-        $afterAttr  = $matches[5];
-        $closing    = $matches[6];
+        $content = $matches[2];
 
-        // 이스케이프된 따옴표 처리
-        $content = \preg_replace('/\\\([\'"])/', '$1', $content);
+        // 각 줄의 불필요한 들여쓰기 제거
+        $lines   = \explode("\n", $content);
+        $lines   = \array_map('trim', $lines);
+        $content = \implode(' ', \array_filter($lines));
 
-        return "<{$tag} {$beforeAttr}{$content}{$afterAttr}{$closing}";
+        return ' ' . \trim($content);
     }, $html);
 }

@@ -1625,11 +1625,18 @@ class Model extends ModelBase
                     throw (new Exception($this->tableName . ' ' . $key . ' argument error'))->setDebugMessage('page not found', __FILE__, __LINE__);
                 }
 
-                // orperator의 마지막이 seq로 끝날경우, 값이 숫자나 null이 아니라면 처리하지 않음
-                if (!$this->isValidSeqArgument($key, $arguments[$index] ?? null)) {
-                    // \prx($this->tableName, $this->condition, $name, $arguments, $index, $key, $arguments[$index] ?? null);
-
-                    continue;
+                if (1) {
+                    // orperator의 마지막이 seq로 끝날경우, 값이 숫자나 null이 아니라면 처리하지 않음
+                    // 이걸하면
+                    // if ($_GET['keyword'] ?? false) {
+                    //     $surveyModels->and('(');
+                    //     $surveyModels->conditionSeq($_GET['keyword']);
+                    //     $surveyModels->orName($_GET['keyword']);
+                    //     $surveyModels->condition(')');
+                    // } 와 같은 경우 conditionSeq가 추가 되지 않으므로 뒤의 or이 문제가 됨
+                    // if (!$this->isValidSeqArgument($key, $arguments[$index] ?? null)) {
+                    //     continue;
+                    // }
                 }
 
                 if (false === \array_key_exists($index, $arguments)) {

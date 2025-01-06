@@ -19,6 +19,24 @@ function ___($domain, $string, $a, $b)
     return \dngettext($domain, $string, $a, $b);
 }
 
+function replace_timely($word)
+{
+    $words = [
+        'day'   => 'daily',
+        'week'  => 'weekly',
+        'month' => 'monthly',
+    ];
+
+    return $words[$word] ?? $word;
+}
+
+// $str = "name=John | age=25 | city=Seoul";
+// 결과:
+// [
+//     'name' => 'John',
+//     'age' => '25',
+//     'city' => 'Seoul'
+// ]
 function str_to_array($inputString, $mainDelimiter = '|', $keyValueDelimiter = '=')
 {
     $result = [];
@@ -1335,6 +1353,15 @@ function get_tree(array $data = []) : array
     }
 
     return $permalink->get(0);
+}
+
+function check_zipcode($zipcode, $locale = 'ko')
+{
+    if ('jp' === $locale) {
+        return \preg_match('/^\d{3}[-]?\d{4}$/', $zipcode);
+    }
+
+    return \preg_match('/^\d{5}$/', $zipcode) || 5 == \strlen($zipcode);
 }
 
 function get_tree_item(array $data = []) : array
