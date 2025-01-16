@@ -17,7 +17,7 @@ class Path
         if (false !== \strpos($pathString, '?')) {
             [$pathString, $this->queryString] = \explode('?', $pathString);
         }
-        $this->pathString = \trim($pathString, '/');
+        $this->pathString = \trim(\rawurldecode($pathString), '/');
 
         if ($rewriteQueryString) {
             $this->queryString = $rewriteQueryString;

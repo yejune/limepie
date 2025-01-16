@@ -230,6 +230,10 @@ class Fields
         $value = $data;
 
         foreach ($keys as $id) {
+            if (true === \is_object($value)) {
+                $value = $value->value;
+            }
+
             if (true === isset($value[$id])) {
                 $value = $value[$id];
 
@@ -242,14 +246,40 @@ class Fields
         return $value;
     }
 
-    public static function getDefaultByDot($spec, $key)
+    public static function getValueByDot2($data, $key)
+    {
+        $keys  = \explode('.', $key);
+        $value = $data;
+
+        foreach ($keys as $id) {
+            if (true === \is_object($value)) {
+                $value = $value->property['properties'];
+            }
+
+            if (true === isset($value[$id])) {
+                $value = $value[$id];
+
+                continue;
+            }
+
+            return null;
+        }
+
+        return $value;
+    }
+
+    public static function getDefaultByDot($spec, $data, $key)
     {
         $keys     = \explode('.', $key);
         $property = $spec;
+
         // pr($spec, $keys);
         $idx      = '';
         $prevKey  = null;
         $chkArray = null;
+
+        $value = static::getValueByDot2($data, $key);
+        // \prx($data, $key);
 
         foreach ($keys as $id) {
             if (1 === \preg_match('#__([^_]{13})__#', $id) || '*' == $id) {
@@ -265,8 +295,18 @@ class Fields
                     $chkArray = false;
                     $property = $property['properties'][$id];
 
+                    // \prx($property, $value);
+
                     // []가 아닌데 multiple이 있다.
                     if (true === isset($property['multiple']) && $property['multiple']) {
+                        if (false === isset($property['properties'])) {
+                            // custom multiple일 가능성
+                            $property = $value;
+
+                            return $property['default'] ?? null;
+                            // \prx($property);
+                        }
+
                         throw (new Exception('multiple spec error'))->setDebugMessage('multiple spec error', __FILE__, __LINE__);
                     }
                 } elseif (true === isset($property['properties'][$id . '[]'])) {
@@ -279,9 +319,8 @@ class Fields
                     }
                 } else {
                     // $id가 $id or $id[] 둘다 없다.
-                    // \prx($property);
 
-                    throw (new Exception('not found key ' . $key))->setDebugMessage('not found key ' . $key, __FILE__, __LINE__);
+                    throw (new Exception('#1 not found key ' . $key))->setDebugMessage('not found key ' . $key, __FILE__, __LINE__);
                 }
 
                 $prevKey = false;
@@ -331,7 +370,7 @@ class Fields
                     }
                 } else {
                     // $id가 $id or $id[] 둘다 없다.
-                    throw (new Exception('not found key ' . $key))->setDebugMessage('not found key ' . $key, __FILE__, __LINE__);
+                    throw (new Exception('#2 not found key ' . $key))->setDebugMessage('not found key ' . $key, __FILE__, __LINE__);
                 }
 
                 $prevKey = false;

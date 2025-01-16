@@ -266,14 +266,14 @@ class Generator
                 $description = 'data-description="' . \htmlspecialchars($description) . '"';
             }
 
-            if ('delete' === $button['type']) {
+            if ('delete' === $button['type'] || 'put' === $button['type']) {
                 if (true === isset($button['string'])) {
                     $string = $button['string'];
                 } else {
                     $string = \Limepie\genRandomString(6);
                 }
 
-                $innerhtml .= '<a href="" data-method="delete" data-value="' . $string . '" ' . \str_replace('{=string}', $string, $description) . ' class="btn ' . $class . '">' . $text . '</a>';
+                $innerhtml .= '<a href="" data-method="' . $button['type'] . '" data-value="' . $string . '" ' . \str_replace('{=string}', $string, $description) . ' class="btn ' . $class . '">' . $text . '</a>';
             } elseif ('a' === $button['type']) {
                 $innerhtml .= '<a data-href="' . $button['href'] . '" href="' . $href . '" class="btn ' . $class . '">' . $text . '</a>';
             } elseif ('open' === $button['type']) {

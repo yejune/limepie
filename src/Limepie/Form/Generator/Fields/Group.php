@@ -133,7 +133,7 @@ class Group extends Fields
             //     $targetValue = 0;
             // } else {
             // defaultValue by spec
-            $targetValue = static::getDefaultByDot(static::$specs, $targetElementDotName);
+            $targetValue = static::getDefaultByDot(static::$specs, static::$allData, $targetElementDotName);
             // }
 
             if (true === \is_object($targetValue)) {
@@ -586,23 +586,38 @@ class Group extends Fields
                         $targetElementDotName1 = \substr($elementDotName, 0, \strrpos($elementDotName, '.'));
                         $targetElementDotName  = $targetElementDotName1 . '.' . \trim($targetElementDotName, '.');
                     } else {
-                        $targetElementDotName = \ltrim($targetElementDotName, '.');
+                        // $targetElementDotName = \ltrim($targetElementDotName, '.');
+                        if ($elementDotName) {
+                            $targetElementDotName = $elementDotName . '.' . \ltrim($targetElementDotName, '.');
+                        } else {
+                            // 없고 하나일때는 루트다
+                            $targetElementDotName = \ltrim($targetElementDotName, '.');
+                        }
                     }
 
                     //  \pr($elementName, $targetElementDotName);
                 } elseif (0 === \strpos((string) $targetElementDotName, '.')) { // .var는 현재 위치.
-                    // display_target: .bed_type
-                    // \pr($propertyValue, $elementName, $elementDotName, $targetElementDotName);
+                    // .이 하나일때는 현재 위치이므로 elementDotName가 존재한다면 붙여준다.
 
-                    // \pr($elementDotName, $targetElementDotName);
                     if (\strrpos($elementDotName, '.')) {
                         $targetElementDotName = $elementDotName . $targetElementDotName;
                     } else {
-                        $targetElementDotName = \ltrim($targetElementDotName, '.');
+                        if ($elementDotName) {
+                            $targetElementDotName = $elementDotName . '.' . \ltrim($targetElementDotName, '.');
+                        } else {
+                            // 없고 하나일때는 루트다
+                            $targetElementDotName = \ltrim($targetElementDotName, '.');
+                        }
                     }
                 }
 
+                // \prx($propertyValue['display_target'], $elementDotName, $targetElementDotName);
+
+                // try {
                 $targetValue = parent::getValueByDot(static::$allData, $targetElementDotName);
+                // } catch (\Exception $e) {
+                //     $targetValue = null;
+                // }
 
                 // \prx($targetElementDotName, $targetValue, $data, static::$allData);
 
@@ -619,7 +634,13 @@ class Group extends Fields
                     //     $targetValue = 0;
                     // } else {
                     // defaultValue by spec
-                    $targetValue = static::getDefaultByDot(static::$specs, $targetElementDotName);
+                    try {
+                        $targetValue = static::getDefaultByDot(static::$specs, static::$allData, $targetElementDotName);
+                    } catch (\Exception $e) {
+                        // \prx(static::$allData);
+                        \prx($e);
+                        $targetValue = null;
+                    }
                     // }
 
                     if (true === \is_object($targetValue)) {

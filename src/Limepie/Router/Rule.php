@@ -28,10 +28,14 @@ class Rule
     public static function getMatched(string $pattern, string $subject, array $default) : array
     {
         $matches = [];
+        $org     = $pattern;
 
-        if (false !== \strpos($pattern, '{')) {
-            $pattern = \preg_replace('#\{([^\}0-9]+)\}#', '(?P<$1>[0-9a-zA-Z_\-\.]+)', $pattern);
-        }
+        // if (false !== \strpos($pattern, '{')) {
+        //     \prx($pattern);
+        //     $pattern = \preg_replace('#\{(\d+)\}#u', '(?P<$1>[0-9a-zA-Z_\-\.]+)', $pattern);
+        //     // $pattern = \preg_replace('#\{([^\}0-9]+)\}#u', '(?P<$1>[0-9a-zA-Z_\-\.]+)', $pattern);
+        // }
+        // \prx($org, $pattern);
 
         if (1 === \preg_match($pattern, $subject, $matches)) {
             $allowMethods = [];
