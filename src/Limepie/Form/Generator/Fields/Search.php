@@ -27,6 +27,14 @@ class Search extends Fields
                 if (isset($value['search_cover_url'])) {
                     $item['cover_url'] = $value['search_cover_url'];
                 }
+
+                if (isset($value['append_text'])) {
+                    $item['append_text'] = $value['append_text'];
+                }
+
+                if (isset($value['prepend_text'])) {
+                    $item['prepend_text'] = $value['prepend_text'];
+                }
                 $property['items'][$value['search_id']] = $item;
             }
             $value = $value['search_id'];
@@ -164,11 +172,16 @@ class Search extends Fields
                 //     $option .= '</optgroup>';
                 // } else {
 
-                $coverUrl = '';
+                $coverUrl    = '';
+                $itemText    = '';
+                $prependText = '';
+                $appendText  = '';
 
                 if (isset($itemText['id'])) {
-                    $coverUrl = $itemText['cover_url'] ?? '';
-                    $itemText = $itemText['text'];
+                    $coverUrl    = $itemText['cover_url'] ?? '';
+                    $itemText    = $itemText['text'];
+                    $prependText = $itemText['prepend_text'] ?? '';
+                    $appendText  = $itemText['append_text']  ?? '';
                 }
                 $disabled2 = '';
 
@@ -180,9 +193,9 @@ class Search extends Fields
                 // \pr($value, $itemValue);
 
                 if ((string) $value === (string) $itemValue) {
-                    $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemValue . '" selected="selected"' . $disabled2 . '>' . $itemText . '</option>';
+                    $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemValue . '" selected="selected"' . $disabled2 . '>' . $prependText . $itemText . $appendText . '</option>';
                 } else {
-                    $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemValue . '" ' . $disabled2 . '>' . $itemText . '</option>';
+                    $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemValue . '" ' . $disabled2 . '>' . $prependText . $itemText . $appendText . '</option>';
                 }
                 // }
             }

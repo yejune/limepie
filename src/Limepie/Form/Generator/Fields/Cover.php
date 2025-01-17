@@ -6,6 +6,7 @@ namespace Limepie\Form\Generator\Fields;
 
 use Limepie\Form\Generator\Fields;
 
+// file-name-alias-seq, cover-url로 구성된다.
 class cover extends Fields
 {
     public static function write($key, $property, $data, $ruleName, $propertyName)
