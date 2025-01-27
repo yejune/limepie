@@ -14,6 +14,8 @@ class Search extends Fields
             $ruleName = $property['rule_name'];
         }
 
+        // \prx($property);
+
         // if (true === \is_array($value)) {
         //     $value = null;
         // }
@@ -143,66 +145,46 @@ class Search extends Fields
         $option = '';
 
         if (true === isset($property['items'])) {
-            foreach ($property['items'] as $itemValue => $itemText) {
-                if (true === \is_array($itemText)) {
-                    if (true === isset($itemText[\Limepie\get_language()])) {
-                        $itemText = $itemText[\Limepie\get_language()];
-                    }
-                }
-                $itemValue = \htmlspecialchars((string) $itemValue);
-
-                // if (true === \is_array($itemText)) {
-                //     $option .= '<optgroup label="' . $itemValue . '">';
-
-                //     foreach ($itemText as $subItemValue => $subItemText) {
-                //         $disabled2 = '';
-
-                //         if (true === \in_array($subItemValue, $disables, false)) {
-                //             $disabled2 = 'disabled="disabled"';
-                //         } else {
-                //             $disabled2 = $disabled;
-                //         }
-
-                //         if ((string) $value === (string) $subItemValue) {
-                //             $option .= '<option value="' . $subItemValue . '" selected="selected"' . $disabled2 . '>' . $itemValue . ' > ' . $subItemText . '</option>';
-                //         } else {
-                //             $option .= '<option value="' . $subItemValue . '" ' . $disabled2 . '>' . $itemValue . ' > ' . $subItemText . '</option>';
-                //         }
-                //     }
-                //     $option .= '</optgroup>';
-                // } else {
-
+            foreach ($property['items'] as $itemKeyValue => $itemValue) {
                 $coverUrl    = '';
                 $itemText    = '';
                 $prependText = '';
                 $appendText  = '';
 
-                if (isset($itemText['id'])) {
-                    $coverUrl    = $itemText['cover_url'] ?? '';
-                    $itemText    = $itemText['text'];
-                    $prependText = $itemText['prepend_text'] ?? '';
-                    $appendText  = $itemText['append_text']  ?? '';
-                }
-                $disabled2 = '';
-
-                if (true === \in_array($itemValue, $disables, false)) {
-                    $disabled2 = 'disabled="disabled"';
+                if (isset($itemValue['id'])) {
+                    $coverUrl    = $itemValue['cover_url'] ?? '';
+                    $itemText    = $itemValue['text'];
+                    $prependText = $itemValue['prepend_text'] ?? '';
+                    $appendText  = $itemValue['append_text']  ?? '';
                 } else {
-                    $disabled2 = $disabled;
+                    $itemText = $itemValue;
                 }
-                // \pr($value, $itemValue);
 
-                if ((string) $value === (string) $itemValue) {
-                    $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemValue . '" selected="selected"' . $disabled2 . '>' . $prependText . $itemText . $appendText . '</option>';
-                } else {
-                    $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemValue . '" ' . $disabled2 . '>' . $prependText . $itemText . $appendText . '</option>';
+                if (true === \is_array($itemText)) {
+                    if (true === isset($itemText[\Limepie\get_language()])) {
+                        $itemText = $itemText[\Limepie\get_language()];
+                    }
                 }
-                // }
+
+                $optionDisabled = '';
+
+                if (true === \in_array($itemKeyValue, $disables, false)) {
+                    $optionDisabled = 'disabled="disabled"';
+                } else {
+                    $optionDisabled = $disabled;
+                }
+                // \pr($value, $itemKeyValue);
+
+                if ((string) $value === (string) $itemKeyValue) {
+                    $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemKeyValue . '" selected="selected"' . $optionDisabled . '>' . $prependText . $itemText . $appendText . '</option>';
+                } else {
+                    $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemKeyValue . '" ' . $optionDisabled . '>' . $prependText . $itemText . $appendText . '</option>';
+                }
             }
         } else {
             $option = '<option value="">select</option>';
         }
-
+        // \prx($option);
         $onchange = '';
 
         if (true === isset($property['onchange'])) {
@@ -233,10 +215,10 @@ class Search extends Fields
         $option = '';
 
         if (true === isset($property['items'])) {
-            foreach ($property['items'] as $itemValue => $itemText) {
-                $itemValue = \htmlspecialchars((string) $itemValue);
+            foreach ($property['items'] as $itemKeyValue => $itemText) {
+                $itemKeyValue = \htmlspecialchars((string) $itemKeyValue);
 
-                if ($value === $itemValue) {
+                if ($value === $itemKeyValue) {
                     $option .= $itemText;
                 }
             }

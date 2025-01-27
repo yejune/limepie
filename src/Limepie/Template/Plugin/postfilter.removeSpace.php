@@ -141,6 +141,46 @@ function removeSpace($content, $tpl) // , $isTagWhitespaceRemove = 0)
         return $openTag . $scriptContent . $closeTag;
     }, $content);
 
+    // HTML 속성 내의 JavaScript 주석 제거
+    $content = \preg_replace_callback('/\b(on\w+)\s*=\s*(["\'])((?:[^\2\\\]|\\\.|[\r\n])*?)\2/si', function ($matches) {
+        $event  = $matches[1];
+        $quote  = $matches[2];
+        $script = $matches[3];
+
+        // 1. 문자열 보호 (임시 플레이스홀더로 대체)
+        $placeholders = [];
+        $step         = 0;
+
+        // 작은따옴표 문자열 보호
+        $script = \preg_replace_callback('/\'((?:\\\.|[^\\\'])*?)\'/', function ($m) use (&$placeholders, &$step) {
+            $placeholder                = "###STRING{$step}###";
+            $placeholders[$placeholder] = $m[0];
+            ++$step;
+
+            return $placeholder;
+        }, $script);
+
+        // 큰따옴표 문자열 보호
+        $script = \preg_replace_callback('/"((?:\\\.|[^\"])*?)"/', function ($m) use (&$placeholders, &$step) {
+            $placeholder                = "###STRING{$step}###";
+            $placeholders[$placeholder] = $m[0];
+            ++$step;
+
+            return $placeholder;
+        }, $script);
+
+        // 2. 주석 제거
+        $script = \preg_replace('/\/\/.*?(?=[\r\n]|$)/m', '', $script);
+        $script = \preg_replace('/\/\*.*?\*\//s', '', $script);
+
+        // 3. 문자열 복원
+        foreach ($placeholders as $placeholder => $original) {
+            $script = \str_replace($placeholder, $original, $script);
+        }
+
+        return ' ' . $event . '=' . $quote . $script . $quote;
+    }, $content);
+
     // 4. <style> 태그 처리
     $content = \preg_replace_callback('/(<\s*style\s*\b[^>]*>)(.*?)(<\s*\/\s*style\s*>)/is', function ($matches) {
         $openTag      = $matches[1];
