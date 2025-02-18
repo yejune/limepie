@@ -63,9 +63,9 @@ class Editorjs extends Fields
         }
 
         if ($fileserver) {
-            $imageButton = '';
+            $imageButtonCss = '';
         } else {
-            $imageButton = "#contentjs{$id} .contentjs-image{
+            $imageButtonCss = "#contentjs{$id} .contentjs-image{
                 display: none !important;
             }";
         }
@@ -83,7 +83,7 @@ class Editorjs extends Fields
         //  display: none !important;
         //  height: 0;
         }
-        {$imageButton}
+        {$imageButtonCss}
         </style>
 <script nonce="{$_SESSION['nonce']}">
 $(function() {

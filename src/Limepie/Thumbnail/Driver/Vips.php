@@ -5,6 +5,7 @@ namespace Limepie\Thumbnail\Driver;
 
 use Jcupitt\Vips\Image;
 use Limepie\Thumbnail\DriverAbstract;
+use Limepie\Thumbnail\DriverException;
 
 class Vips extends DriverAbstract
 {
@@ -117,19 +118,18 @@ class Vips extends DriverAbstract
             // 리사이징
             $resized = $this->image->resize(
                 $dimensions['width'] / $this->originalDimensions['width'],
-                [
-                    'kernel' => 'lanczos3',
-                    'height' => $dimensions['height'] / $this->originalDimensions['height'],
-                ]
+                // [
+                //     'kernel' => 'lanczos3',
+                //     'height' => $dimensions['height'] / $this->originalDimensions['height'],
+                // ]
             );
-
             // 중앙 기준 crop
             $left = (int) (($dimensions['width'] - $width) / 2);
             $top  = (int) (($dimensions['height'] - $height) / 2);
 
             $this->image = $resized->crop($left, $top, $width, $height);
         } catch (\throwable $e) {
-            throw new DriverException("Failed to crop image: {$e->getMessage()}");
+            throw new DriverException("Failed to crop image: {$e->getMessage()} {$e->getFile()} {$e->getLine()}");
         }
     }
 

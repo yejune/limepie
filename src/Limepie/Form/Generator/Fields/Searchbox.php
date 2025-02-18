@@ -74,7 +74,7 @@ class Searchbox extends Fields
 
         $expend  = '';
         $scripts = <<<SCRIPT
-        <script nonce="{$_SESSION['nonce']}">select2('{$id}');{$callback}</script>
+        <script nonce="{$_SESSION['nonce']}">$(function() {select2('{$id}');{$callback}});</script>
         SCRIPT;
 
         $prepend = '';

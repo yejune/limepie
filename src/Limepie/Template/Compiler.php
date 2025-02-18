@@ -364,6 +364,10 @@ class Compiler
             // pr($match, $result);
         } else {
             switch ($match[2]) {
+                case '+':
+                    $result = [2, $this->compileInclude($statement, $line)];
+
+                    break;
                 case '@':
                     $this->brace[] = ['if', $line];
                     $this->brace[] = ['loop', $line];
@@ -384,25 +388,59 @@ class Compiler
                 case '#':
                     // scope a b:c => $a, $b = $c;
 
-                    if (1 === \preg_match('`^#\s?(?P<filename>[^ ]+\.tpl)(\s+(?P<scope>.*))?$`', $statement, $tmp)) {
+                    // if (1 === \preg_match('`^#\s?(?P<filename>[^ ]+\.tpl)(\s+(?P<scope>.*))?$`', $statement, $tmp)) {
+                    //     // #a.tpl scope variable
+                    //     $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 333)];
+                    // } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                    //     // #define_id scope variable
+                    //     $result = [2, $this->compileDefine('#' . $tmp['define'], $line, $tmp['scope'] ?? '')];
+                    // } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?:\'|")(?P<filename>[^ ]+)(?:\'|")(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                    //     // #define_id "a.tpl" scope variable
+                    //     $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 444)];
+                    // } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                    //     // #define_id a.tpl scope variable
+                    //     $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 555)];
+                    // } elseif (1 === \preg_match('`^#([\s+])?(?:\'|")(?P<filename>[^"\']+)(?:\'|")(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                    //     // #"a.tpl" scope variable
+                    //     $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 111)];
+                    // } elseif (1 === \preg_match('`^#([\s+])?(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                    //     // #a.tpl scope variable
+                    //     $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 222)];
+                    // } else {
+                    //     $result = [1, $statement];
+                    // }
+
+                    // 공통 패턴 정의
+                    $SCOPE = '(?:\s+scope\s+(?P<scope>.*))?';  // scope와 변수들
+                    $ID    = '[a-zA-Z0-9\-_\.]+';                 // 식별자
+                    $FILE  = '[^ ]+';                           // 파일명
+
+                    if (1 === \preg_match("`^#\\s*(?P<filename>{$FILE}\\.tpl){$SCOPE}$`", $statement, $tmp)) {
+                        // echo 1;
                         // #a.tpl scope variable
                         $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 333)];
-                    } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                    } elseif (1 === \preg_match("`^#\\s*(?P<define>{$ID}){$SCOPE}$`", $statement, $tmp)) {
+                        // echo 2;
                         // #define_id scope variable
                         $result = [2, $this->compileDefine('#' . $tmp['define'], $line, $tmp['scope'] ?? '')];
-                    } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?:\'|")(?P<filename>[^ ]+)(?:\'|")(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                    } elseif (1 === \preg_match("`^#\\s*(?P<define>{$ID})\\s+['\"](?P<filename>{$FILE})['\"]{$SCOPE}$`", $statement, $tmp)) {
+                        // echo 3;
                         // #define_id "a.tpl" scope variable
                         $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 444)];
-                    } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                    } elseif (1 === \preg_match("`^#\\s*(?P<define>{$ID})\\s+(?P<filename>{$FILE}){$SCOPE}$`", $statement, $tmp)) {
+                        // echo 4;
                         // #define_id a.tpl scope variable
                         $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 555)];
-                    } elseif (1 === \preg_match('`^#([\s+])?(?:\'|")(?P<filename>[^"\']+)(?:\'|")(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                    } elseif (1 === \preg_match("`^#\\s*['\"](?P<filename>{$FILE})['\"]{$SCOPE}$`", $statement, $tmp)) {
+                        // echo 5;
                         // #"a.tpl" scope variable
                         $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 111)];
-                    } elseif (1 === \preg_match('`^#([\s+])?(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
+                    } elseif (1 === \preg_match("`^#\\s*(?P<filename>{$FILE}){$SCOPE}$`", $statement, $tmp)) {
+                        // echo 6;
                         // #a.tpl scope variable
                         $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 222)];
                     } else {
+                        // echo 7;
                         $result = [1, $statement];
                     }
 
@@ -417,10 +455,6 @@ class Compiler
                     }
 
                     $result = [2, $this->compileElse($statement, $line)];
-
-                    break;
-                case '*':
-                    $result = [2, '/*' . $statement . '*/'];
 
                     break;
                 case '-':
@@ -619,6 +653,11 @@ class Compiler
         }
 
         return 'echo ' . $result . ';';
+    }
+
+    public function compileInclude($statement, $line)
+    {
+        return 'include "' . \substr($statement, 1) . '"';
     }
 
     public function compileElse($statement, $line)

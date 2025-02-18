@@ -55,6 +55,7 @@ class BrowserImage extends Fields
             $value  = \htmlspecialchars((string) $data['name']);
             $button = '';
             $html   = <<<EOT
+                <div class="input-group">
                 <input type="text" class='form-control form-control-file' value="{$value}" readonly="readonly" />
             EOT;
 
@@ -76,6 +77,7 @@ class BrowserImage extends Fields
             }
 
             $html .= <<<EOT
+                <!--btn--></div>
                 <div class='form-preview clone-element'><img {$style} src='{$data['url']}' class='form-preview-image'></div>
             EOT;
             $button = <<<'EOT'
@@ -88,6 +90,7 @@ class BrowserImage extends Fields
                 {$prepend}
                 <input type="text" class='form-control form-control-file' value="" readonly="readonly" />
                 <input type="file" class='valid-target form-control-file form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" accept="{$accept}" />
+                <!--btn-->
             </div>
             EOT;
             $button = <<<'EOT'

@@ -8,6 +8,169 @@ use Limepie\ArrayObject;
 use Limepie\Di;
 use Limepie\Exception;
 
+function getIsDisplay($serviceModuleBannerItem)
+{
+    $isDisplay = false;
+    $now       = \date('Y-m-d H:i:s');
+
+    if (1 == $serviceModuleBannerItem['is_display']) {
+        $isDisplay = true;
+    } elseif (2 == $serviceModuleBannerItem['is_display'] || 3 == $serviceModuleBannerItem['is_display']) {
+        $isDateValid = false;
+
+        // 날짜 범위 체크
+        if (2 == $serviceModuleBannerItem['is_display']) {
+            if ($serviceModuleBannerItem['display_start_dt'] <= $now
+            && $serviceModuleBannerItem['display_end_dt'] >= $now) {
+                $isDateValid = true;
+            }
+        } else { // IsDisplay == 3
+            if ($serviceModuleBannerItem['display_start_dt'] <= $now) {
+                $isDateValid = true;
+            }
+        }
+
+        if ($isDateValid) {
+            if (0 == $serviceModuleBannerItem['is_allday']) {
+                $isDisplay = true;
+            } else {
+                // 현재 요일 가져오기 (0: 일요일, 1: 월요일, ..., 6: 토요일)
+                $currentDayOfWeek = \date('w', \strtotime($now));
+
+                // 요일별 체크
+                switch ($currentDayOfWeek) {
+                    case 0: // 일요일
+                        if (1 == $serviceModuleBannerItem['is_sunday']) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                    case 1: // 월요일
+                        if (1 == $serviceModuleBannerItem['is_monday']) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                    case 2: // 화요일
+                        if (1 == $serviceModuleBannerItem['is_tuesday']) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                    case 3: // 수요일
+                        if (1 == $serviceModuleBannerItem['is_wednesday']) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                    case 4: // 목요일
+                        if (1 == $serviceModuleBannerItem['is_thursday']) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                    case 5: // 금요일
+                        if (1 == $serviceModuleBannerItem['is_friday']) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                    case 6: // 토요일
+                        if (1 == $serviceModuleBannerItem['is_saturday']) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                }
+            }
+        }
+    }
+
+    return $isDisplay;
+}
+
+function getDisplayStatus($serviceModuleBannerItem)
+{
+    $now    = \date('Y-m-d H:i:s');
+    $status = [
+        'isDisplay'    => false,
+        'isAllDisplay' => false,
+        'isExpired'    => false,    // 기간이 지나서 안보이는 경우
+        'isWaiting'    => false,    // 시작 대기 중인 경우
+        'reason'       => '',
+    ];
+
+    // is_display가 1인 경우 (항상 표시)
+    if (1 == $serviceModuleBannerItem['is_display']) {
+        $status['isDisplay']    = true;
+        $status['isAllDisplay'] = true;
+
+        return $status;
+    }
+
+    // is_display가 2 또는 3인 경우
+    if (2 == $serviceModuleBannerItem['is_display'] || 3 == $serviceModuleBannerItem['is_display']) {
+        // 시작일이 미래인 경우
+        if ($serviceModuleBannerItem['display_start_dt'] > $now) {
+            $status['isWaiting'] = true;
+            $status['reason']    = '예정';
+
+            return $status;
+        }
+
+        // is_display가 2이고 종료일이 과거인 경우
+        if (2 == $serviceModuleBannerItem['is_display'] && $serviceModuleBannerItem['display_end_dt'] < $now) {
+            $status['isExpired'] = true;
+            $status['reason']    = '지남';
+
+            return $status;
+        }
+
+        // 날짜가 유효한 경우
+        $isDateValid = false;
+
+        if (2 == $serviceModuleBannerItem['is_display']) {
+            if ($serviceModuleBannerItem['display_start_dt'] <= $now
+                && $serviceModuleBannerItem['display_end_dt'] >= $now) {
+                $isDateValid = true;
+            }
+        } else { // is_display == 3
+            if ($serviceModuleBannerItem['display_start_dt'] <= $now) {
+                $isDateValid = true;
+            }
+        }
+
+        if ($isDateValid) {
+            // 요일 제한이 없는 경우
+            if (0 == $serviceModuleBannerItem['is_allday']) {
+                $status['isDisplay'] = true;
+
+                return $status;
+            }
+
+            // 요일 체크
+            $currentDayOfWeek = \date('w', \strtotime($now));
+            $dayMap           = [
+                0 => 'is_sunday',
+                1 => 'is_monday',
+                2 => 'is_tuesday',
+                3 => 'is_wednesday',
+                4 => 'is_thursday',
+                5 => 'is_friday',
+                6 => 'is_saturday',
+            ];
+
+            if (isset($dayMap[$currentDayOfWeek])
+                && 1 == $serviceModuleBannerItem[$dayMap[$currentDayOfWeek]]) {
+                $status['isDisplay'] = true;
+            } else {
+                $status['reason'] = '요일제한';
+            }
+        }
+    }
+
+    return $status;
+}
 function insert_random($items, $newItem, $max = null)
 {
     // $items = [1, 2, 3, 4, 5];
@@ -99,12 +262,15 @@ function is_same($array1, $array2)
     return $sorted1 === $sorted2;
 }
 
-function key_value($array, $separator = ': ', $delimiter = ', ') {
+function key_value($array, $separator = ': ', $delimiter = ', ')
+{
     $result = [];
+
     foreach ($array as $key => $value) {
-        $result[] = "$key$separator$value";
+        $result[] = "{$key}{$separator}{$value}";
     }
-    return implode($delimiter, $result);
+
+    return \implode($delimiter, $result);
 }
 
 function is_diff($array1, $array2)
@@ -1450,8 +1616,14 @@ function refparse($arr = [], $basepath = '') : array
                     if ($value['lang_group_class'] ?? '') {
                         $langGroupClass .= ' ' . $value['lang_group_class'];
                     }
+
+                    $languagePackName = \Limepie\__('core', '언어팩');
+
+                    if ($value['lang_name'] ?? false) {
+                        $languagePackName = $value['lang_name'];
+                    }
                     $value = [
-                        'label'       => ($label ?? '') . ' - ' . \Limepie\__('core', '언어팩'),
+                        'label'       => ($label ?? '') . ' - ' . $languagePackName,
                         'type'        => 'group',
                         'class'       => \trim($langClass),
                         'group_class' => \trim($langGroupClass),

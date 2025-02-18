@@ -64,6 +64,7 @@ class CoverSimple extends Fields
         $button = '';
 
         $html = <<<EOT
+            <div class="input-group">
             <input type="text" class='form-control form-control-file url' value="{$data['url']}" readonly="readonly" />
             EOT;
         $html .= <<<EOT
@@ -74,7 +75,7 @@ class CoverSimple extends Fields
             <input type="hidden" class="clone-element file_name_alias_seq" name="{$key}[file_name_alias_seq]"  value="{$data['file_name_alias_seq']}" />
             EOT;
         $html .= <<<EOT
-            <input type="hidden" class="clone-element url" name="{$key}[url]"  value="{$data['url']}" />
+            <input type="hidden" class="clone-element url" name="{$key}[url]"  value="{$data['url']}" /><!--btn--></div>
             EOT;
 
         if ($data['url']) {

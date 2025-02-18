@@ -91,7 +91,7 @@ class Text extends Fields
         }
 
         return <<<EOT
-        <div class="input-group">{$prepend}<input type="text" class="valid-target form-control{$elementClass}" name="{$key}" value="{$value}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}"{$readonly}{$disabled}{$placeholder}{$style} />{$append}</div>
+        <div class="input-group">{$prepend}<input type="text" class="valid-target form-control{$elementClass}" name="{$key}" value="{$value}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}"{$readonly}{$disabled}{$placeholder}{$style} />{$append}<!--btn--></div>
         EOT;
     }
 

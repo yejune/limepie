@@ -334,8 +334,11 @@ class Template
                 $head = \fread($fp, \strlen($cplHead) + 9);
                 \fclose($fp);
 
-                if (9 < \strlen($head)
-                    && \substr($head, 0, 66) === \substr($cplHead, 0, 66) && \filesize($cplPath) === (int) \substr($head, -9)) {
+                if (
+                    9 < \strlen($head)
+                    && \substr($head, 0, 66) === \substr($cplHead, 0, 66)
+                    && \filesize($cplPath)   === (int) \substr($head, -9)
+                ) {
                     return $cplPath;
                 }
             }

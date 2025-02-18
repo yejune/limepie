@@ -2,7 +2,9 @@
 
 namespace Limepie\Form\Generation\Fields;
 
-class Postcode extends \Limepie\Form\Generation\Fields
+use Limepie\Form\Generation\Fields;
+
+class Postcode extends Fields
 {
     public static function write($key, $property, $value, $ruleName)
     {
@@ -65,8 +67,6 @@ class Postcode extends \Limepie\Form\Generation\Fields
 
 <script src="//ssl.daumcdn.net/dmaps/map_js_init/postcode.v2.js"></script>
 <script>
-
-    //본 예제에서는 도로명 주소 표기 방식에 대한 법령에 따라, 내려오는 데이터를 조합하여 올바른 주소를 구성하는 방법을 설명합니다.
     function {$id}_execDaumPostcode() {
         new daum.Postcode({
             oncomplete: function(data) {

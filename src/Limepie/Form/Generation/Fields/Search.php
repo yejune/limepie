@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Limepie\Form\Generation\Fields;
 
-class Search extends \Limepie\Form\Generation\Fields
+use Limepie\Form\Generation\Fields;
+
+class Search extends Fields
 {
     public static function write($key, $property, $value, $ruleName)
     {
@@ -57,10 +59,7 @@ class Search extends \Limepie\Form\Generation\Fields
 
         $expend  = '';
         $scripts = <<<SCRIPT
-            <script>
-                select2('{$id}');
-
-            </script>
+            <script>$(function() {select2('{$id}');});</script>
         SCRIPT;
 
         $prepend = '';

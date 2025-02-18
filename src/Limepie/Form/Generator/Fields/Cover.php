@@ -55,7 +55,8 @@ class cover extends Fields
             // $value  = \htmlspecialchars((string) $data['name']);
             $button = '';
             $html   = <<<EOT
-            <input type="text" class='form-control form-control-file' value="{$data['cover_url']}" readonly="readonly" />
+            <div class="input-group">
+                <input type="text" class='form-control form-control-file' value="{$data['cover_url']}" readonly="readonly" />
             EOT;
             $html .= <<<EOT
             <input type="text" class='valid-target form-control-file form-control-filetext form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}[name]" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$data['cover_url']}" accept="{$accept}" />
@@ -73,6 +74,7 @@ class cover extends Fields
             }
 
             $html .= <<<EOT
+            <!--btn--></div>
             <div class='form-preview clone-element'><div><a href="{$data['cover_url']}" target="_new"><img {$style} src='{$data['cover_url']}' class='form-preview-image'></a></div></div>
             EOT;
             $button = <<<'EOT'
@@ -81,7 +83,7 @@ class cover extends Fields
         } else {
             $value = '';
             $html  = <<<EOT
-            <div class="input-group">{$prepend}<input type="text" class='form-control form-control-file' value="" readonly="readonly" /><input type="file" class='valid-target form-control-file form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" accept="{$accept}" /></div>
+            <div class="input-group">{$prepend}<input type="text" class='form-control form-control-file' value="" readonly="readonly" /><input type="file" class='valid-target form-control-file form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" accept="{$accept}" /><!--btn--></div>
             EOT;
             $button = <<<'EOT'
             <button class="btn btn-search btn-file-search" type="button">&nbsp;</button>

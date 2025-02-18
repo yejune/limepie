@@ -116,10 +116,11 @@ class Search extends Fields
             SCRIPT;
         }
 
-        $expend  = '';
-        $scripts = <<<SCRIPT
-        <script nonce="{$_SESSION['nonce']}">select2('{$id}', '{$keyword_min_length}', '{$delay}');{$callback}</script>
-        SCRIPT;
+        $multiple = 0;
+
+        if (true === isset($property['multiple']) && $property['multiple']) {
+            $multiple = 1;
+        }
 
         $prepend = '';
 
@@ -142,6 +143,17 @@ class Search extends Fields
             <span class="input-group-text">{$property['append']}</span>
             EOD;
         }
+
+        $containerClass = '';
+
+        if (!$prepend) {
+            $containerClass .= ' input-group-first';
+        }
+
+        if (!$append && !($property['multiple'] ?? false)) {
+            $containerClass .= ' input-group-last';
+        }
+
         $option = '';
 
         if (true === isset($property['items'])) {
@@ -175,10 +187,16 @@ class Search extends Fields
                 }
                 // \pr($value, $itemKeyValue);
 
+                $optionClass = ''; // $containerClass;
+
+                if (isset($itemValue['class']) && $itemValue['class']) {
+                    $optionClass = ' ' . $itemValue['class'];
+                }
+
                 if ((string) $value === (string) $itemKeyValue) {
-                    $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemKeyValue . '" selected="selected"' . $optionDisabled . '>' . $prependText . $itemText . $appendText . '</option>';
+                    $option .= '<option data-prepend-text="' . $prependText . '" data-append-text="' . $appendText . '" data-cover-url="' . $coverUrl . '" value="' . $itemKeyValue . '" selected="selected"' . $optionDisabled . ' data-class="' . $optionClass . '">' . $itemText . '</option>';
                 } else {
-                    $option .= '<option data-cover-url="' . $coverUrl . '" value="' . $itemKeyValue . '" ' . $optionDisabled . '>' . $prependText . $itemText . $appendText . '</option>';
+                    $option .= '<option data-prepend-text="' . $prependText . '" data-append-text="' . $appendText . '" data-cover-url="' . $coverUrl . '" value="' . $itemKeyValue . '" ' . $optionDisabled . ' data-class="' . $optionClass . '">' . $itemText . '</option>';
                 }
             }
         } else {
@@ -199,8 +217,12 @@ class Search extends Fields
             $styleText = "<style nonce=\"{$_SESSION['nonce']}\">.{$id}_select2 .loading-results { display: none; }</style>";
         }
 
+        $scripts = <<<SCRIPT
+        <script nonce="{$_SESSION['nonce']}">$(function() {select2('{$id}', '{$keyword_min_length}', '{$delay}', '{$containerClass}');{$callback}});</script>
+        SCRIPT;
+
         return <<<EOT
-        {$styleText}<div class="input-group">{$prepend}<select class="valid-target form-control{$class}" {$style} name="{$key}" data-api-server="{$api_server}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>{$append}</div>{$scripts}
+        {$styleText}{$scripts}<div class="input-group">{$prepend}<select class="valid-target form-control{$class}" {$style} name="{$key}" data-class="{$containerClass}" data-keyword-min-length="{$keyword_min_length}" data-delay="{$delay}" data-api-server="{$api_server}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>{$append}<!--btn--></div>
         EOT;
     }
 

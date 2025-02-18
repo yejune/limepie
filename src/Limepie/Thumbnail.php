@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Limepie;
 
+use Limepie\Thumbnail\DriverException;
+
 class Thumbnail
 {
     public const DRIVER_GD = 'gd';
@@ -116,7 +118,7 @@ class Thumbnail
         $supported = match ($driver) {
             self::DRIVER_GD      => \extension_loaded('gd'),
             self::DRIVER_IMAGICK => \extension_loaded('imagick'),
-            self::DRIVER_VIPS    => \extension_loaded('vips'),
+            self::DRIVER_VIPS    => true,
             default              => false
         };
 
@@ -178,8 +180,8 @@ class Thumbnail
             }
 
             return $this;
-        } catch (Thumbnail\Driver\DriverException $e) {
-            throw new Thumbnail\Driver\ThumbnailException(
+        } catch (DriverException $e) {
+            throw new Thumbnail\ThumbnailException(
                 "Failed to process image: {$e->getMessage()}",
                 0,
                 $e
@@ -199,8 +201,8 @@ class Thumbnail
     {
         try {
             $this->driver->saveToStream($stream, $format);
-        } catch (Thumbnail\Driver\DriverException $e) {
-            throw new Thumbnail\Driver\ThumbnailException(
+        } catch (DriverException $e) {
+            throw new Thumbnail\ThumbnailException(
                 "Failed to save image: {$e->getMessage()}",
                 0,
                 $e
@@ -221,8 +223,8 @@ class Thumbnail
     {
         try {
             return $this->driver->getImageData($format);
-        } catch (Thumbnail\Driver\DriverException $e) {
-            throw new Thumbnail\Driver\ThumbnailException(
+        } catch (DriverException $e) {
+            throw new Thumbnail\ThumbnailException(
                 "Failed to get image data: {$e->getMessage()}",
                 0,
                 $e
@@ -247,7 +249,7 @@ class Thumbnail
             $drivers[] = self::DRIVER_IMAGICK;
         }
 
-        if (\extension_loaded('vips')) {
+        if (true) {
             $drivers[] = self::DRIVER_VIPS;
         }
 

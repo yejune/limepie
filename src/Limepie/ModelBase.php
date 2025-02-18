@@ -130,6 +130,10 @@ class ModelBase extends ArrayObject
             $this->setAttributes($attributes);
         }
 
+        if (!isset($_SERVER['db_instance_count'])) {
+            $_SERVER['db_instance_count'] = 0;
+        }
+
         $this->keyName        = $this->primaryKeyName;
         $this->tableAliasName = $this->tableAliasName . ++$_SERVER['db_instance_count'];
     }

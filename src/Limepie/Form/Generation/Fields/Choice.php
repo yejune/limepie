@@ -2,7 +2,9 @@
 
 namespace Limepie\Form\Generation\Fields;
 
-class Choice extends \Limepie\Form\Generation\Fields
+use Limepie\Form\Generation\Fields;
+
+class Choice extends Fields
 {
     public static function write($key, $property, $value, $ruleName)
     {
@@ -141,7 +143,6 @@ class Choice extends \Limepie\Form\Generation\Fields
             $scripts = <<<EOD
                 <script>
                 $(function() {
-
                     $('[name="{$keyName}"]').change(function(ev) {
                         ev.preventDefault();
                         {$script}

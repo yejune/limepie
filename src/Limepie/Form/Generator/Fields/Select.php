@@ -197,7 +197,7 @@ EOD;
                         // check if we have the last nav item
 
                         // either add a subnav or close the optionst item
-                        if ($its->hasChildren()) {
+                        if ($its instanceof \RecursiveIteratorIterator && $its->hasChildren()) {
                             $output->append('<optgroup label="' . \str_repeat('&nbsp;', $curDepth * 4) . $it['name'] . '">');
                         } else {
                             $selected = '';
@@ -281,7 +281,7 @@ EOD;
         }
 
         $html = <<<EOT
-        <div class="input-group">{$prepend}<select class="valid-target form-select{$class}" {$style} name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  {$onchange} data-default="{$default}">{$option}</select>{$append}</div>{$scripts}
+        <div class="input-group">{$prepend}<select class="valid-target form-select{$class}" {$style} name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  {$onchange} data-default="{$default}">{$option}</select>{$append}<!--btn--></div>{$scripts}
         EOT;
 
         return $html;

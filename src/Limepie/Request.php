@@ -52,7 +52,7 @@ class Request
     final public function __construct()
     {
         $this->rawBody = \file_get_contents('php://input');
-        $this->bodies  = $this->getBodyAll();
+        $this->bodies  = $this->getFormData();
 
         $this->language = $this->getBestLanguage();
 
@@ -583,7 +583,7 @@ class Request
         return $this->requestId;
     }
 
-    public function getBodyAll()
+    public function getFormData()
     {
         $rawBody = $this->getRawBody();
 
@@ -1021,8 +1021,6 @@ class Request
 
     /**
      * Process a request header and return the one with best quality.
-     *
-     * @param ?string $name
      */
     final protected function getBestQuality(array $qualityParts, ?string $name) : string
     {

@@ -187,7 +187,7 @@ class Mysql extends \Limepie\Pdo
     public function set($statement, $bindParameters = [])
     {
         if ($this->readonly) {
-            throw new \Limepie\Exception('This is readonly mode');
+            throw new \Limepie\Exception('This is readonly mode: #1 ' . $this->getErrorMessage());
         }
 
         try {
@@ -248,7 +248,7 @@ class Mysql extends \Limepie\Pdo
     public function sets($statement, $bindParameters)
     {
         if ($this->readonly) {
-            throw new \Limepie\Exception('This is readonly mode');
+            throw new \Limepie\Exception('This is readonly mode: #2 ' . $this->getErrorMessage());
         }
 
         if (
@@ -292,7 +292,7 @@ class Mysql extends \Limepie\Pdo
     public function setAndGetSequnce($statement, $bindParameters = [])
     {
         if ($this->readonly) {
-            throw new \Limepie\Exception('This is readonly mode');
+            throw new \Limepie\Exception('This is readonly mode: #3 ' . $this->getErrorMessage());
         }
 
         if (true === $this->set($statement, $bindParameters)) {
@@ -407,7 +407,7 @@ class Mysql extends \Limepie\Pdo
     public function transaction(\Closure $callback)
     {
         if ($this->readonly) {
-            throw new \Limepie\Exception('This is readonly mode');
+            throw new \Limepie\Exception('This is readonly mode: #4 ' . $this->getErrorMessage());
         }
 
         try {
@@ -459,7 +459,7 @@ class Mysql extends \Limepie\Pdo
     public function transaction2(callable $callback)
     {
         if ($this->readonly) {
-            throw new \Limepie\Exception('This is readonly mode');
+            throw new \Limepie\Exception('This is readonly mode: #5 ' . $this->getErrorMessage());
         }
 
         try {
@@ -582,5 +582,26 @@ class Mysql extends \Limepie\Pdo
         }
 
         return \trim($statement) . ', [' . \Limepie\http_build_query($fixedBinds, '=', ', ') . ']';
+    }
+
+    private function getErrorMessage()
+    {
+        $message = '';
+
+        foreach (\debug_backtrace() as $trace) {
+            if (true === isset($trace['file'])) {
+                if (
+                    false === \strpos(
+                        $trace['file'],
+                        'yejune/limepie/src/Limepie'
+                    )
+                    && !($trace['object'] instanceof Mysql)
+                ) {
+                    $message .= $trace['file'] . ' in line ' . $trace['line'];
+                }
+            }
+        }
+
+        return $message;
     }
 }

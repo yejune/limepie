@@ -92,7 +92,30 @@ class Redis
      */
     public function delete(string $key) : bool
     {
+        if (\str_ends_with($key, '*')) {
+            // prefix로 끝나는 경우 scan으로 삭제
+            $this->deleteScan($key);
+
+            return true;
+        }
+
+        // 단일 키 삭제
         return $this->redis->del($key) > 0;
+    }
+
+    public function deleteScan(string $prefix)
+    {
+        $iterator = null;
+
+        do {
+            // SCAN으로 키들을 가져오기 (한 번에 100개씩)
+            $keys = $this->redis->scan($iterator, $prefix, 100);
+
+            // 찾은 키들이 있다면 삭제
+            if ($keys) {
+                $this->redis->del($keys);
+            }
+        } while ($iterator > 0);  // iterator가 0이 될 때까지 계속 스캔
     }
 
     /**

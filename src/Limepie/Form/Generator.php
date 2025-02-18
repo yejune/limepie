@@ -275,7 +275,32 @@ class Generator
 
                 $innerhtml .= '<a href="" data-method="' . $button['type'] . '" data-value="' . $string . '" ' . \str_replace('{=string}', $string, $description) . ' class="btn ' . $class . '">' . $text . '</a>';
             } elseif ('a' === $button['type']) {
-                $innerhtml .= '<a data-href="' . $button['href'] . '" href="' . $href . '" class="btn ' . $class . '">' . $text . '</a>';
+                $htmx = '';
+
+                if (isset($button['hx-get'])) {
+                    $htmx = 'hx-get="' . $button['hx-get'] . '"';
+
+                    if (isset($button['hx-boost'])) {
+                        $htmx .= ' hx-boost="' . $button['hx-boost'] . '"';
+                    }
+
+                    if (isset($button['hx-target'])) {
+                        $htmx .= ' hx-target="' . $button['hx-target'] . '"';
+                    }
+
+                    if (isset($button['hx-on::before-after'])) {
+                        $htmx .= ' hx-on::before-after="' . $button['hx-on::before-after'] . '"';
+                    }
+
+                    if (isset($button['hx-on::before-request'])) {
+                        $htmx .= ' hx-on::before-request="' . $button['hx-on::before-request'] . '"';
+                    }
+
+                    if (isset($button['hx-swap'])) {
+                        $htmx .= ' hx-swap="' . $button['hx-swap'] . '"';
+                    }
+                }
+                $innerhtml .= '<a data-href="' . $button['href'] . '" href="' . $href . '" ' . $htmx . ' class="btn ' . $class . '">' . $text . '</a>';
             } elseif ('open' === $button['type']) {
                 if (isset($button['name'])) {
                     $name = $button['name'];

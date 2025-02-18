@@ -348,7 +348,9 @@ console.log('map_results', map_results);
         $("#submit{$geometryId}").on('click', mapinit);
     });
 }
-kakao_map_init{$geometryId}();
+$(function() {
+    kakao_map_init{$geometryId}();
+});
 </script>
 EOT;
     }

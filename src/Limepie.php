@@ -26,6 +26,87 @@ function encrypt_token($data, $secretKey)
     return \Limepie\encrypt(\base64_encode(\serialize($data)), $secretKey);
 }
 
+function getIsDisplay($serviceModuleBannerItem)
+{
+    $isDisplay = false;
+    $now       = \date('Y-m-d H:i:s');
+
+    if (1 == $serviceModuleBannerItem->getIsDisplay()) {
+        $isDisplay = true;
+    } elseif (2 == $serviceModuleBannerItem->getIsDisplay() || 3 == $serviceModuleBannerItem->getIsDisplay()) {
+        $isDateValid = false;
+
+        // 날짜 범위 체크
+        if (2 == $serviceModuleBannerItem->getIsDisplay()) {
+            if ($serviceModuleBannerItem->getDisplayStartDt() <= $now
+            && $serviceModuleBannerItem->getDisplayEndDt() >= $now) {
+                $isDateValid = true;
+            }
+        } else { // IsDisplay == 3
+            if ($serviceModuleBannerItem->getDisplayStartDt() <= $now) {
+                $isDateValid = true;
+            }
+        }
+
+        if ($isDateValid) {
+            if (0 == $serviceModuleBannerItem->getIsAllday()) {
+                $isDisplay = true;
+            } else {
+                // 현재 요일 가져오기 (0: 일요일, 1: 월요일, ..., 6: 토요일)
+                $currentDayOfWeek = \date('w', \strtotime($now));
+
+                // 요일별 체크
+                switch ($currentDayOfWeek) {
+                    case 0: // 일요일
+                        if (1 == $serviceModuleBannerItem->getIsSunday()) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                    case 1: // 월요일
+                        if (1 == $serviceModuleBannerItem->getIsMonday()) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                    case 2: // 화요일
+                        if (1 == $serviceModuleBannerItem->getIsTuesday()) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                    case 3: // 수요일
+                        if (1 == $serviceModuleBannerItem->getIsWednesday()) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                    case 4: // 목요일
+                        if (1 == $serviceModuleBannerItem->getIsThursday()) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                    case 5: // 금요일
+                        if (1 == $serviceModuleBannerItem->getIsFriday()) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                    case 6: // 토요일
+                        if (1 == $serviceModuleBannerItem->getIsSaturday()) {
+                            $isDisplay = true;
+                        }
+
+                        break;
+                }
+            }
+        }
+    }
+
+    return $isDisplay;
+}
+
 function decrypt_token($token, $secretKey, $timeoutSeconds = 10)
 {
     $decrypted = \Limepie\decrypt($token, $secretKey);
@@ -291,7 +372,7 @@ function wrap_space_em($text)
     $secondPart = \substr($text, $pos);
 
     // 두 번째 부분을 <em> 태그로 감쌉니다.
-    return $firstPart . '<em>' . \trim($secondPart) . '</em>';
+    return $firstPart . ' <em>' . \trim($secondPart) . '</em>';
 }
 function star_item_percentage($averagePercentage, $starNumber)
 {

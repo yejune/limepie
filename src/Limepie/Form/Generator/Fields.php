@@ -416,9 +416,9 @@ class Fields
 
         $class = '';
 
-        if (0 === \strpos(\trim($innerHtml), "<div class='form-element")) {
-            $class = ''; // ' btn-block';
-        }
+        // if (0 === \strpos(\trim($innerHtml), "<div class='form-element")) {
+        //     $class     = ''; // ' btn-block';
+        // }
 
         if (true === $isMultiple) {
             $dynamicOnchangeScript = '';
@@ -451,7 +451,15 @@ class Fields
         }
 
         if ($btnGroupHtml) {
-            $innerHtml .= '<span class="btn-group input-group-btn' . $class . '">' . $btnGroupHtml . '</span>';
+            if ('group' === $propertyValue['type']) {
+                $innerHtml .= '<span class="btn-group input-group-btn' . $class . '">' . $btnGroupHtml . '</span>';
+            } else {
+                if (false !== \strpos($innerHtml, '<!--btn-->')) {
+                    $innerHtml = \str_replace('<!--btn-->', $btnGroupHtml, $innerHtml);
+                } else {
+                    $innerHtml .= '<span class="btn-group input-group-btn' . $class . '">' . $btnGroupHtml . '</span>';
+                }
+            }
         }
 
         return '<div data-uniqid="' . $parentId . '" class="input-group-wrapper'

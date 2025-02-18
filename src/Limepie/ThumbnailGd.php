@@ -28,7 +28,7 @@ class ThumbnailGd
         $this->options = \array_merge([
             'background' => 'transparent',
             'quality'    => 90,
-            'enlarge'    => false, // 새로운 옵션: 원본보다 큰 크기 요청 시 확대 여부
+            'enlarge'    => true, // 새로운 옵션: 원본보다 큰 크기 요청 시 확대 여부
         ], $options);
 
         $this->validateInput();
@@ -112,85 +112,94 @@ class ThumbnailGd
     {
         $srcWidth  = \imagesx($this->image);
         $srcHeight = \imagesy($this->image);
+        $srcRatio  = $srcWidth    / $srcHeight;
+        $dstRatio  = $this->width / $this->height;
 
-        $srcRatio = $srcWidth    / $srcHeight;
-        $dstRatio = $this->width / $this->height;
+        if (self::SCALE_SHOW_ALL === $this->scale) {
+            // Scale 모드
+            if ($srcRatio > $dstRatio) {
+                $newWidth  = $this->width;
+                $newHeight = (int) ($this->width / $srcRatio);
+            } else {
+                $newHeight = $this->height;
+                $newWidth  = (int) ($this->height * $srcRatio);
+            }
 
-        // 요청된 크기가 원본보다 큰 경우 처리
-        if ($this->width > $srcWidth || $this->height > $srcHeight) {
-            if (!$this->options['enlarge']) {
-                // 확대하지 않고 원본 크기 유지
+            // 확대 방지
+            if (!$this->options['enlarge'] && ($newWidth > $srcWidth || $newHeight > $srcHeight)) {
                 $newWidth  = $srcWidth;
                 $newHeight = $srcHeight;
-            } else {
-                // 확대 허용
-                if (self::SCALE_SHOW_ALL === $this->scale) {
-                    if ($srcRatio > $dstRatio) {
-                        $newWidth  = $this->width;
-                        $newHeight = (int) ($this->width / $srcRatio);
-                    } else {
-                        $newHeight = $this->height;
-                        $newWidth  = (int) ($this->height * $srcRatio);
-                    }
-                } else {
-                    $newWidth  = $this->width;
-                    $newHeight = $this->height;
-                }
             }
-        } else {
-            // 기존 로직
-            if (self::SCALE_SHOW_ALL === $this->scale) {
-                if ($srcRatio > $dstRatio) {
-                    $newWidth  = $this->width;
-                    $newHeight = (int) ($this->width / $srcRatio);
-                } else {
-                    $newHeight = $this->height;
-                    $newWidth  = (int) ($this->height * $srcRatio);
-                }
+
+            // 리사이즈를 위한 임시 이미지
+            $resized = \imagecreatetruecolor($newWidth, $newHeight);
+            \imagealphablending($resized, false);
+            \imagesavealpha($resized, true);
+
+            // 리사이즈
+            \imagecopyresampled($resized, $this->image, 0, 0, 0, 0, $newWidth, $newHeight, $srcWidth, $srcHeight);
+
+            // 최종 캔버스 생성
+            $canvas = \imagecreatetruecolor($this->width, $this->height);
+            \imagealphablending($canvas, false);
+            \imagesavealpha($canvas, true);
+
+            // 배경 설정
+            if ('transparent' === $this->options['background']) {
+                $transparent = \imagecolorallocatealpha($canvas, 0, 0, 0, 127);
+                \imagefill($canvas, 0, 0, $transparent);
             } else {
-                $newWidth  = $this->width;
-                $newHeight = $this->height;
+                $rgb        = $this->hexToRgb($this->options['background']);
+                $background = \imagecolorallocate($canvas, $rgb[0], $rgb[1], $rgb[2]);
+                \imagefill($canvas, 0, 0, $background);
             }
-        }
 
-        $newImage = \imagecreatetruecolor($this->width, $this->height);
+            // 중앙 정렬하여 합성
+            \imagecopy(
+                $canvas,
+                $resized,
+                (int) (($this->width - $newWidth) / 2),
+                (int) (($this->height - $newHeight) / 2),
+                0,
+                0,
+                $newWidth,
+                $newHeight
+            );
 
-        // Handle transparency
-        \imagealphablending($newImage, false);
-        \imagesavealpha($newImage, true);
-
-        // Fill with transparent or specified background
-        if ('transparent' === $this->options['background']) {
-            $transparent = \imagecolorallocatealpha($newImage, 0, 0, 0, 127);
-            \imagefill($newImage, 0, 0, $transparent);
-        } else {
-            $rgb        = $this->hexToRgb($this->options['background']);
-            $background = \imagecolorallocate($newImage, $rgb[0], $rgb[1], $rgb[2]);
-            \imagefill($newImage, 0, 0, $background);
-        }
-
-        // Calculate position to center the image
-        $x = (int) (($this->width - $newWidth) / 2);
-        $y = (int) (($this->height - $newHeight) / 2);
-
-        // Copy and resize the image
-        \imagecopyresampled(
-            $newImage,
-            $this->image,
-            $x,
-            $y,
-            0,
-            0,
-            $newWidth,
-            $newHeight,
-            $srcWidth,
-            $srcHeight
-        );
-
-        if ($this->image instanceof \GdImage || \is_resource($this->image)) {
+            \imagedestroy($resized);
             \imagedestroy($this->image);
+            $this->image = $canvas;
+        } else {
+            // Crop 모드
+            $scale = \max($this->width / $srcWidth, $this->height / $srcHeight);
+
+            if (!$this->options['enlarge'] && $scale > 1) {
+                $scale = 1;
+            }
+
+            $newWidth  = (int) ($srcWidth * $scale);
+            $newHeight = (int) ($srcHeight * $scale);
+
+            $resized = \imagecreatetruecolor($newWidth, $newHeight);
+            \imagecopyresampled($resized, $this->image, 0, 0, 0, 0, $newWidth, $newHeight, $srcWidth, $srcHeight);
+
+            // 중앙 기준 crop을 위한 최종 이미지
+            $final = \imagecreatetruecolor($this->width, $this->height);
+            \imagecopy(
+                $final,
+                $resized,
+                0,
+                0,
+                (int) (($newWidth - $this->width) / 2),
+                (int) (($newHeight - $this->height) / 2),
+                $this->width,
+                $this->height
+            );
+
+            \imagedestroy($resized);
+            \imagedestroy($this->image);
+            $this->image = $final;
         }
-        $this->image = $newImage;
     }
 
     public function saveToStream($stream, string $format = 'jpeg') : void

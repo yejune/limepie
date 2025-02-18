@@ -76,7 +76,7 @@ class Image extends Fields
             }
 
             $html .= <<<EOT
-            </div>
+            <!--btn--></div>
             <div class='form-preview clone-element'><div><a href="{$data['url']}" target="_new"><img {$style} src='{$data['url']}' class='form-preview-image'></a></div></div>
             EOT;
             $button = <<<'EOT'
@@ -85,7 +85,7 @@ class Image extends Fields
         } else {
             $value = '';
             $html  = <<<EOT
-            <div class="input-group">{$prepend}<input type="text" class='form-control form-control-file' value="" readonly="readonly" /><input type="file" class='valid-target form-control-file form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" accept="{$accept}" /></div>
+            <div class="input-group">{$prepend}<input type="text" class='form-control form-control-file' value="" readonly="readonly" /><input type="file" class='valid-target form-control-file form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" accept="{$accept}" /><!--btn--></div>
             EOT;
             $button = <<<'EOT'
             <button class="btn btn-search btn-file-search" type="button">&nbsp;</button>

@@ -119,7 +119,6 @@ class Juso extends Fields
             </select>
             <div class="juso-loader" style='display: none;'></div>
             </div>
-
         EOT;
     }
 

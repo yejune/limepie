@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Limepie\Thumbnail\Driver;
 
 use Limepie\Thumbnail\DriverAbstract;
+use Limepie\Thumbnail\DriverException;
 
 // src/Driver/ImagickDriver.php
 class Imagick extends DriverAbstract
