@@ -2,6 +2,8 @@
 
 namespace Limepie\Cache;
 
+use Limepie\Di;
+
 class Redis
 {
     private $redis;
@@ -45,6 +47,11 @@ class Redis
         }
     }
 
+    private function getDomainKey(string $key)
+    {
+        return Di::getRequest()->getHost() . ':' . $key;
+    }
+
     /**
      * Set a value in the cache.
      *
@@ -74,7 +81,7 @@ class Redis
      */
     public function get(string $key)
     {
-        $value = $this->redis->get($key);
+        $value = $this->redis->get($this->getDomainKey($key));
 
         if (false === $value) {
             return false;
@@ -94,13 +101,13 @@ class Redis
     {
         if (\str_ends_with($key, '*')) {
             // prefix로 끝나는 경우 scan으로 삭제
-            $this->deleteScan($key);
+            $this->deleteScan($this->getDomainKey($key));
 
             return true;
         }
 
         // 단일 키 삭제
-        return $this->redis->del($key) > 0;
+        return $this->redis->del($this->getDomainKey($key)) > 0;
     }
 
     public function deleteScan(string $prefix)
@@ -127,7 +134,7 @@ class Redis
      */
     public function exists(string $key) : bool
     {
-        return $this->redis->exists($key) > 0;
+        return $this->redis->exists($this->getDomainKey($key)) > 0;
     }
 
     /**
@@ -188,5 +195,15 @@ class Redis
     private function unserialize($data)
     {
         return \unserialize($data);
+    }
+
+    public function info()
+    {
+        return $this->redis->info();
+    }
+
+    public function ping()
+    {
+        return $this->redis->ping();
     }
 }

@@ -19,92 +19,16 @@ function ___($domain, $string, $a, $b)
     return \dngettext($domain, $string, $a, $b);
 }
 
+function check_tpl_path($decoded)
+{
+    return \preg_match('/^[A-Z].*\.tpl$/', $decoded);
+}
+
 function encrypt_token($data, $secretKey)
 {
     $data['created_at'] = \time();
 
     return \Limepie\encrypt(\base64_encode(\serialize($data)), $secretKey);
-}
-
-function getIsDisplay($serviceModuleBannerItem)
-{
-    $isDisplay = false;
-    $now       = \date('Y-m-d H:i:s');
-
-    if (1 == $serviceModuleBannerItem->getIsDisplay()) {
-        $isDisplay = true;
-    } elseif (2 == $serviceModuleBannerItem->getIsDisplay() || 3 == $serviceModuleBannerItem->getIsDisplay()) {
-        $isDateValid = false;
-
-        // 날짜 범위 체크
-        if (2 == $serviceModuleBannerItem->getIsDisplay()) {
-            if ($serviceModuleBannerItem->getDisplayStartDt() <= $now
-            && $serviceModuleBannerItem->getDisplayEndDt() >= $now) {
-                $isDateValid = true;
-            }
-        } else { // IsDisplay == 3
-            if ($serviceModuleBannerItem->getDisplayStartDt() <= $now) {
-                $isDateValid = true;
-            }
-        }
-
-        if ($isDateValid) {
-            if (0 == $serviceModuleBannerItem->getIsAllday()) {
-                $isDisplay = true;
-            } else {
-                // 현재 요일 가져오기 (0: 일요일, 1: 월요일, ..., 6: 토요일)
-                $currentDayOfWeek = \date('w', \strtotime($now));
-
-                // 요일별 체크
-                switch ($currentDayOfWeek) {
-                    case 0: // 일요일
-                        if (1 == $serviceModuleBannerItem->getIsSunday()) {
-                            $isDisplay = true;
-                        }
-
-                        break;
-                    case 1: // 월요일
-                        if (1 == $serviceModuleBannerItem->getIsMonday()) {
-                            $isDisplay = true;
-                        }
-
-                        break;
-                    case 2: // 화요일
-                        if (1 == $serviceModuleBannerItem->getIsTuesday()) {
-                            $isDisplay = true;
-                        }
-
-                        break;
-                    case 3: // 수요일
-                        if (1 == $serviceModuleBannerItem->getIsWednesday()) {
-                            $isDisplay = true;
-                        }
-
-                        break;
-                    case 4: // 목요일
-                        if (1 == $serviceModuleBannerItem->getIsThursday()) {
-                            $isDisplay = true;
-                        }
-
-                        break;
-                    case 5: // 금요일
-                        if (1 == $serviceModuleBannerItem->getIsFriday()) {
-                            $isDisplay = true;
-                        }
-
-                        break;
-                    case 6: // 토요일
-                        if (1 == $serviceModuleBannerItem->getIsSaturday()) {
-                            $isDisplay = true;
-                        }
-
-                        break;
-                }
-            }
-        }
-    }
-
-    return $isDisplay;
 }
 
 function decrypt_token($token, $secretKey, $timeoutSeconds = 10)
