@@ -141,7 +141,7 @@ class Model extends ModelBase
             // parentNode가 있고 single인 경우 ,single일때만 적용된다. 싱글이 아니면 seq를 비교할수 없다.
             if ($class->parentNode && $isSingle) {
                 foreach ($data ?? [] as $key => $value) {
-                    if ('seq' !== $key) {
+                    if ('seq' !== $key && \Limepie\has_value($value)) {
                         $attribute[$parentTableName][$key] = $value;
                     }
                 }
@@ -156,7 +156,7 @@ class Model extends ModelBase
             // parentNode가 있고 single인 경우,single일때만 적용된다. 싱글이 아니면 seq를 비교할수 없다.
             if ($class->parentNode && $isSingle) {
                 foreach ($data ?? [] as $key => $value) {
-                    if ('seq' !== $key) {
+                    if ('seq' !== $key && \Limepie\has_value($value)) {
                         $attribute[$key] = $value;
                     }
                 }
@@ -308,7 +308,7 @@ class Model extends ModelBase
                     if ($class->parentNode) {
                         // parentNode가 true일 경우, 부모에게 자식을 붙인다.
                         foreach ($data[$leftKeyValue] ?? [] as $key => $value) {
-                            if ('seq' !== $key) {
+                            if ('seq' !== $key && \Limepie\has_value($value)) {
                                 $attribute[$parentTableName][$key] = $value;
                             }
                         }
@@ -320,7 +320,7 @@ class Model extends ModelBase
                     if ($class->parentNode) {
                         // parentNode가 true일 경우, 부모에게 자식을 붙인다.
                         foreach ($data[$leftKeyValue] ?? [] as $key => $value) {
-                            if ('seq' !== $key) {
+                            if ('seq' !== $key && \Limepie\has_value($value)) {
                                 $attribute[$key] = $value;
                             }
                         }
@@ -430,7 +430,7 @@ class Model extends ModelBase
 
                         if ($class->parentNode) { // parent로 옮길때는 seq까지 옮기면 덮어 쓴다.
                             foreach ($rightKeyMapValueByLeftKey ?? [] as $key => $value) {
-                                if ('seq' !== $key) {
+                                if ('seq' !== $key && \Limepie\has_value($value)) {
                                     $attribute[$parentTableName][$key] = $value;
                                 }
                             }
@@ -440,7 +440,7 @@ class Model extends ModelBase
                     } else {
                         if ($class->parentNode) { // parent로 옮길때는 seq까지 옮기면 덮어 쓴다.
                             foreach ($rightKeyMapValueByLeftKey ?? [] as $key => $value) {
-                                if ('seq' !== $key) {
+                                if ('seq' !== $key && \Limepie\has_value($value)) {
                                     $attribute[$key] = $value;
                                 }
                             }
@@ -1990,7 +1990,7 @@ class Model extends ModelBase
                 if ($joinModel->parentNode) {
                     // parentNode가 true일 경우, 부모에게 자식을 붙인다.
                     foreach ($tmp ?? [] as $key => $value) {
-                        if ('seq' !== $key) {
+                        if ('seq' !== $key && \Limepie\has_value($value)) {
                             $attributes[$key] = $value;
                         }
                     }
@@ -2250,7 +2250,7 @@ class Model extends ModelBase
                 if ($joinModel->parentNode) {
                     // parentNode가 true일 경우, 부모에게 자식을 붙인다.
                     foreach ($tmp ?? [] as $key => $value) {
-                        if ('seq' !== $key) {
+                        if ('seq' !== $key && \Limepie\has_value($value)) {
                             $row[$key] = $value;
                         }
                     }

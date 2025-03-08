@@ -604,4 +604,9 @@ class Mysql extends \Limepie\Pdo
 
         return $message;
     }
+
+    public function self()
+    {
+        return $this;
+    }
 }

@@ -82,8 +82,12 @@ class Validation
                 return true;
             }
 
-            if (true === \is_array($value) && \count($value)) {
-                return true;
+            if (true === \is_array($value)) {
+                if (\count($value)) {
+                    return true;
+                }
+
+                return false;
             }
 
             if (0 < \strlen((string) $value)) {

@@ -39,6 +39,30 @@ class Textarea extends Fields
             $style = ' style="' . $property['element_style'] . '"';
         }
 
+        $prepend = $prependClass = '';
+
+        if (true === isset($property['prepend_class']) && $property['prepend_class']) {
+            $prependClass = ' ' . $property['prepend_class'];
+        }
+
+        if (true === isset($property['prepend']) && $property['prepend']) {
+            $prepend = <<<EOD
+            <span class="input-group-text{$prependClass}">{$property['prepend']}</span>
+            EOD;
+        }
+
+        $append = $appendClass = '';
+
+        if (true === isset($property['append_class']) && $property['append_class']) {
+            $appendClass = ' ' . $property['append_class'];
+        }
+
+        if (true === isset($property['append']) && $property['append']) {
+            $append = <<<EOD
+            <span class="input-group-text{$appendClass}">{$property['append']}</span>
+            EOD;
+        }
+
         if (
             isset($property['counter']) && $property['counter']
                                         && isset($property['rules']['maxlength']) && $property['rules']['maxlength']
@@ -48,8 +72,14 @@ class Textarea extends Fields
             $counter   = '<p class="position-absolute no-select bottom-0 end-0 m-1 textarea-counter fs-7 mb-0" style="color:#939393;">(<span pan class="counter text-black">0/' . $property['rules']['maxlength'] . '</span>bytes)</p>';
         }
 
+        $innerBtn = '';
+
+        if (true === isset($property['inner_btn']) && $property['inner_btn']) {
+            $innerBtn = '<!--btn-->';
+        }
+
         return <<<EOT
-        <textarea class="valid-target form-control {$className}" {$readonly} {$style} name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}" rows="{$rows}"{$maxLength}>{$value}</textarea>{$counter}
+        <div class="input-group">{$prepend}<textarea class="valid-target form-control {$className}" {$readonly} {$style} name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}" rows="{$rows}"{$maxLength}>{$value}</textarea>{$counter}{$append}{$innerBtn}</div>
         EOT;
     }
 

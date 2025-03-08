@@ -2,11 +2,11 @@
 
 namespace Limepie\Form;
 
+use Limepie\ArrayObject;
+
 class Generation
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public static function getValue($data, $key)
     {
@@ -44,12 +44,12 @@ class Generation
         return $value['default'] ?? null;
     }
 
-    public function write(array $spec, array|\Limepie\ArrayObject $data = []) : string
+    public function write(array $spec, array|ArrayObject $data = []) : string
     {
-        $method = __NAMESPACE__ . '\\Generation\\Fields\\' . \Limepie\camelize($spec['type']);
+        $method = __NAMESPACE__ . '\Generation\Fields\\' . \Limepie\camelize($spec['type']);
         $html   = '';
 
-        if ($data instanceof \Limepie\ArrayObject) {
+        if ($data instanceof ArrayObject) {
             $data = $data->toArray();
         }
 
@@ -110,6 +110,7 @@ class Generation
                     } else {
                         $l = false;
                     }
+
                     // $active = $step['active'] ?? 0;
                     if (1 == $i) {
                         $active = 1;
@@ -239,7 +240,7 @@ class Generation
                 if ($spec['list_button_text'] ?? false) {
                     $listButtonText = $spec['list_button_text'];
                 }
-                $innerhtml .= '<a href="../' . '" class="btn btn-secondary float-right">' . $listButtonText . '</a>';
+                $innerhtml .= '<a href="../" class="btn btn-secondary float-right">' . $listButtonText . '</a>';
             }
         }
         $innerhtml .= '</div>';
@@ -363,7 +364,7 @@ class Generation
 
     public function read(array $spec, array $data = []) : string
     {
-        $method = __NAMESPACE__ . '\\Generation\\Fields\\' . \Limepie\camelize($spec['type']);
+        $method = __NAMESPACE__ . '\Generation\Fields\\' . \Limepie\camelize($spec['type']);
 
         if (true === isset($spec['label'][\Limepie\get_language()])) {
             $title = $spec['label'][\Limepie\get_language()];
@@ -381,5 +382,12 @@ class Generation
 {$elements}
 </div>
 EOT;
+    }
+
+    public function list(array $spec, array $data = []) : string
+    {
+        $method = __NAMESPACE__ . '\Generation\Fields\\' . \Limepie\camelize($spec['type']);
+
+        return $method::list($spec['key'] ?? '', $spec, $data);
     }
 }

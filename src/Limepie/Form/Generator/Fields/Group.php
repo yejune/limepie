@@ -148,7 +148,6 @@ class Group extends Fields
 
     public static function write(string $elementName, array $specs, $data, $ruleName = null)
     {
-        //  \pr($elementName, $specs, $data, $ruleName);
         $innerhtml    = '';
         $script       = '';
         $html         = '';
@@ -851,9 +850,37 @@ class Group extends Fields
         if (true === isset($specs['group_style'])) {
             $groupStyle = " style='" . $specs['group_style'] . "'";
         }
+        $onchange = '';
 
+        if (isset($specs['event'])) {
+            $function = '';
+            $type     = [];
+            // \prx($specs);
+
+            if (isset($specs['event']['function'])) {
+                $function = $specs['event']['function'];
+            }
+
+            if (isset($specs['event']['type'])) {
+                $type = $specs['event']['type'];
+            }
+
+            if ($type) {
+                foreach ($type as $event) {
+                    if ('onload' === $event) {
+                        $onchange .= ' data-onload="' . \Limepie\minify_js(\str_replace('"', '\"', $function)) . '"';
+                    }
+                }
+            }
+        }
+
+        // if (true === isset($specs['group_class']) && false !== \strpos($specs['group_class'], 'border-primary')) {
+        //     if (0 == $data['is_display']) {
+        //         $groupClassString = \str_replace('border-primary', 'border-danger', $groupClassString);
+        //     }
+        // }
         $html = <<<EOT
-        {$styleTag}<div class='{$groupClassString}'{$groupStyle}>{$innerhtml}</div>{$script}
+        {$styleTag}<div class='{$groupClassString}'{$groupStyle}{$onchange}>{$innerhtml}</div>{$script}
         EOT;
 
         return $html;

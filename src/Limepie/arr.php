@@ -427,6 +427,25 @@ function is_list(array $array) : bool
     return true;
 }
 
+function array_insert_before(&$array, $beforeKey, $newKey, $newValue)
+{
+    if (\array_key_exists($beforeKey, $array)) {
+        $new = [];
+
+        foreach ($array as $key => $value) {
+            if ($key === $beforeKey) {
+                $new[$newKey] = $newValue;
+            }
+            $new[$key] = $value;
+        }
+        $array = $new;
+
+        return true;
+    }
+
+    return false;
+}
+
 function insert_before(array $array, $key, array|string $new)
 {
     if (false === \is_array($new)) {
@@ -1390,6 +1409,345 @@ function refparse($arr = [], $basepath = '') : array
 {
     $return = [];
 
+    foreach ($arr ?? [] as $key => $fields) {
+        // if ($fields['display_script'] ?? false) {
+        //     // prx($arr); // 디버깅 코드 제거
+        //     $tmpClass = \Limepie\genRandomString();
+
+        //     // 모든 요소 클래스 문자열 생성
+        //     $allElementsClasses = [];
+
+        //     foreach ($fields['display_script'] as $scriptKey => $elements) {
+        //         // $elements = \explode(',', $scriptValue);
+
+        //         foreach ($elements ?? [] as $element) {
+        //             $element = \trim($element);
+
+        //             if (empty($element)) {
+        //                 continue;
+        //             }
+        //             $allElementsClasses[] = '.' . \str_replace('[]', '__', $element) . "_{$tmpClass}";
+        //         }
+        //     }
+
+        //     // 중복 제거
+        //     $allElementsClasses  = \array_unique($allElementsClasses);
+        //     $allElementsSelector = \implode(', ', $allElementsClasses);
+
+        //     // 각 스크립트 키에 대한 조건문 생성
+        //     $jsConditions = [];
+
+        //     foreach ($fields['display_script'] as $scriptKey => $elements) {
+        //         // $elements     = \explode(',', $scriptValue);
+        //         $showElements = [];
+
+        //         foreach ($elements ?? [] as $element) {
+        //             $element = \trim($element);
+
+        //             if (empty($element)) {
+        //                 continue;
+        //             }
+
+        //             $showElements[] = "\$self.closest('.form-group').find('." . \str_replace('[]', '__', $element) . "_{$tmpClass}').show();";
+        //         }
+
+        //         $jsConditions[] = "if(this.value == '{$scriptKey}') { " . \implode(' ', $showElements) . ' }';
+        //     }
+
+        //     // onchange 핸들러 추가 - 표시/숨김 처리 부분
+        //     $arr[$key]['onchange'] = <<<SQL
+        //         var \$self = $(this);
+        //         // 모든 요소 숨기기
+        //         \$self.closest('.form-group').find('{$allElementsSelector}').hide();
+
+        //         // 현재 값에 따라 해당 요소만 표시
+        //         {$jsConditions[0]}
+        //     SQL;
+
+        //     // 나머지 조건 추가
+        //     for ($i = 1; $i < \count($jsConditions); ++$i) {
+        //         $arr[$key]['onchange'] .= " else {$jsConditions[$i]}";
+        //     }
+
+        //     // 폼 유효성 검사 코드 추가
+        //     $validElements = [];
+
+        //     foreach ($fields['display_script'] as $scriptKey => $elements) {
+        //         //  $elements = \explode(',', $scriptValue);
+
+        //         foreach ($elements ?? [] as $element) {
+        //             $element = \trim($element);
+
+        //             if (empty($element)) {
+        //                 continue;
+        //             }
+
+        //             $validElements[] = '.' . \str_replace('[]', '__', $element) . "_{$tmpClass}";
+        //         }
+        //     }
+
+        //     // 중복 제거 및 문자열 연결
+        //     $validElements    = \array_unique($validElements);
+        //     $validElementsStr = \implode(', ', $validElements);
+
+        //     // 유효성 검사 코드 추가
+        //     $arr[$key]['onchange'] .= <<<SQL
+        //         if(\$self.closest('form').length > 0) {
+        //             var elementsToCheck = \$('.valid-target', \$self.closest('.form-group').find('{$validElementsStr}').closest('.form-element-wrapper'));
+        //             if(elementsToCheck.length > 0) {
+        //                 \$self.closest('form').validate().checkByElements(elementsToCheck);
+        //             }
+        //         }
+        //     SQL;
+
+        //     // script 설정 처리
+        //     foreach ($fields['display_script'] as $scriptKey => $elements) {
+        //         // $elements = \explode(',', $scriptValue);
+
+        //         foreach ($elements ?? [] as $element) {
+        //             $element = \trim($element);
+
+        //             if (empty($element)) {
+        //                 continue;
+        //             }
+
+        //             // class 업데이트
+        //             $arr[$element]['class'] = ($arr[$element]['class'] ?? '') . ' ' . \str_replace('[]', '__', $element) . '_' . $tmpClass;
+
+        //             // display 조건 설정
+        //             $arr[$element]['display_target']                 = '.' . $key;
+        //             $arr[$element]['display_target_condition_class'] = [
+        //                 // $scriptKey => 'last-child',
+        //             ];
+
+        //             // 기본적으로 모든 값에 대해 숨김 처리
+        //             if (!isset($arr[$element]['display_target_condition_style'])) {
+        //                 $arr[$element]['display_target_condition_style'] = [];
+        //             }
+
+        //             // 현재 scriptKey에 대해서는 표시
+        //             $arr[$element]['display_target_condition_style'][$scriptKey] = 'display: block';
+
+        //             // 다른 scriptKey들에 대해서는 숨김
+        //             foreach ($fields['display_script'] as $otherKey => $otherValue) {
+        //                 if ($otherKey !== $scriptKey) {
+        //                     $arr[$element]['display_target_condition_style'][$otherKey] = 'display: none';
+        //                 }
+        //             }
+        //         }
+        //     }
+        //     // \prx($arr);
+        // }
+
+        if ($fields['display_script'] ?? false) {
+            $tmpClass = \Limepie\genRandomString();
+
+            // 모든 요소 클래스 문자열 생성
+            $allElementsClasses = [];
+
+            // 모든 요소 추적 - 각 요소가 어떤 scriptKey에 속하는지 기록
+            $elementToScriptKeys = [];
+
+            foreach ($fields['display_script'] as $scriptKey => $elements) {
+                if (!\is_array($elements)) {
+                    continue; // 배열이 아닌 경우 건너뜀
+                }
+
+                foreach ($elements as $element) {
+                    $element = \trim($element);
+
+                    if (empty($element)) {
+                        continue;
+                    }
+
+                    $allElementsClasses[] = '.' . \str_replace('[]', '__', $element) . "_{$tmpClass}";
+
+                    // 이 요소가 속한 scriptKey 기록
+                    if (!isset($elementToScriptKeys[$element])) {
+                        $elementToScriptKeys[$element] = [];
+                    }
+                    $elementToScriptKeys[$element][] = $scriptKey;
+                }
+            }
+
+            // 중복 제거
+            $allElementsClasses  = \array_unique($allElementsClasses);
+            $allElementsSelector = \implode(', ', $allElementsClasses);
+
+            // 각 스크립트 키에 대한 조건문 생성
+            $jsConditions = [];
+
+            foreach ($fields['display_script'] as $scriptKey => $elements) {
+                if (!\is_array($elements)) {
+                    continue; // 배열이 아닌 경우 건너뜀
+                }
+
+                $showElements = [];
+
+                foreach ($elements as $element) {
+                    $element = \trim($element);
+
+                    if (empty($element)) {
+                        continue;
+                    }
+
+                    $showElements[] = "\$self.closest('.form-group').find('." . \str_replace('[]', '__', $element) . "_{$tmpClass}').show();";
+                }
+
+                $jsConditions[] = "if(this.value == '{$scriptKey}') { " . \implode(' ', $showElements) . ' }';
+            }
+
+            // onchange 핸들러 추가 - 표시/숨김 처리 부분
+            if (!empty($jsConditions)) {
+                $arr[$key]['onchange'] = <<<SQL
+                    var \$self = $(this);
+                    // 모든 요소 숨기기
+                    \$self.closest('.form-group').find('{$allElementsSelector}').hide();
+
+                    // 현재 값에 따라 해당 요소만 표시
+                    {$jsConditions[0]}
+                SQL;
+
+                // 나머지 조건 추가
+                for ($i = 1; $i < \count($jsConditions); ++$i) {
+                    $arr[$key]['onchange'] .= " else {$jsConditions[$i]}";
+                }
+
+                // 기본 케이스 추가 - 일치하는 조건이 없을 때 모든 요소 숨김
+                $arr[$key]['onchange'] .= " else { \$self.closest('.form-group').find('{$allElementsSelector}').hide(); }";
+
+                // 폼 유효성 검사 코드 추가
+                $validElements = [];
+
+                foreach ($fields['display_script'] as $scriptKey => $elements) {
+                    if (!\is_array($elements)) {
+                        continue;
+                    }
+
+                    foreach ($elements as $element) {
+                        $element = \trim($element);
+
+                        if (empty($element)) {
+                            continue;
+                        }
+
+                        $validElements[] = '.' . \str_replace('[]', '__', $element) . "_{$tmpClass}";
+                    }
+                }
+
+                // 중복 제거 및 문자열 연결
+                $validElements    = \array_unique($validElements);
+                $validElementsStr = \implode(', ', $validElements);
+
+                // 유효성 검사 코드 추가
+                $arr[$key]['onchange'] .= <<<SQL
+                    if(\$self.closest('form').length > 0) {
+                        var elementsToCheck = \$('.valid-target', \$self.closest('.form-group').find('{$validElementsStr}').closest('.form-element-wrapper'));
+                        if(elementsToCheck.length > 0) {
+                            \$self.closest('form').validate().checkByElements(elementsToCheck);
+                        }
+                    }
+                SQL;
+            }
+
+            // script 설정 처리
+            foreach ($fields['display_script'] as $scriptKey => $elements) {
+                if (!\is_array($elements)) {
+                    continue;
+                }
+
+                foreach ($elements as $element) {
+                    $element = \trim($element);
+
+                    if (empty($element)) {
+                        continue;
+                    }
+
+                    // class 업데이트
+                    $arr[$element]['class'] = ($arr[$element]['class'] ?? '') . ' ' . \str_replace('[]', '__', $element) . '_' . $tmpClass;
+
+                    // display 조건 설정
+                    $arr[$element]['display_target']                 = '.' . $key;
+                    $arr[$element]['display_target_condition_class'] = [];
+
+                    // 기본적으로 모든 값에 대해 숨김 처리
+                    if (!isset($arr[$element]['display_target_condition_style'])) {
+                        $arr[$element]['display_target_condition_style'] = [];
+                    }
+
+                    // 중요: 처음 로드 시 모든 요소를 기본으로 숨김 처리
+                    $arr[$element]['style'] = ($arr[$element]['style'] ?? '') . '; display: none;';
+
+                    // 현재 scriptKey에 대해서는 표시
+                    $arr[$element]['display_target_condition_style'][$scriptKey] = 'display: block';
+
+                    // 다른 scriptKey들에 대해서는 숨김
+                    foreach ($fields['display_script'] as $otherKey => $otherValue) {
+                        if ($otherKey !== $scriptKey) {
+                            $arr[$element]['display_target_condition_style'][$otherKey] = 'display: none';
+                        }
+                    }
+
+                    // 코드의 핵심 수정 부분: 정의되지 않은 키에 대한 처리
+                    // 모든 가능한 scriptKey 값에 대해 명시적으로 지정
+                    // 예: 0, 1, 2, 3, ... 등 없는 키에 대해서도 숨김 처리
+                    $arr[$element]['display_target_condition_default_style'] = 'display: none;';
+
+                    // 현재 선택된 값이 없는 경우 기본적으로 숨김
+                    $arr[$element]['display_target_condition_default'] = 'true';
+                }
+            }
+
+            // 페이지 로드 시 초기 상태 설정을 위한 JavaScript 추가
+            // 이 부분은 페이지 로드 후 한 번 수행되며, 초기 선택값에 따라 요소를 표시하거나 숨김
+            if (!empty($allElementsClasses)) {
+                if (!isset($arr[$key]['ready'])) {
+                    $arr[$key]['ready'] = '';
+                }
+
+                $arr[$key]['ready'] .= <<<SQL
+                    // 페이지 로드 시 초기 상태 설정
+                    var initVal = $(this).val();
+                    var \$self = $(this);
+                    // 기본적으로 모든 요소 숨기기
+                    \$self.closest('.form-group').find('{$allElementsSelector}').hide();
+
+                    // 초기 선택값에 따라 요소 표시
+        SQL;
+
+                foreach ($fields['display_script'] as $scriptKey => $elements) {
+                    if (!\is_array($elements) || empty($elements)) {
+                        continue;
+                    }
+
+                    $showElementsInit = [];
+
+                    foreach ($elements as $element) {
+                        $element = \trim($element);
+
+                        if (empty($element)) {
+                            continue;
+                        }
+                        $showElementsInit[] = "\$self.closest('.form-group').find('." . \str_replace('[]', '__', $element) . "_{$tmpClass}').show();";
+                    }
+
+                    if (!empty($showElementsInit)) {
+                        $arr[$key]['ready'] .= <<<SQL
+
+                        if(initVal == '{$scriptKey}') {
+                            {$showElementsInit[0]}
+        SQL;
+
+                        for ($i = 1; $i < \count($showElementsInit); ++$i) {
+                            $arr[$key]['ready'] .= " {$showElementsInit[$i]}";
+                        }
+                        $arr[$key]['ready'] .= ' }';
+                    }
+                }
+            }
+        }
+    }
+
     foreach ($arr ?? [] as $key => $value) {
         if ('$ref' === $key) {
             if (false === \is_array($value)) {
@@ -1504,36 +1862,91 @@ function refparse($arr = [], $basepath = '') : array
             }
         } else {
             if (true === \is_array($value)) {
-                if (true === isset($value['lang'])) {
-                    if (1 === \preg_match('#\[\]$#', $key, $m)) {
+                if (true === isset($value['lang']) && 1 === \preg_match('#\[\]$#', $key, $m)) {
+                    if ('group' === $value['type']) {
                         // form 이 바뀌어야만 성립한다. 그러므로 지원하지 않음을 밝히고 form 자체를 수정하게 권고한다.
                         throw new Exception('[] multiple은 lang옵션을 지원하지 않습니다. group 하위로 옮기세요.');
                     }
 
+                    if (false === isset($value['lang_key'])) {
+                        throw new Exception('multiple type에서 lang 지정시 하위에서 사용할 lang_key 가 필요합니다.');
+                    }
+
+                    $langKey                                 = $value['lang_key'];
+                    $default                                 = $value;
+                    $orginType                               = $default['type'];
+                    $default['type']                         = 'group';
+                    $default['properties'][$langKey]         = $default;
+                    $default['properties'][$langKey]['type'] = $orginType;
+
+                    if ('append' === $default['lang'] && !isset($default['langs'])) {
+                        unset($default['properties'][$langKey]['rules']['required']);
+                    }
+
+                    unset(
+                        $default['lang'],
+                        $default['lang_key'],
+                        $default['rules'],
+                        $default['label'],
+                        $default['properties'][$langKey]['multiple'],
+                        $default['properties'][$langKey]['sortable'],
+                        $default['properties'][$langKey]['display_target'],
+                        $default['properties'][$langKey]['display_target_condition'],
+                        $default['properties'][$langKey]['display_target_condition_class'],
+                        $default['properties'][$langKey]['display_target_condition_style'],
+                    );
+
+                    $default['properties'][$langKey] = \Limepie\arr\refparse($default['properties'][$langKey], $basepath);
+
+                    $return[$key] = \Limepie\arr\refparse($default, $basepath);
+                    // \prx($key, $return[$key]);
+
+                    // exit;
+                    // if (isset($value['properties']['langs']['lang'])) {
+                    //     unset($value['properties']['langs']['lang']);
+                    // }
+                } elseif (true === isset($value['lang'])) {
+                    $isRemoveLabel = ($value['remove_lang_title'] ?? false);
+                    $isLangAppend  = 'append' === $value['lang'];
+                    $orgClass      = $value['class'] ?? '';
+
                     if ('append' === $value['lang']) {
+                        if (true === $isRemoveLabel) {
+                            $value['class'] = $orgClass . ' pb-0';
+                        }
                         $return[$key] = \Limepie\arr\refparse($value, $basepath);
                     }
+
+                    $value['class'] = $orgClass;
+
                     $default = $value;
-                    unset($default['lang'], $default['class'],$default['style'], $default['description'], $default['default']);
-                    $default2 = $default;
+                    unset(
+                        $default['lang'],
+                        $default['class'],
+                        $default['style'],
+                        $default['description'],
+                        $default['default'],
+                        $default['display_target'],
+                        $default['display_target_condition'],
+                        $default['display_target_condition_class'],
+                        $default['display_target_condition_style'],
+                    );
+                    $appendLangProperties = $default;
 
                     // append이고 langs으로 lang을 특정하지 않았을 경우
                     // rules required를 false 처리해준다.
                     // 원하지 않는 언어가 강제 required되는 상황 방지.
                     // langs를 입력했다는건 사용하겠다는 의미로 부모의 properties를 그대로 사용한다.
                     if ('append' === $value['lang'] && !isset($value['langs'])) {
-                        $default2['rules']['required'] = false;
+                        unset(
+                            $appendLangProperties['rules']['required'],
+                        );
+                        // \prx($arr);
                     }
 
-                    // unset($default2['label']);
+                    // unset($appendLangProperties['label']);
                     if ($value['label'] ?? false) {
                         if (true === \is_array($value['label'])) {
-                            // TODO: 라벨이 배열일 경우 랭귀지 팩이 포함되어 있다. 이경우 배열 전체를 루프돌면서 언어팩이라는 글짜를 언어별로 추가해줘야 한다. 지금은 랭귀지팩의 특정언어를 선택해서 가져올수 없으므로 개발을 중단하고 현재의 언어에 대해서만 처리하는 형태로 완료한다.
-
-                            // foreach($value['label'] as $langKey => &$langValue) {
-                            //     $langValue .= ' - '.getLang....
-                            // }
-
                             $label = $value['label'][\Limepie\get_language()] ?? '';
                         } else {
                             $label = $value['label'];
@@ -1549,24 +1962,42 @@ function refparse($arr = [], $basepath = '') : array
                         $desiredOrder = [];
 
                         foreach ($languageModels as $languageModel) {
-                            $desiredOrder[]                          = $languageModel->getId();
-                            $langProperties[$languageModel->getId()] = [
-                                'label'   => \Limepie\__('core', $languageModel->getName()),
-                                'prepend' => '<i class="fi fi-' . $languageModel->getLocaleId() . '"></i>',
-                            ] + $default2;
+                            $desiredOrder[] = $languageModel->getId();
+                            $properties     = ['prepend' => '<i class="fi fi-' . $languageModel->getLocaleId() . '" title="' . $languageModel->getName() . '"></i>'];
+
+                            if (true === $isRemoveLabel) {
+                                unset($properties['label'] , $appendLangProperties['label']);
+                                $properties['class'] = ($properties['class'] ?? '') . ' border-0 pb-1 pt-0';
+                            } else {
+                                $properties['label'] = \Limepie\__('core', $languageModel->getName());
+                            }
+
+                            $langProperties[$languageModel->getId()] = $properties + $appendLangProperties;
                         }
                     } else {
-                        $langProperties = [
-                            'ko' => ['label' => \Limepie\__('core', '한국어'), 'prepend' => '<i class="fi fi-kr"></i>'] + $default2,
-                            'en' => ['label' => \Limepie\__('core', '영어'), 'prepend' => '<i class="fi fi-us"></i>']  + $default2,
-                            'ja' => ['label' => \Limepie\__('core', '일본어'), 'prepend' => '<i class="fi fi-jp"></i>'] + $default2,
-                            'zh' => ['label' => \Limepie\__('core', '중국어'), 'prepend' => '<i class="fi fi-cn"></i>'] + $default2,
-                        ];
-                        // 원하는 순서 배열을 정의합니다.
+                        $langProperties = [];
+                        $desiredOrder   = ['ko', 'ja', 'en', 'zh'];
 
-                        $desiredOrder = ['ko', 'ja', 'en', 'zh'];
+                        $languages = [
+                            'ko' => ['name' => '한국어', 'locale' => 'kr'],
+                            'en' => ['name' => '영어', 'locale' => 'us'],
+                            'ja' => ['name' => '일본어', 'locale' => 'jp'],
+                            'zh' => ['name' => '중국어', 'locale' => 'cn'],
+                        ];
+
+                        foreach ($languages as $code => $lang) {
+                            $properties = ['prepend' => '<i class="fi fi-' . $lang['locale'] . '" title="' . $lang['name'] . '"></i>'];
+
+                            if (true === $isRemoveLabel) {
+                                unset($properties['label'] ,$appendLangProperties['label']);
+                                $properties['class'] = ($properties['class'] ?? '') . ' border-0 pb-1 pt-0';
+                            } else {
+                                $properties['label'] = \Limepie\__('core', $lang['name']);
+                            }
+
+                            $langProperties[$code] = $properties + $appendLangProperties;
+                        }
                     }
-                    // \prx($langProperties);
 
                     if (isset($value['langs']) && $value['langs']) {
                         $newLangProperties = [];
@@ -1603,7 +2034,6 @@ function refparse($arr = [], $basepath = '') : array
                         }
                         $langProperties = $newLangProperties;
                     }
-                    // pr($langProperties);
 
                     $langClass = '';
 
@@ -1622,13 +2052,39 @@ function refparse($arr = [], $basepath = '') : array
                     if ($value['lang_name'] ?? false) {
                         $languagePackName = $value['lang_name'];
                     }
-                    $value = [
+
+                    $display_target                 = $value['display_target']                 ?? '';
+                    $display_target_condition       = $value['display_target_condition']       ?? [];
+                    $display_target_condition_class = $value['display_target_condition_class'] ?? [];
+                    $display_target_condition_style = $value['display_target_condition_style'] ?? [];
+                    $value                          = [
                         'label'       => ($label ?? '') . ' - ' . $languagePackName,
                         'type'        => 'group',
-                        'class'       => \trim($langClass),
-                        'group_class' => \trim($langGroupClass),
+                        'class'       => \trim($langClass) . (true === $isRemoveLabel ? ' border-0 pt-0' : ''),
+                        'group_class' => \trim($langGroupClass) . (true === $isRemoveLabel ? ' p-1' : ''),
                         'properties'  => $langProperties,
                     ];
+
+                    if ($isLangAppend && true === $isRemoveLabel) {
+                        unset($value['label']);
+                    }
+
+                    if ($display_target) {
+                        $value['display_target'] = $display_target;
+                    }
+
+                    if ($display_target_condition) {
+                        $value['display_target_condition'] = $display_target_condition;
+                    }
+
+                    if ($display_target_condition_class) {
+                        $value['display_target_condition_class'] = $display_target_condition_class;
+                    }
+
+                    if ($display_target_condition_style) {
+                        $value['display_target_condition_style'] = $display_target_condition_style;
+                    }
+
                     $return[$key . '_langs'] = \Limepie\arr\refparse($value, $basepath);
                 } else {
                     $return[$key] = \Limepie\arr\refparse($value, $basepath);

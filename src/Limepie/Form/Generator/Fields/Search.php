@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Limepie\Form\Generator\Fields;
 
+use Limepie\Di;
 use Limepie\Form\Generator\Fields;
 
 class Search extends Fields
@@ -40,6 +41,52 @@ class Search extends Fields
                 $property['items'][$value['search_id']] = $item;
             }
             $value = $value['search_id'];
+        } else {
+            if (isset($property['model']) && $property['model']) {
+                // \prx($property['model'], $value);
+
+                $tableName = '\Resource\Model\Database\Service\\' . \Limepie\camelize($property['model']['table']);
+                $model     = new $tableName();
+
+                foreach ($property['model']['relations'] ?? [] as $rel) {
+                    $relationTableName = '\Resource\Model\Database\Service\\' . \Limepie\camelize($rel['table']);
+                    $match             = new $relationTableName();
+                    $matchKey          = 'match' . \Limepie\camelize($rel['left']) . 'With' . \Limepie\camelize($rel['right']);
+                    $match->{$matchKey}();
+                    $model->relation($match);
+                }
+                $dataset = $value;
+
+                if ($value) {
+                    $slave1  = Di::getMysqlSlave1();
+                    $dataset = $model($slave1)->getBySeq($value)->toArray(function ($data) use ($value, $property) {
+                        $table  = $property['model']['table'];
+                        $result = '';
+
+                        // \prx($data);
+
+                        foreach ($property['model']['keys'] as $key) {
+                            if ($key['table'] === $table) {
+                                $result .= ($key['prepend'] ?? '') . $data[$key['field']] . ($key['append'] ?? '');
+                            } else {
+                                $result .= ($key['prepend'] ?? '') . $data[$key['table'] . '_model'][$key['field']] . ($key['append'] ?? '');
+                            }
+                        }
+
+                        return  [
+                            'id'   => $value,
+                            'text' => $result,
+                        ];
+                    });
+                }
+                // $model->getList([
+                //     'limit' => 100,
+                // ]);
+
+                $property['items'][$value] = $dataset;
+            } else {
+                $property['items'][$value] = $value;
+            }
         }
 
         // \pr($ruleName, $property['rule_name'] ?? '');

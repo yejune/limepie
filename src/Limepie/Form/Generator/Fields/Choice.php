@@ -97,6 +97,7 @@ class Choice extends Fields
 
         $buttons = '';
         $script  = '';
+        $random  = \Limepie\genRandomString(5);
 
         if (true === isset($property['items']) && true === \is_array($property['items'])) {
             $index   = 0;
@@ -107,7 +108,7 @@ class Choice extends Fields
 
             foreach ($property['items'] as $k1 => $v1) {
                 ++$index;
-                $id = $prepend . $index;
+                $id = $prepend . '-' . $random . '-' . $index;
 
                 if (true === \is_array($v1)) {
                     if (true === isset($v1[\Limepie\get_language()])) {

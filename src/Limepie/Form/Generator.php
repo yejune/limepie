@@ -142,7 +142,7 @@ class Generator
         $elements = $method::write($spec['key'] ?? '', $spec, $data);
 
         $innerhtml = <<<EOT
-        <div>{$html}{$elements}</div>
+        {$html}{$elements}
         EOT;
 
         $innerhtml .= '<hr /> <div class="clearfix">';

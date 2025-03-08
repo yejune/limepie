@@ -1143,6 +1143,20 @@ class ModelBase extends ArrayObject
         return $this;
     }
 
+    public function on($callback)
+    {
+        $sql = $callback($this);
+
+        if ($this->onCondition) {
+            $this->onCondition .= ' AND ' . $sql;
+        } else {
+            $this->onCondition = $sql;
+        }
+        // \prx($sql);
+
+        return $this;
+    }
+
     protected function buildJoinOn(string $name, array $arguments = [], int $offset = 2) : self
     {
         $operator = \substr($name, $offset);
@@ -1152,7 +1166,7 @@ class ModelBase extends ArrayObject
         } else {
             [$conds, $binds] = $this->getConditions($name, $arguments, $offset);
 
-            $this->onCondition .= \implode(' ', $conds);
+            $this->onCondition .= ($this->onCondition ? ' AND ' : '') . \implode(' ', $conds);
             $this->onConditionBinds += $binds;
         }
 

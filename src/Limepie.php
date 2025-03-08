@@ -19,6 +19,62 @@ function ___($domain, $string, $a, $b)
     return \dngettext($domain, $string, $a, $b);
 }
 
+/**
+ * bluetools 앱의 버전 확인 함수.
+ *
+ * @param null|string $platform 확인할 플랫폼 (android, ios, 또는 null로 모든 플랫폼)
+ * @param null|string $version  비교할 버전 (예: "1.0.0")
+ *
+ * @return bool 조건에 맞는지 여부
+ */
+function is_bluetools($platform = null, $version = null)
+{
+    // User-Agent 가져오기
+    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+    if (empty($userAgent)) {
+        return false;
+    }
+
+    // bluetools 문자열이 있는지 확인
+    if (false === \strpos($userAgent, 'bluetools')) {
+        return false;
+    }
+
+    // 특정 플랫폼 체크가 필요한 경우
+    if (null !== $platform) {
+        $platform = \strtolower($platform);
+
+        // 해당 플랫폼 문자열이 있는지 확인
+        if (false === \strpos($userAgent, $platform)) {
+            return false;
+        }
+    }
+
+    // 버전 체크가 필요 없는 경우 바로 true 반환
+    if (null === $version) {
+        return true;
+    }
+
+    // 버전 추출 시도
+    $matches = [];
+
+    if (\preg_match('/bluetools\s+(?:android|ios)?\s*(\d+(?:\.\d+){0,2})/', $userAgent, $matches)) {
+        $currentVersion = $matches[1];
+
+        // 버전 비교
+        return \version_compare($currentVersion, $version, '>=');
+    }
+
+    // 버전 정보를 찾을 수 없는 경우
+    return false; // 버전 정보가 없으면 false 반환 (요구사항에 따라 조정 가능)
+}
+
+function has_value($value)
+{
+    return null !== $value && '' !== $value && false !== $value;
+}
+
 function check_tpl_path($decoded)
 {
     return \preg_match('/^[A-Z].*\.tpl$/', $decoded);
@@ -1620,6 +1676,71 @@ function encrypt($str, $key)
 function decrypt($encrypt, $key)
 {
     return \openssl_decrypt(\base58_decode($encrypt), 'aes-256-cbc', (string) $key, \OPENSSL_RAW_DATA, \str_repeat(\chr(0), 16));
+}
+
+function shield(mixed $data, ?string $key = null) : string
+{
+    if (null === $key) {
+        $key = Environment::get('salt');
+    }
+
+    $payload = \serialize([
+        \is_array($data) ? $data : (string) $data,
+        \time(),
+    ]);
+
+    $nonce = \random_bytes(16);
+
+    return \base64_encode(
+        $nonce
+        . \openssl_encrypt(
+            $payload,
+            'aes-128-gcm',
+            \hash('sha256', $key, true),
+            OPENSSL_RAW_DATA,
+            $nonce,
+            $tag
+        )
+        . $tag
+    );
+}
+
+function unshield(string $encoded, ?string $key = null, int $expireDays = 365) : mixed
+{
+    if (null === $key) {
+        $key = Environment::get('salt');
+    }
+
+    $data = \base64_decode($encoded, true);
+
+    if (false === $data) {
+        throw new \RuntimeException('Invalid data format');
+    }
+
+    $nonce      = \substr($data, 0, 16);
+    $tag        = \substr($data, -16);
+    $ciphertext = \substr($data, 16, -16);
+
+    $decrypted = \openssl_decrypt(
+        $ciphertext,
+        'aes-128-gcm',
+        \hash('sha256', $key, true),
+        OPENSSL_RAW_DATA,
+        $nonce,
+        $tag
+    );
+
+    if (false === $decrypted) {
+        throw new \RuntimeException('Decryption failed or data tampered');
+    }
+
+    [$data, $time] = unserialize($decrypted);
+
+    if (\time() - $time > $expireDays * 86400) {
+        throw new \RuntimeException('Data has expired');
+    }
+
+    return $data;
 }
 
 function get_max_number($max = 0)
