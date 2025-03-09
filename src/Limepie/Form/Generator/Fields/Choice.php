@@ -91,8 +91,18 @@ class Choice extends Fields
 
         $readonly = '';
 
-        if (true === isset($property['readonly']) && $property['readonly']) {
-            $readonly = ' pe-none';
+        $readonlyItems = [];
+
+        if (true === isset($property['readonly'])) {
+            if (true === \is_array($property['readonly']) && $property['readonly']) {
+                foreach ($property['readonly'] as $subKey => $subArray) {
+                    $readonlyItems[$subKey] = \array_flip($subArray);
+                }
+
+                $readonlyItems = $readonlyItems[$value] ?? [];
+            } else {
+                $readonly = ' pe-none bg-secondary';
+            }
         }
 
         $buttons = '';
@@ -131,8 +141,15 @@ class Choice extends Fields
                     $checkedId = $id;
                 }
 
+                $pe = '';
+
+                if (isset($readonlyItems[$k1]) && \strlen((string) $readonlyItems[$k1]) > 0) {
+                    $pe = ' pe-none';
+                }
+                // \prx($pe, $k1, $readonlyItems[$k1]);
+
                 $buttons .= <<<EOD
-                <input id="{$id}" class="valid-target btn-check{$inputClass}" type="radio" name="{$key}" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$k1}" data-is-default="{$checkdefault}"{$onchange}{$onclick}{$initload}{$checked}><label for="{$id}" class="btn btn-switch {$elementClass}"><span>{$v1}</span></label>
+                <input id="{$id}" class="valid-target btn-check{$inputClass}" type="radio" name="{$key}" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$k1}" data-is-default="{$checkdefault}"{$onchange}{$onclick}{$initload}{$checked}><label for="{$id}" class="btn btn-switch {$elementClass}{$pe}"><span>{$v1}</span></label>
                 EOD;
 
                 // if ($changeEvent) {

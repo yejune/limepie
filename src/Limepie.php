@@ -75,6 +75,30 @@ function has_value($value)
     return null !== $value && '' !== $value && false !== $value;
 }
 
+function get_boolean($value)
+{
+    // null 값 처리
+    if (\is_null($value)) {
+        return false;
+    }
+
+    if (\is_string($value)) {
+        // 문자열인 경우 소문자로 변환 후 비교
+        $lowerValue = \strtolower($value);
+
+        if ('true' === $lowerValue || '1' === $lowerValue || 'yes' === $lowerValue || 'y' === $lowerValue) {
+            return true;
+        }
+
+        if ('false' === $lowerValue || '0' === $lowerValue || 'no' === $lowerValue || 'n' === $lowerValue || 'null' === $lowerValue) {
+            return false;
+        }
+    }
+
+    // 숫자, 불리언 또는 다른 값들
+    return (bool) $value;
+}
+
 function check_tpl_path($decoded)
 {
     return \preg_match('/^[A-Z].*\.tpl$/', $decoded);

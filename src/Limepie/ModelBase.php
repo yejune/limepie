@@ -1397,6 +1397,11 @@ class ModelBase extends ArrayObject
         return $result;
     }
 
+    public function getQuery()
+    {
+        return $this->replaceQueryBinds($this->query, $this->binds);
+    }
+
     /**
      * Return a query with the binds replaced.
      */
