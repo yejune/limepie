@@ -7,6 +7,7 @@ namespace Limepie\arr;
 use Limepie\ArrayObject;
 use Limepie\Di;
 use Limepie\Exception;
+use Limepie\Form\Parser;
 
 function getIsDisplay($serviceModuleBannerItem)
 {
@@ -1405,141 +1406,42 @@ function key_sort(&$array, $path)
     return $array;
 }
 
+/**
+ * 폼 구성 처리를 위한 메인 함수.
+ *
+ * @param array  $arr      처리할 폼 구성 배열
+ * @param string $basepath 기본 경로
+ *
+ * @return array 처리된 폼 구성 배열
+ */
 function refparse($arr = [], $basepath = '') : array
+{
+    $formProcessor = new Parser($arr, $basepath);
+
+    return $formProcessor->processForm();
+}
+
+function legacy_refparse($arr = [], $basepath = '') : array
 {
     $return = [];
 
+    // 동적 폼 생성 시 조건부로 요소를 표시하거나 숨기는 기능.
+    // 요구사항 정리
+    //     조건부 표시 기능:
+    //         is_extra 필드 값에 따라 다른 필드들(short_description, cover)의 표시 여부를 제어합니다.
+    //         값이 0일 때는 모든 필드 숨김
+    //         값이 1일 때는 short_description 표시
+    //         값이 2일 때는 cover 표시
+    //         값이 3일 때는 short_description과 cover 모두 표시
+    //         동적 UI 구현:
+    //         선택 변경 시 즉시 UI 업데이트
+    //         페이지 로드 시 초기 상태 설정
+    //         폼 유효성 검사와 연동
+    //     CSS 클래스 생성:
+    //         각 요소에 고유한 클래스 할당
+    //         요소 선택 및 스타일 적용을 위한 셀렉터 생성
     foreach ($arr ?? [] as $key => $fields) {
-        // if ($fields['display_script'] ?? false) {
-        //     // prx($arr); // 디버깅 코드 제거
-        //     $tmpClass = \Limepie\genRandomString();
-
-        //     // 모든 요소 클래스 문자열 생성
-        //     $allElementsClasses = [];
-
-        //     foreach ($fields['display_script'] as $scriptKey => $elements) {
-        //         // $elements = \explode(',', $scriptValue);
-
-        //         foreach ($elements ?? [] as $element) {
-        //             $element = \trim($element);
-
-        //             if (empty($element)) {
-        //                 continue;
-        //             }
-        //             $allElementsClasses[] = '.' . \str_replace('[]', '__', $element) . "_{$tmpClass}";
-        //         }
-        //     }
-
-        //     // 중복 제거
-        //     $allElementsClasses  = \array_unique($allElementsClasses);
-        //     $allElementsSelector = \implode(', ', $allElementsClasses);
-
-        //     // 각 스크립트 키에 대한 조건문 생성
-        //     $jsConditions = [];
-
-        //     foreach ($fields['display_script'] as $scriptKey => $elements) {
-        //         // $elements     = \explode(',', $scriptValue);
-        //         $showElements = [];
-
-        //         foreach ($elements ?? [] as $element) {
-        //             $element = \trim($element);
-
-        //             if (empty($element)) {
-        //                 continue;
-        //             }
-
-        //             $showElements[] = "\$self.closest('.form-group').find('." . \str_replace('[]', '__', $element) . "_{$tmpClass}').show();";
-        //         }
-
-        //         $jsConditions[] = "if(this.value == '{$scriptKey}') { " . \implode(' ', $showElements) . ' }';
-        //     }
-
-        //     // onchange 핸들러 추가 - 표시/숨김 처리 부분
-        //     $arr[$key]['onchange'] = <<<SQL
-        //         var \$self = $(this);
-        //         // 모든 요소 숨기기
-        //         \$self.closest('.form-group').find('{$allElementsSelector}').hide();
-
-        //         // 현재 값에 따라 해당 요소만 표시
-        //         {$jsConditions[0]}
-        //     SQL;
-
-        //     // 나머지 조건 추가
-        //     for ($i = 1; $i < \count($jsConditions); ++$i) {
-        //         $arr[$key]['onchange'] .= " else {$jsConditions[$i]}";
-        //     }
-
-        //     // 폼 유효성 검사 코드 추가
-        //     $validElements = [];
-
-        //     foreach ($fields['display_script'] as $scriptKey => $elements) {
-        //         //  $elements = \explode(',', $scriptValue);
-
-        //         foreach ($elements ?? [] as $element) {
-        //             $element = \trim($element);
-
-        //             if (empty($element)) {
-        //                 continue;
-        //             }
-
-        //             $validElements[] = '.' . \str_replace('[]', '__', $element) . "_{$tmpClass}";
-        //         }
-        //     }
-
-        //     // 중복 제거 및 문자열 연결
-        //     $validElements    = \array_unique($validElements);
-        //     $validElementsStr = \implode(', ', $validElements);
-
-        //     // 유효성 검사 코드 추가
-        //     $arr[$key]['onchange'] .= <<<SQL
-        //         if(\$self.closest('form').length > 0) {
-        //             var elementsToCheck = \$('.valid-target', \$self.closest('.form-group').find('{$validElementsStr}').closest('.form-element-wrapper'));
-        //             if(elementsToCheck.length > 0) {
-        //                 \$self.closest('form').validate().checkByElements(elementsToCheck);
-        //             }
-        //         }
-        //     SQL;
-
-        //     // script 설정 처리
-        //     foreach ($fields['display_script'] as $scriptKey => $elements) {
-        //         // $elements = \explode(',', $scriptValue);
-
-        //         foreach ($elements ?? [] as $element) {
-        //             $element = \trim($element);
-
-        //             if (empty($element)) {
-        //                 continue;
-        //             }
-
-        //             // class 업데이트
-        //             $arr[$element]['class'] = ($arr[$element]['class'] ?? '') . ' ' . \str_replace('[]', '__', $element) . '_' . $tmpClass;
-
-        //             // display 조건 설정
-        //             $arr[$element]['display_target']                 = '.' . $key;
-        //             $arr[$element]['display_target_condition_class'] = [
-        //                 // $scriptKey => 'last-child',
-        //             ];
-
-        //             // 기본적으로 모든 값에 대해 숨김 처리
-        //             if (!isset($arr[$element]['display_target_condition_style'])) {
-        //                 $arr[$element]['display_target_condition_style'] = [];
-        //             }
-
-        //             // 현재 scriptKey에 대해서는 표시
-        //             $arr[$element]['display_target_condition_style'][$scriptKey] = 'display: block';
-
-        //             // 다른 scriptKey들에 대해서는 숨김
-        //             foreach ($fields['display_script'] as $otherKey => $otherValue) {
-        //                 if ($otherKey !== $scriptKey) {
-        //                     $arr[$element]['display_target_condition_style'][$otherKey] = 'display: none';
-        //                 }
-        //             }
-        //         }
-        //     }
-        //     // \prx($arr);
-        // }
-
-        if ($fields['display_script'] ?? false) {
+        if ($fields['display_switch'] ?? false) {
             $tmpClass = \Limepie\genRandomString();
 
             // 모든 요소 클래스 문자열 생성
@@ -1548,7 +1450,7 @@ function refparse($arr = [], $basepath = '') : array
             // 모든 요소 추적 - 각 요소가 어떤 scriptKey에 속하는지 기록
             $elementToScriptKeys = [];
 
-            foreach ($fields['display_script'] as $scriptKey => $elements) {
+            foreach ($fields['display_switch'] as $scriptKey => $elements) {
                 if (!\is_array($elements)) {
                     continue; // 배열이 아닌 경우 건너뜀
                 }
@@ -1577,7 +1479,7 @@ function refparse($arr = [], $basepath = '') : array
             // 각 스크립트 키에 대한 조건문 생성
             $jsConditions = [];
 
-            foreach ($fields['display_script'] as $scriptKey => $elements) {
+            foreach ($fields['display_switch'] as $scriptKey => $elements) {
                 if (!\is_array($elements)) {
                     continue; // 배열이 아닌 경우 건너뜀
                 }
@@ -1619,7 +1521,7 @@ function refparse($arr = [], $basepath = '') : array
                 // 폼 유효성 검사 코드 추가
                 $validElements = [];
 
-                foreach ($fields['display_script'] as $scriptKey => $elements) {
+                foreach ($fields['display_switch'] as $scriptKey => $elements) {
                     if (!\is_array($elements)) {
                         continue;
                     }
@@ -1650,8 +1552,16 @@ function refparse($arr = [], $basepath = '') : array
                 SQL;
             }
 
-            // script 설정 처리
-            foreach ($fields['display_script'] as $scriptKey => $elements) {
+            $diffKeys = [];
+
+            // items에는 있으나 display_switch에는 없는 키가 있는 경우 숨김 처리를 하기 위한 키 찾기
+            if (true === isset($fields['items']) && true === isset($fields['display_switch'])) {
+                $itemKeys   = \array_keys($fields['items']);
+                $scriptKeys = \array_keys($fields['display_switch']);
+                $diffKeys   = \array_diff($itemKeys, $scriptKeys);
+            }
+
+            foreach ($fields['display_switch'] as $scriptKey => $elements) {
                 if (!\is_array($elements)) {
                     continue;
                 }
@@ -1673,6 +1583,11 @@ function refparse($arr = [], $basepath = '') : array
                     // 기본적으로 모든 값에 대해 숨김 처리
                     if (!isset($arr[$element]['display_target_condition_style'])) {
                         $arr[$element]['display_target_condition_style'] = [];
+
+                        // items에는 있으나 display_switch에는 없는 키가 있는 경우 숨김 처리
+                        foreach ($diffKeys as $diffKey) {
+                            $arr[$element]['display_target_condition_style'][$diffKey] = 'display: none;';
+                        }
                     }
 
                     // 중요: 처음 로드 시 모든 요소를 기본으로 숨김 처리
@@ -1682,19 +1597,19 @@ function refparse($arr = [], $basepath = '') : array
                     $arr[$element]['display_target_condition_style'][$scriptKey] = 'display: block';
 
                     // 다른 scriptKey들에 대해서는 숨김
-                    foreach ($fields['display_script'] as $otherKey => $otherValue) {
+                    foreach ($fields['display_switch'] as $otherKey => $otherValue) {
                         if ($otherKey !== $scriptKey) {
                             $arr[$element]['display_target_condition_style'][$otherKey] = 'display: none';
                         }
                     }
 
-                    // 코드의 핵심 수정 부분: 정의되지 않은 키에 대한 처리
-                    // 모든 가능한 scriptKey 값에 대해 명시적으로 지정
-                    // 예: 0, 1, 2, 3, ... 등 없는 키에 대해서도 숨김 처리
-                    $arr[$element]['display_target_condition_default_style'] = 'display: none;';
+                    // // 코드의 핵심 수정 부분: 정의되지 않은 키에 대한 처리
+                    // // 모든 가능한 scriptKey 값에 대해 명시적으로 지정
+                    // // 예: 0, 1, 2, 3, ... 등 없는 키에 대해서도 숨김 처리
+                    // $arr[$element]['display_target_condition_default_style'] = 'display: none;';
 
-                    // 현재 선택된 값이 없는 경우 기본적으로 숨김
-                    $arr[$element]['display_target_condition_default'] = 'true';
+                    // // 현재 선택된 값이 없는 경우 기본적으로 숨김
+                    // $arr[$element]['display_target_condition_default'] = 'true';
                 }
             }
 
@@ -1715,7 +1630,7 @@ function refparse($arr = [], $basepath = '') : array
                     // 초기 선택값에 따라 요소 표시
         SQL;
 
-                foreach ($fields['display_script'] as $scriptKey => $elements) {
+                foreach ($fields['display_switch'] as $scriptKey => $elements) {
                     if (!\is_array($elements) || empty($elements)) {
                         continue;
                     }
@@ -1792,7 +1707,7 @@ function refparse($arr = [], $basepath = '') : array
 
                     if ($referenceData) {
                         $data    = \array_merge($data, $referenceData);
-                        $newData = \Limepie\arr\refparse($data, $basepath);
+                        $newData = \Limepie\arr\legacy_refparse($data, $basepath);
 
                         $return = \array_merge($return, $newData);
                     }
@@ -1896,9 +1811,9 @@ function refparse($arr = [], $basepath = '') : array
                         $default['properties'][$langKey]['display_target_condition_style'],
                     );
 
-                    $default['properties'][$langKey] = \Limepie\arr\refparse($default['properties'][$langKey], $basepath);
+                    $default['properties'][$langKey] = \Limepie\arr\legacy_refparse($default['properties'][$langKey], $basepath);
 
-                    $return[$key] = \Limepie\arr\refparse($default, $basepath);
+                    $return[$key] = \Limepie\arr\legacy_refparse($default, $basepath);
                     // \prx($key, $return[$key]);
 
                     // exit;
@@ -1912,9 +1827,9 @@ function refparse($arr = [], $basepath = '') : array
 
                     if ('append' === $value['lang']) {
                         if (true === $isRemoveLabel) {
-                            $value['class'] = $orgClass . ' pb-0';
+                            $value['class'] = $orgClass . ' pb-1';
                         }
-                        $return[$key] = \Limepie\arr\refparse($value, $basepath);
+                        $return[$key] = \Limepie\arr\legacy_refparse($value, $basepath);
                     }
 
                     $value['class'] = $orgClass;
@@ -2085,9 +2000,9 @@ function refparse($arr = [], $basepath = '') : array
                         $value['display_target_condition_style'] = $display_target_condition_style;
                     }
 
-                    $return[$key . '_langs'] = \Limepie\arr\refparse($value, $basepath);
+                    $return[$key . '_langs'] = \Limepie\arr\legacy_refparse($value, $basepath);
                 } else {
-                    $return[$key] = \Limepie\arr\refparse($value, $basepath);
+                    $return[$key] = \Limepie\arr\legacy_refparse($value, $basepath);
                 }
             } else {
                 $return[$key] = $value;
