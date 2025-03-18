@@ -776,7 +776,7 @@ function ceil(float $val, int $precision = 0)
     return \ceil($val * $x) / $x;
 }
 
-function yml_parse_file($file, ?\Closure $callback = null)
+function legacy_yml_parse_file($file, ?\Closure $callback = null)
 {
     $filepath = \Limepie\stream_resolve_include_path($file);
 
@@ -784,7 +784,7 @@ function yml_parse_file($file, ?\Closure $callback = null)
         $basepath = \dirname($filepath);
         $spec     = \yaml_parse_file($filepath);
 
-        $data = \Limepie\arr\refparse($spec, $basepath);
+        $data = \Limepie\arr\legacy_refparse($spec, $basepath);
 
         if (true === isset($callback) && $callback) {
             return $callback($data);
@@ -794,6 +794,43 @@ function yml_parse_file($file, ?\Closure $callback = null)
     }
 
     throw new Exception('"' . $file . '" file not found');
+}
+
+function yml_parse_file($file, ?\Closure $callback = null)
+{
+    $filepath = \Limepie\stream_resolve_include_path($file);
+
+    if ($filepath) {
+        $basepath = \dirname($filepath);
+        $spec     = \yaml_parse_file($filepath);
+
+        $formProcessor = new Form\Parser($spec, $basepath);
+
+        $data = $formProcessor->processForm();
+
+        if (true === isset($callback) && $callback) {
+            return $callback($data);
+        }
+
+        return $data;
+    }
+
+    throw new Exception('"' . $file . '" file not found');
+}
+
+function yml_parse($body, ?\Closure $callback = null)
+{
+    $spec = \yaml_parse($body);
+
+    $formProcessor = new Form\Parser($spec);
+
+    $data = $formProcessor->processForm();
+
+    if (true === isset($callback) && $callback) {
+        return $callback($data);
+    }
+
+    return $data;
 }
 
 /**
@@ -1026,6 +1063,11 @@ function is_ajax()
            && ('xmlhttprequest' === \strtolower(\getenv('HTTP_X_REQUESTED_WITH')));
 }
 
+function is_post()
+{
+    return 'POST' === $_SERVER['REQUEST_METHOD'];
+}
+
 function is_cli() : bool
 {
     if (true === isset($_ENV['is_swoole']) && 1 === (int) $_ENV['is_swoole']) {
@@ -1033,6 +1075,40 @@ function is_cli() : bool
     }
 
     return 'cli' === \php_sapi_name();
+}
+
+/**
+ * 주어진 쿼리 스트링이 현재 URL의 쿼리 스트링에 포함되어 있는지 확인하는 함수.
+ *
+ * @param string $queryString 확인할 쿼리 스트링 (예: "type=1&sort=2")
+ *
+ * @return bool 포함 여부 (true/false)
+ */
+function match_qs($queryString)
+{
+    if (!$queryString) {
+        return true;
+    }
+
+    // 현재 URL의 쿼리 스트링 가져오기
+    $currentQueryString = $_SERVER['QUERY_STRING'] ?? '';
+
+    // 비교할 쿼리 스트링을 배열로 파싱
+    \parse_str($queryString, $queryParams);
+
+    // 현재 URL의 쿼리 스트링을 배열로 파싱
+    \parse_str($currentQueryString, $currentParams);
+
+    // 모든 요구 파라미터가 현재 URL에 있고 값이 일치하는지 확인
+    foreach ($queryParams as $key => $value) {
+        // 키가 존재하지 않거나 값이 다른 경우
+        if (!isset($currentParams[$key]) || $currentParams[$key] != $value) {
+            return false;
+        }
+    }
+
+    // 모든 파라미터가 일치하면 true 반환
+    return true;
 }
 
 function random_uuid()

@@ -337,7 +337,7 @@ class ModelBase extends ArrayObject
     }
 
     #[\ReturnTypeWillChange]
-    public function offsetGet($offset)// : mixed
+    public function offsetGet($offset) : mixed
     {
         // \prx($offset);
         // if ($offset instanceof \Closure) {
@@ -347,7 +347,16 @@ class ModelBase extends ArrayObject
         //     exit;
         // }
 
-        if (false === \array_key_exists($offset, $this->attributes)) {
+        // if (false === \is_array($this->attributes)) {
+        //     $traces = \debug_backtrace();
+        //     \prx($this->originAttributes);
+
+        //     exit;
+        // }
+        // $target = \is_array($this->attributes) ? $this->attributes : $this->originAttributes;
+        $target = $this->attributes;
+
+        if (false === \array_key_exists($offset, $target)) {
             $traces = \debug_backtrace();
 
             foreach ($traces as $trace) {
@@ -377,7 +386,7 @@ class ModelBase extends ArrayObject
             }
         }
 
-        return $this->attributes[$offset];
+        return $target[$offset] ?? null;
     }
 
     public function setAttributes($attributes = null)
@@ -915,7 +924,7 @@ class ModelBase extends ArrayObject
     }
 
     #[\ReturnTypeWillChange]
-    public function key(?string $keyName = null)// : mixed
+    public function key(?string $keyName = null) : mixed
     {
         if ($keyName) {
             return $this->keyName($keyName);

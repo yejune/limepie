@@ -15,11 +15,6 @@ class Search extends Fields
             $ruleName = $property['rule_name'];
         }
 
-        // \prx($property);
-
-        // if (true === \is_array($value)) {
-        //     $value = null;
-        // }
         if (true === \is_array($value) && $value) {
             if (false === isset($property['items']) || !$property['items']) {
                 $item = [
@@ -43,8 +38,6 @@ class Search extends Fields
             $value = $value['search_id'];
         } else {
             if (isset($property['model']) && $property['model']) {
-                // \prx($property['model'], $value);
-
                 $tableName = '\Resource\Model\Database\Service\\' . \Limepie\camelize($property['model']['table']);
                 $model     = new $tableName();
 
@@ -63,8 +56,6 @@ class Search extends Fields
                         $table  = $property['model']['table'];
                         $result = '';
 
-                        // \prx($data);
-
                         foreach ($property['model']['keys'] as $key) {
                             if ($key['table'] === $table) {
                                 $result .= ($key['prepend'] ?? '') . $data[$key['field']] . ($key['append'] ?? '');
@@ -79,21 +70,14 @@ class Search extends Fields
                         ];
                     });
                 }
-                // $model->getList([
-                //     'limit' => 100,
-                // ]);
 
                 $property['items'][$value] = $dataset;
-            } else {
-                $property['items'][$value] = $value;
             }
         }
 
-        // \pr($ruleName, $property['rule_name'] ?? '');
         if (0 === \strlen((string) $value)) {
             $value = $property['default'] ?? '';
         }
-        // $id = 'id' . \time() . '_' . \str_replace(['[', ']'], ['_', ''], $key);
 
         $id = \Limepie\clean_str($key) . '_' . \uniqid();
 

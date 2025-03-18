@@ -197,7 +197,7 @@ EOD;
                         // check if we have the last nav item
 
                         // either add a subnav or close the optionst item
-                        if ($its instanceof \RecursiveIteratorIterator && $its->hasChildren()) {
+                        if ($its instanceof \RecursiveIterator && $its->hasChildren()) {
                             $output->append('<optgroup label="' . \str_repeat('&nbsp;', $curDepth * 4) . $it['name'] . '">');
                         } else {
                             $selected = '';

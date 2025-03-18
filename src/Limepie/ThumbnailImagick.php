@@ -10,7 +10,7 @@ class ThumbnailImagick
 
     public const SCALE_SHOW_ALL = 'scale';
 
-    private \Imagick $image;
+    private ?\Imagick $image = null; // 초기값 null로 명시적 선언
 
     private int $width;
 
@@ -249,7 +249,7 @@ class ThumbnailImagick
 
     public function __destruct()
     {
-        if ($this->image instanceof \Imagick) {
+        if (null !== $this->image) {
             $this->image->clear();
             $this->image->destroy();
         }
