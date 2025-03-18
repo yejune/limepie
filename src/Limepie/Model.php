@@ -163,6 +163,17 @@ class Model extends ModelBase
             }
             // 그 외의 경우
             else {
+                // fetchValue 적용 (이 위치에 추가)
+                if ($class->valueName instanceof \Closure) {
+                    // \prx($data);
+                    $tmp = [];
+
+                    foreach ($data ?? [] as $key => $value) {
+                        $tmp[$key] = ($class->valueName)($value);
+                    }
+                    $data->attributes = $tmp;
+                }
+
                 $attribute[$moduleName] = $data;
             }
         }
@@ -412,6 +423,10 @@ class Model extends ModelBase
                                     $innerKeyName = ($remapKey)($value);
                                 } else {
                                     $innerKeyName = $value[$remapKey];
+                                }
+
+                                if ($class->valueName instanceof \Closure) {
+                                    $value = ($class->valueName)($value);
                                 }
 
                                 $rightKeyMapValueByLeftKey[$innerKeyName] = $value;
@@ -2018,9 +2033,9 @@ class Model extends ModelBase
             $this->originAttributes = $this->attributes = $this->getRelation($attributes);
             $this->primaryKeyValue  = $this->originAttributes[$this->primaryKeyName] ?? null;
 
-            if ($this->valueName instanceof \Closure) {
-                return $this->attributes = ($this->valueName)($this->attributes);
-            }
+            // if ($this->valueName instanceof \Closure) {
+            //     return $this->attributes = ($this->valueName)($this->attributes);
+            // }
 
             return $this;
         }
@@ -2302,11 +2317,11 @@ class Model extends ModelBase
         if ($attributes) {
             $attributes = $this->getRelations($attributes);
 
-            if ($this->valueName instanceof \Closure) {
-                foreach ($attributes as $key => $attribute) {
-                    $attributes[$key]->attributes = ($this->valueName)($attribute);
-                }
-            }
+            // if ($this->valueName instanceof \Closure) {
+            //     foreach ($attributes as $key => $attribute) {
+            //         $attributes[$key]->attributes = ($this->valueName)($attribute);
+            //     }
+            // }
 
             $this->attributes = $attributes;
             // gets에서는 원본 속성을 저장하지 않음, 원본속성은 개별 모델에 존재함
