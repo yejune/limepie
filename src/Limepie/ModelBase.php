@@ -74,8 +74,6 @@ class ModelBase extends ArrayObject
 
     public $bindcount = 0;
 
-    public $secondKeyName;
-
     public $removeColumns = [];
 
     public $parent;
@@ -120,7 +118,7 @@ class ModelBase extends ArrayObject
 
     public $joinTableAliasName;
 
-    public function __construct(?\PDO $pdo = null, $attributes = null)
+    public function __construct(?\PDO $pdo = null, $attributes = null, $originAttributes = [])
     {
         if ($pdo) {
             $this->setConnect($pdo);
@@ -128,6 +126,10 @@ class ModelBase extends ArrayObject
 
         if ($attributes) {
             $this->setAttributes($attributes);
+        }
+
+        if ($originAttributes) {
+            $this->setOriginAttributes($originAttributes);
         }
 
         if (!isset($_SERVER['db_instance_count'])) {
@@ -396,34 +398,22 @@ class ModelBase extends ArrayObject
         }
 
         if (\is_array($attributes)) {
-            $type = 0;
-
-            // 정해진 필드만
-            if (1 === $type) {
-                foreach ($this->allColumns as $column) {
-                    if (true === isset($attributes[$column])) {
-                        $this->attributes[$column] = $attributes[$column];
-                    } elseif (true === isset($attributes[$this->tableName . '_' . $column])) {
-                        $column1                   = $this->tableName . '_' . $column;
-                        $this->attributes[$column] = $attributes[$column1];
-                    } else {
-                        $this->attributes[$column] = null;
-                    }
-                }
-            } else {
-                $this->attributes       = $this->buildDataType($attributes);
-                $this->originAttributes = $this->attributes;
-
-                // if ('quest_mission_type' == $this->tableName) {
-                //     \prx($this->attributes, $this->originAttributes);
-
-                //     exit;
-                // }
-            }
-            $this->primaryKeyValue = $this->attributes[$this->primaryKeyName] ?? null;
+            $this->attributes       = $this->buildDataType($attributes);
+            $this->originAttributes = $this->attributes;
         } else {
             $this->attributes = $attributes;
         }
+        $this->primaryKeyValue = $this->originAttributes[$this->primaryKeyName] ?? null;
+    }
+
+    public function setOriginAttributes(array|ArrayObject $attributes)
+    {
+        if ($attributes instanceof ArrayObject) {
+            $attributes = $attributes->attributes;
+        }
+
+        $this->originAttributes = $this->buildDataType($attributes);
+        $this->primaryKeyValue  = $this->originAttributes[$this->primaryKeyName] ?? null;
     }
 
     public function getmicrotime()
@@ -688,11 +678,9 @@ class ModelBase extends ArrayObject
         return $this;
     }
 
-    public function keyName(callable|string $keyName, ?string $secondKeyName = null) : self
+    public function keyName(callable|string $keyName) : self
     {
         $this->keyName = $keyName;
-
-        $this->secondKeyName = $secondKeyName;
 
         return $this;
     }
@@ -1220,12 +1208,8 @@ class ModelBase extends ArrayObject
 
     protected function buildKeyName(string $name, array $arguments) : self
     {
-        if (1 === \preg_match('#keyName(?P<leftKeyName>.*)(With(?P<rightKeyName>.*))?$#U', $name, $m)) {
+        if (1 === \preg_match('#keyName(?P<leftKeyName>.*)$#U', $name, $m)) {
             $this->keyName = \Limepie\decamelize($m['leftKeyName']);
-
-            if (true === isset($m['rightKeyName'])) {
-                $this->secondKeyName = \Limepie\decamelize($m['rightKeyName']);
-            }
         } else {
             $this->keyName = \Limepie\decamelize(\substr($name, 7));
         }
@@ -1484,6 +1468,7 @@ class ModelBase extends ArrayObject
     protected function buildMatch(string $name, $arguments) : self
     {
         if (true === isset($arguments[0])) {
+            // matchLeftSeqWithRightSeq(true)할 경우 match key 삭제
             $this->matchKeyRemove = $arguments[0];
         }
 

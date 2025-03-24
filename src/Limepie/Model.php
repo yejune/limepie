@@ -164,14 +164,13 @@ class Model extends ModelBase
             // 그 외의 경우
             else {
                 // fetchValue 적용 (이 위치에 추가)
-                if ($class->valueName instanceof \Closure) {
-                    // \prx($data);
-                    $tmp = [];
+                if ($class->valueName instanceof \Closure && $data) {
+                    $fetchAttributes = [];
 
                     foreach ($data ?? [] as $key => $value) {
-                        $tmp[$key] = ($class->valueName)($value);
+                        $fetchAttributes[$key] = new $class($connect, ($class->valueName)($value), $value->attributes);
                     }
-                    $data->attributes = $tmp;
+                    $data->attributes = $fetchAttributes;
                 }
 
                 $attribute[$moduleName] = $data;
@@ -416,21 +415,18 @@ class Model extends ModelBase
                             //     throw new Exception($remapKey . ' column is null, not match');
                             // }
 
-                            if ($class->secondKeyName) {
-                                $rightKeyMapValueByLeftKey[$value[$remapKey]][$value[$class->secondKeyName]] = $value;
+                            if ($remapKey instanceof \Closure) {
+                                $innerKeyName = ($remapKey)($value);
                             } else {
-                                if ($remapKey instanceof \Closure) {
-                                    $innerKeyName = ($remapKey)($value);
-                                } else {
-                                    $innerKeyName = $value[$remapKey];
-                                }
-
-                                if ($class->valueName instanceof \Closure) {
-                                    $value = ($class->valueName)($value);
-                                }
-
-                                $rightKeyMapValueByLeftKey[$innerKeyName] = $value;
+                                $innerKeyName = $value[$remapKey];
                             }
+
+                            if ($class->valueName instanceof \Closure) {
+                                // \prx($value);
+                                $value = new $class($connect, ($class->valueName)($value), $value->attributes);
+                            }
+
+                            $rightKeyMapValueByLeftKey[$innerKeyName] = $value;
                         }
                     }
 
@@ -707,7 +703,14 @@ class Model extends ModelBase
 
     public function update($checkUpdatedTs = false)
     {
-        if (false === isset($this->attributes[$this->primaryKeyName])) {
+        // if (false === isset($this->attributes[$this->primaryKeyName])) {
+        //     $debug = \debug_backtrace()[0];
+
+        //     throw (new Exception('not found ' . $this->primaryKeyName))
+        //         ->setDebugMessage('models update?', $debug['file'], $debug['line'])
+        //     ;
+        // }
+        if (!$this->primaryKeyValue) {
             $debug = \debug_backtrace()[0];
 
             throw (new Exception('not found ' . $this->primaryKeyName))
@@ -873,7 +876,7 @@ class Model extends ModelBase
                     `{$where}` = :{$where}
             SQL;
 
-            $this->changeBinds[':' . $this->primaryKeyName] = $this->attributes[$this->primaryKeyName];
+            $this->changeBinds[':' . $this->primaryKeyName] = $this->primaryKeyValue;
 
             if (true === $checkUpdatedTs) {
                 $sql .= ' AND updated_ts = :check_updated_ts';
@@ -2030,8 +2033,12 @@ class Model extends ModelBase
                 }
             }
 
+            $this->primaryKeyValue = $attributes[$this->primaryKeyName] ?? null;
+            // originAttr과 attr이 달라지는 경우는 valueName을 적용하거나 parentNode를 적용한 경우
+            // parentNode는 원본을 상실함. 부모노드로 속성만 옮겨지고 구조가 유지 되지 않음
+            // 여기서는 valueName을 적용할수 없고 getRelation에서 배열에서 적용하는 구조이므로
+            // originAttributes와 attributes는 동일한 배열을 참조함
             $this->originAttributes = $this->attributes = $this->getRelation($attributes);
-            $this->primaryKeyValue  = $this->originAttributes[$this->primaryKeyName] ?? null;
 
             // if ($this->valueName instanceof \Closure) {
             //     return $this->attributes = ($this->valueName)($this->attributes);
@@ -2324,7 +2331,7 @@ class Model extends ModelBase
             // }
 
             $this->attributes = $attributes;
-            // gets에서는 원본 속성을 저장하지 않음, 원본속성은 개별 모델에 존재함
+            // gets에서는 원본 속성을 저장하지 않음, 원본속성은 개별 모델에만 존재함
             // $this->originAttributes = $this->attributes;
 
             return $this;

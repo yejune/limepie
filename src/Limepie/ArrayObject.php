@@ -41,6 +41,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         if ($this->attributes) {
             $data = [];
 
+            // single row에만 존재
             if (
                 true    === isset($this->primaryKeyName)
                 && true === isset($this->primaryKeyValue)
@@ -48,9 +49,13 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
                 && $this->primaryKeyValue
             ) {
                 $data[$this->primaryKeyName] = $this->primaryKeyValue;
+                // $data['type']                = 'single';
+                $data['attribute'] = $this->attributes;
+            } else {
+                // $data['type']       = 'multiple';
+                $data['attributes'] = $this->attributes;
             }
 
-            $data['attributes'] = $this->attributes;
             // $data['orgiginal_attributes'] = $this->originAttributes ?? [];
 
             return $data;
