@@ -36,6 +36,8 @@ class Request
 
     public $language = 'ko';
 
+    public $country = 'KR';
+
     public $locale = 'ko_KR';
 
     public $query;
@@ -54,15 +56,100 @@ class Request
         $this->rawBody = \file_get_contents('php://input');
         $this->bodies  = $this->getFormData();
 
-        $this->language = $this->getBestLanguage();
-
-        if (true === isset($this->locales[$this->language])) {
-            $this->locale = $this->locales[$this->language];
-        }
+        $info           = $this->getBestLanguageInfo();
+        $this->language = $info['language'];
+        $this->locale   = $info['locale'];
+        $this->country  = $info['country'];
 
         $this->getHost();
 
         [$this->subDomain , $this->baseDomain] = \explode('.', $this->host, 2);
+    }
+
+    /**
+     * HTTP_ACCEPT_LANGUAGE에서 최상의 언어, 로케일, 국가 정보를 추출하는 함수.
+     *
+     * @param string $defaultLanguage 기본 언어 코드
+     * @param string $defaultCountry  기본 국가 코드
+     *
+     * @return array 언어, 로케일, 국가 정보를 포함하는 배열
+     */
+    public function getBestLanguageInfo($defaultLanguage = 'en', $defaultCountry = 'US')
+    {
+        // 기본값 설정
+        $default = [
+            'language'          => \strtolower($defaultLanguage),
+            'locale'            => \strtolower($defaultLanguage) . '-' . \strtoupper($defaultCountry),
+            'locale_underscore' => \strtolower($defaultLanguage) . '_' . \strtoupper($defaultCountry),
+            'country'           => \strtoupper($defaultCountry),
+        ];
+
+        // HTTP_ACCEPT_LANGUAGE가 없는 경우 기본값 반환
+        if (!isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) || empty($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
+            return $default;
+        }
+
+        // Accept-Language 헤더 파싱
+        $languageHeader = $_SERVER['HTTP_ACCEPT_LANGUAGE'];
+        $languages      = [];
+
+        // 각 언어 태그와 품질값(q) 파싱
+        foreach (\explode(',', $languageHeader) as $langPart) {
+            $parts   = \explode(';q=', \trim($langPart));
+            $langTag = $parts[0];
+            $quality = isset($parts[1]) ? (float) ($parts[1]) : 1.0;
+
+            $languages[$langTag] = $quality;
+        }
+
+        // 품질값에 따라 내림차순 정렬
+        \arsort($languages);
+
+        // 결과 저장할 배열 초기화
+        $result = $default;
+
+        // 가장 높은 품질값을 가진 항목 처리
+        foreach ($languages as $langTag => $quality) {
+            // 로케일 형식(예: en-US)인 경우
+            if (false !== \strpos($langTag, '-')) {
+                [$lang, $country]            = \explode('-', $langTag);
+                $result['language']          = \strtolower($lang);
+                $result['locale']            = $langTag;
+                $result['locale_underscore'] = \strtolower($lang) . '_' . \strtoupper($country);
+                $result['country']           = \strtoupper($country);
+
+                break; // 최상위 로케일을 찾았으므로 중단
+            }
+            // 언어만 있는 경우(예: en)
+
+            $result['language'] = \strtolower($langTag);
+
+            // 계속 검색해서 이 언어에 대한 국가 정보가 있는지 확인
+            $hasLocale = false;
+
+            foreach ($languages as $tag => $q) {
+                if (0 === \strpos($tag, $langTag . '-')) {
+                    [, $country]                 = \explode('-', $tag);
+                    $result['locale']            = $tag;
+                    $result['locale_underscore'] = \strtolower($langTag) . '_' . \strtoupper($country);
+                    $result['country']           = \strtoupper($country);
+                    $hasLocale                   = true;
+
+                    break;
+                }
+            }
+
+            // 로케일 정보를 찾았으면 중단
+            if ($hasLocale) {
+                break;
+            }
+
+            // 로케일 정보를 찾지 못했다면 기본 국가 코드로 로케일 설정
+            $result['locale']            = \strtolower($langTag) . '-' . $default['country'];
+            $result['locale_underscore'] = \strtolower($langTag) . '_' . $default['country'];
+        }
+
+        return $result;
     }
 
     public function addPath($name, Request\Path $path)
@@ -126,7 +213,17 @@ class Request
 
     public function setLanguage($language)
     {
-        return $this->setLocale($language);
+        return $this->language = $language;
+    }
+
+    public function setCountry($country)
+    {
+        return $this->country = $country;
+    }
+
+    public function setLocale($locale)
+    {
+        return $this->locale = $locale;
     }
 
     public function getLanguage()
@@ -134,19 +231,19 @@ class Request
         return $this->language;
     }
 
-    public function setLocale($language, $default = 'ko')
-    {
-        $this->language = \explode('_', $language)[0];
+    // public function setLocalex($language, $default = 'ko')
+    // {
+    //     $this->language = \explode('_', $language)[0];
 
-        if (true === isset($this->locales[$this->language])) {
-            $this->locale = $this->locales[$this->language];
-        } else {
-            if (true === isset($this->locales[$default])) {
-                $this->language = $default;
-                $this->locale   = $this->locales[$default];
-            }
-        }
-    }
+    //     if (true === isset($this->locales[$this->language])) {
+    //         $this->locale = $this->locales[$this->language];
+    //     } else {
+    //         if (true === isset($this->locales[$default])) {
+    //             $this->language = $default;
+    //             $this->locale   = $this->locales[$default];
+    //         }
+    //     }
+    // }
 
     public function bindTextDomain($domain, $path)
     {

@@ -12,11 +12,199 @@ function _($string)
 }
 function __($domain, $string)
 {
-    return \dgettext($domain, $string);
+    if ($string) {
+        return \dgettext($domain, $string);
+    }
+
+    return '';
 }
 function ___($domain, $string, $a, $b)
 {
     return \dngettext($domain, $string, $a, $b);
+}
+
+/**
+ * 큰 숫자를 간결한 형식으로 포맷팅하는 함수.
+ *
+ * @param int    $number   포맷팅할 숫자
+ * @param string $language 언어 코드 ('ko', 'zh', 'ja', 'en')
+ *
+ * @return string 포맷팅된 문자열
+ */
+function format_large_number($number, $language = 'ko')
+{
+    // 숫자가 0이면 바로 반환
+    if (0 == $number) {
+        return '0';
+    }
+
+    // 절대값으로 처리
+    $absNumber = \abs($number);
+
+    // 언어별 단위 정의 (큰 단위부터 내림차순)
+    $units = [
+        'ko' => [
+            1000000000000 => '조',
+            100000000     => '억',
+            10000         => '만',
+            1000          => '천',
+        ],
+        'zh' => [
+            1000000000000 => '兆',
+            100000000     => '亿',
+            10000         => '万',
+            1000          => '千',
+        ],
+        'ja' => [
+            1000000000000 => '兆',
+            100000000     => '億',
+            10000         => '万',
+            1000          => '千',
+        ],
+        'en' => [
+            1000000000000 => 'T',
+            1000000000    => 'B',
+            1000000       => 'M',
+            1000          => 'K',
+        ],
+    ];
+
+    // 언어가 지원되지 않을 경우 기본값은 영어
+    if (!isset($units[$language])) {
+        $language = 'en';
+    }
+
+    // 적합한 단위 찾기
+    foreach ($units[$language] as $value => $unit) {
+        if ($absNumber >= $value) {
+            $formatted = $number / $value;
+
+            // 정수인지 확인하여 소수점 표시 여부 결정
+            if ($formatted == (int) $formatted) {
+                return (int) $formatted . $unit;
+            }
+
+            // 소수점 한 자리까지 표시하고 필요없는 0 제거
+            return \rtrim(\rtrim(number_format($formatted, 1), '0'), '.') . $unit;
+        }
+    }
+
+    // 어떤 단위에도 해당하지 않으면 그대로 반환
+    return number_format($number);
+}
+
+/**
+ * 문장에 키워드가 포함되어 있는지 확인하는 함수.
+ *
+ * @param string $sentence      검색할 문장
+ * @param string $keyword       찾을 키워드
+ * @param bool   $caseSensitive 대소문자 구분 여부 (기본값: false)
+ *
+ * @return bool 키워드 포함 여부
+ */
+function keyword_contain($sentence, $keyword, $caseSensitive = false)
+{
+    if (empty($keyword)) {
+        return false;
+    }
+
+    if ($caseSensitive) {
+        return false !== \strpos($sentence, $keyword);
+    }
+
+    return false !== \stripos($sentence, $keyword);
+}
+
+/**
+ * 문장에서 키워드를 찾아 HTML span 태그로 강조 표시하는 함수.
+ *
+ * @param string $sentence      원본 문장
+ * @param string $keyword       강조할 키워드
+ * @param string $className     span 태그에 적용할 CSS 클래스명
+ * @param bool   $caseSensitive 대소문자 구분 여부 (기본값: false)
+ *
+ * @return string 키워드가 강조된 HTML 문자열
+ */
+function keyword_highlight($sentence, $keyword, $className = 'highlight', $caseSensitive = false)
+{
+    if (empty($keyword) || empty($sentence)) {
+        return $sentence;
+    }
+
+    $flag = $caseSensitive ? '' : 'i';
+
+    // 정규식 특수문자를 이스케이프 처리
+    $escapedKeyword = \preg_quote($keyword, '/');
+
+    // 키워드를 span 태그로 감싸기
+    return \preg_replace(
+        "/({$escapedKeyword})/{$flag}",
+        "<span class=\"{$className}\">$1</span>",
+        \htmlspecialchars($sentence)
+    );
+}
+
+function getHttpHeader()
+{
+    $headers = [];
+
+    foreach ($_SERVER as $key => $value) {
+        if ('HTTP_' === \substr($key, 0, 5)) {
+            $header_name = \str_replace(' ', '-', \ucwords(\str_replace('_', ' ', \strtolower(\substr($key, 5)))));
+
+            if (!\in_array($header_name, ['Cookie', 'Host'])) {
+                $headers[] = "{$header_name}: {$value}";
+            }
+        }
+    }
+
+    // Content-Type 헤더 추가 (HTTP_ 접두사가 없음)
+    if (isset($_SERVER['CONTENT_TYPE'])) {
+        $headers[] = "Content-Type: {$_SERVER['CONTENT_TYPE']}";
+    }
+
+    return $headers;
+}
+/**
+ * 명확하고 혼동되지 않는 추천 코드를 생성하는 함수.
+ *
+ * @param int  $length     코드 길이 (기본값: 6)
+ * @param bool $mixPattern 문자와 숫자를 섞을지 여부 (기본값: false)
+ *
+ * @return string 생성된 추천 코드
+ */
+function referral_code(int $length = 8, bool $mixPattern = false) : string
+{
+    // 혼동 가능성이 적은 문자들만 사용
+    $allowedChars = 'ACDEFGHJKMNPQRTUVWXY';
+    $allowedNums  = '34679';
+
+    $code = '';
+
+    if ($mixPattern) {
+        // 문자와 숫자를 랜덤하게 섞는 방식
+        $allAllowed = $allowedChars . $allowedNums;
+
+        for ($i = 0; $i < $length; ++$i) {
+            $code .= $allAllowed[\random_int(0, \strlen($allAllowed) - 1)];
+        }
+    } else {
+        // 문자와 숫자를 절반씩 사용하는 방식 (기본)
+        $charsLength = (int) ceil($length / 2);
+        $numsLength  = $length - $charsLength;
+
+        // 문자 부분 생성
+        for ($i = 0; $i < $charsLength; ++$i) {
+            $code .= $allowedChars[\random_int(0, \strlen($allowedChars) - 1)];
+        }
+
+        // 숫자 부분 생성
+        for ($i = 0; $i < $numsLength; ++$i) {
+            $code .= $allowedNums[\random_int(0, \strlen($allowedNums) - 1)];
+        }
+    }
+
+    return $code;
 }
 
 /**
@@ -376,7 +564,7 @@ function wrap_space_em($text)
     $secondPart = \substr($text, $pos);
 
     // 두 번째 부분을 <em> 태그로 감쌉니다.
-    return $firstPart . ' <em>' . \trim($secondPart) . '</em>';
+    return \trim($firstPart) . '<em>' . \trim($secondPart) . '</em>';
 }
 function star_item_percentage($averagePercentage, $starNumber)
 {
@@ -849,15 +1037,12 @@ function readable_size($bytes, $decimals = 2) : string
 
 function get_language() : string
 {
-    $locale = Cookie::get(Cookie::getKeyStore('locale'));
+    return Cookie::get(Cookie::getKeyStore('language'));
+}
 
-    if ($locale) {
-        return \explode('_', $locale)[0];
-    }
-
-    return 'ko';
-
-    return $_COOKIE['client-language'] ?? 'ko';
+function get_locale() : string
+{
+    return Cookie::get(Cookie::getKeyStore('locale'));
 }
 
 function file_put_contents($filename, mixed $data, int $flags = 0, $context = null)
@@ -1022,6 +1207,11 @@ function uniqid(int $length = 13) : string
     }
 
     return \substr(\bin2hex($bytes), 0, $length);
+}
+
+function random_string($length = 5)
+{
+    return \Limepie\genRandomString($length);
 }
 
 function genRandomString($length = 5)

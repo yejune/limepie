@@ -2,13 +2,27 @@
 
 namespace Limepie\Http;
 
-class Response extends \Limepie\Exception
+use Limepie\Exception;
+
+class Response extends Exception
 {
     public $response;
 
     public function __construct($response)
     {
         $this->response = $response;
+
+        if (!\headers_sent()) {
+            if (!isset($_SESSION)) {
+                \session_start();
+            }
+            $_SESSION['pending_request'] = [
+                'url'       => $_SERVER['REQUEST_URI'],
+                'method'    => $_SERVER['REQUEST_METHOD'],
+                'post_data' => $_POST,
+                'headers'   => \Limepie\getHttpHeader(),
+            ];
+        }
     }
 
     public function getResponse()

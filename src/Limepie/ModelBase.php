@@ -118,6 +118,8 @@ class ModelBase extends ArrayObject
 
     public $joinTableAliasName;
 
+    public $duplications = [];
+
     public function __construct(?\PDO $pdo = null, $attributes = null, $originAttributes = [])
     {
         if ($pdo) {
@@ -156,6 +158,10 @@ class ModelBase extends ArrayObject
     public function __call(string $name, array $arguments = [])
     {
         //        prx($name, $arguments);
+
+        if (0 === \strpos($name, 'duplication')) {
+            return $this->buildDuplication($name, $arguments);
+        }
 
         if (0 === \strpos($name, 'groupBy')) {
             return $this->buildGroupBy($name, $arguments, 7);
@@ -356,7 +362,18 @@ class ModelBase extends ArrayObject
         //     exit;
         // }
         // $target = \is_array($this->attributes) ? $this->attributes : $this->originAttributes;
+
+        // if ($this->attributes !== $this->originAttributes) {
+        //     \prx($this->attributes, $this->originAttributes);
+        // }
         $target = $this->attributes;
+        // \prx($offset, $target, $this->originAttributes);
+
+        // try {
+        //     \array_key_exists($offset, $target);
+        // } catch (\Exception $e) {
+        //     \prx($e);
+        // }
 
         if (false === \array_key_exists($offset, $target)) {
             $traces = \debug_backtrace();
@@ -948,6 +965,19 @@ class ModelBase extends ArrayObject
     public function forceIndex(string $indexKey) : self
     {
         $this->forceIndexes[] = ' FORCE INDEX (`' . $indexKey . '`)';
+
+        return $this;
+    }
+
+    public function buildDuplication(string $name, array $arguments = [])
+    {
+        $columnNames = \Limepie\decamelize(\substr($name, 11));
+
+        $keys = \explode('_with_', $columnNames);
+
+        foreach ($keys as $index => $key) {
+            $this->duplications[$key] = $arguments[$index];
+        }
 
         return $this;
     }

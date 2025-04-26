@@ -64,11 +64,17 @@ class Group extends Fields
                 continue;
             }
 
-            $elements .= static::processElementData(
+            $nextData = static::processNextData(
+                $nextData,
+                $propertyValue,
+                $isArray
+            );
+
+            $elements .= static::generateElements(
+                $nextData,
                 $fieldTypeGeneratorMethod,
                 $nextElementName,
                 $propertyValue,
-                $nextData,
                 $nextRuleName,
                 $propertyKey,
                 $isArray
@@ -78,12 +84,14 @@ class Group extends Fields
             $description = static::getLocalizedValue($propertyValue, 'description') ?? '';
 
             if (isset($propertyValue['multiple'])) {
-                if (isset($propertyValue['view_total_template'])) {
-                    // \prx($nextData, \count($nextData));
-                    $title .= \str_replace('{=total}', "<span class='total-count'>" . (string) \count($nextData) . '</span>', $propertyValue['view_total_template']);
-                } else {
-                    if (isset($propertyValue['view_total'])) {
-                        $title .= ' (<span class="total-count">' . \count($nextData) . '</span>)';
+                if (\is_array($nextData)) {
+                    if (isset($propertyValue['view_total_template'])) {
+                        // \prx($nextData, \count($nextData));
+                        $title .= \str_replace('{=total}', "<span class='total-count'>" . (string) \count($nextData) . '</span>', $propertyValue['view_total_template']);
+                    } else {
+                        if (isset($propertyValue['view_total'])) {
+                            $title .= ' (<span class="total-count">' . \count($nextData) . '</span>)';
+                        }
                     }
                 }
             }
@@ -134,6 +142,49 @@ class Group extends Fields
                 $addClass[] = $fixedClass;
             }
 
+            if (true === isset($propertyValue['element'])) {
+                if (true === isset($propertyValue['element']['all_of'])) {
+                    $result = true;
+
+                    foreach ($propertyValue['element']['all_of']['conditions'] as $elementKey => $value) {
+                        $elementVVV = static::resolveElementValue($elementKey, $nextElementDotName, $elementDotName);
+                        // \pr($elementKey, $elementVVV, $value);
+
+                        if (\is_array($value)) {
+                            if (true == \in_array($elementVVV, $value)) {
+                                // $result[$elementKey] = true;
+                            } else {
+                                $result = false;
+                            }
+                        } else {
+                            if ($elementVVV == $value) {
+                                // $result[$elementKey] = true;
+                            } else {
+                                $result = false;
+                            }
+                        }
+                    }
+
+                    if ($result) {
+                        if (true === isset($propertyValue['element']['all_of']['inline'])) {
+                            $addStyle[] = $propertyValue['element']['all_of']['inline'];
+                        }
+
+                        if (true === isset($propertyValue['element']['all_of']['class'])) {
+                            $addClass[] = $propertyValue['element']['all_of']['class'];
+                        }
+                    } else {
+                        if (true === isset($propertyValue['element']['all_of']['not']['inline'])) {
+                            $addStyle[] = $propertyValue['element']['all_of']['not']['inline'];
+                        }
+
+                        if (true === isset($propertyValue['element']['all_of']['not']['class'])) {
+                            $addClass[] = $propertyValue['element']['all_of']['not']['class'];
+                        }
+                    }
+                }
+            }
+
             // 다중 타겟 처리
             $multiTargetDisplayUnique = static::processMultiTargets(
                 $propertyValue,
@@ -168,6 +219,8 @@ class Group extends Fields
                     $addStyle[] = 'display: none;';
                 }
             }
+
+            // \prx($title, $addStyle);
 
             if ($title) {
                 $titleHtml .= '<h6 class="' . $labelClass . '">' . $title . '</h6>';
@@ -444,15 +497,17 @@ class Group extends Fields
             $addClassString = \implode(' ', $addClass);
         }
 
-        return match ($type) {
-            'hidden' => "<div class=\"x-hidden {$addClassString}\" name=\"{$nextElementDotName}-layer\">{$elements}</div>",
+        if ('hidden' === $type) {
+            $result = "<div class=\"x-hidden {$addClassString}\" name=\"{$nextElementDotName}-layer\">{$elements}</div>";
+        } elseif ('dummy' === $type && '' === $nextData) {
+            $result = '';
+        } elseif ('checkbox' === $type) {
+            $result = "<div class=\"{$addClassString}\" name=\"{$nextElementDotName}-layer\"><div class=\"checkbox\"><h6>{$elements}</h6>" . ($description ? '<p class="description">' . \nl2br($description) . '</p>' : '') . '</div></div>';
+        } else {
+            $result = "<div class=\"{$addClassString}\" style=\"{$addStyleString}\" name=\"{$nextElementDotName}-layer\">{$titleHtml}{$prependDescription}<div class=\"form-element\">{$elements}</div>{$appendDescription}</div>";
+        }
 
-            'dummy' => ('' === $nextData) ? '' : '',
-
-            'checkbox' => "<div class=\"{$addClassString}\" name=\"{$nextElementDotName}-layer\"><div class=\"checkbox\"><h6>{$elements}</h6>" . ($description ? '<p class="description">' . \nl2br($description) . '</p>' : '') . '</div></div>',
-
-            default => "<div class=\"{$addClassString}\" style=\"{$addStyleString}\" name=\"{$nextElementDotName}-layer\">{$titleHtml}{$prependDescription}<div class=\"form-element\">{$elements}</div>{$appendDescription}</div>"
-        };
+        return $result;
     }
 
     private static function prepareStyleString(array $styles) : string
@@ -617,7 +672,7 @@ class Group extends Fields
         $pathParts = \array_slice($pathParts, 0, \count($pathParts) - ($levelsUp - 1));
 
         // 해석된 경로 생성
-        if (empty($pathParts)) {
+        if (empty(\Limepie\arr\filter_recursive($pathParts))) {
             return $cleanPath;
         }
 
@@ -769,31 +824,29 @@ class Group extends Fields
         $targetElementDotName = self::resolveRelativePath($targetElementDotName, $elementDotName);
 
         // 대상 값 가져오기
-        try {
-            $targetValue = parent::getValueByDot(static::$allData, $targetElementDotName);
+
+        $targetValue = parent::getValueByDot(static::$allData, $targetElementDotName);
+        $targetValue = self::normalizeObjectValue($targetValue);
+
+        // 값이 없는 경우 기본값 처리
+        if (!\strlen((string) $targetValue)) {
+            $targetValue = static::getDefaultByDot(static::$specs, static::$allData, $targetElementDotName);
             $targetValue = self::normalizeObjectValue($targetValue);
-
-            // 값이 없는 경우 기본값 처리
-            if (!\strlen((string) $targetValue)) {
-                $targetValue = static::getDefaultByDot(static::$specs, static::$allData, $targetElementDotName);
-                $targetValue = self::normalizeObjectValue($targetValue);
-            }
-
-            // 조건부 스타일 및 클래스 처리
-            if (\strlen((string) $targetValue)) {
-                if (isset($propertyValue['display_target_condition_style'][$targetValue])) {
-                    $style                 = \trim($propertyValue['display_target_condition_style'][$targetValue], ';');
-                    $displayUnique[$style] = ($displayUnique[$style] ?? 0) + 1;
-                }
-
-                if (isset($propertyValue['display_target_condition_class'][$targetValue])) {
-                    $addClass[] = \trim($propertyValue['display_target_condition_class'][$targetValue]);
-                }
-            }
-        } catch (\Exception $e) {
-            // 예외 처리 (로깅 등)
-            $targetValue = null;
         }
+
+        // 조건부 스타일 및 클래스 처리
+        if (\strlen((string) $targetValue)) {
+            if (isset($propertyValue['display_target_condition_style'][$targetValue])) {
+                $style                 = \trim($propertyValue['display_target_condition_style'][$targetValue], ';');
+                $displayUnique[$style] = ($displayUnique[$style] ?? 0) + 1;
+            }
+
+            if (isset($propertyValue['display_target_condition_class'][$targetValue])) {
+                $addClass[] = \trim($propertyValue['display_target_condition_class'][$targetValue]);
+            }
+        }
+
+        // \prx($propertyValue, $targetValue ?? 'p', $style ?? 'p', $displayUnique ?? []);
 
         return [
             'displayUnique' => $displayUnique,
@@ -802,23 +855,59 @@ class Group extends Fields
     }
 
     /**
-     * 요소 데이터 처리 및 요소 생성 메서드.
+     * nextData 값을 처리하고 필요한 경우 기본값으로 대체합니다.
      *
+     * 이 함수는 데이터가 없거나 null인 경우 propertyValue에서 기본값을
+     * 추출하여 대체하는 역할을 합니다.
+     *
+     * @param mixed $nextData      처리할 데이터
+     * @param array $propertyValue 속성 값 및 기본값 설정
+     * @param bool  $isArray       결과가 배열이어야 하는지 여부
+     *
+     * @return mixed 처리된 데이터(배열 또는 스칼라 값)
+     */
+    private static function processNextData(
+        mixed $nextData,
+        array $propertyValue,
+        bool $isArray
+    ) : mixed {
+        // 데이터가 없거나 null인 경우 처리
+        if (!static::isValue($nextData)) {
+            if (false === $isArray) {
+                // 비배열의 경우 기본값 또는 빈 값으로 설정
+                return $propertyValue['default'] ?? '';
+            }
+            // 배열의 경우 기본값 설정
+            $parentId = static::getUniqueId();
+
+            return isset($propertyValue['default'])
+                ? (\is_array($propertyValue['default'])
+                    ? $propertyValue['default']
+                    : [$propertyValue['default']])
+                : [$parentId => null];
+        }
+
+        return $nextData;
+    }
+
+    /**
+     * 처리된 nextData를 기반으로 HTML 요소를 생성합니다.
+     *
+     * @param mixed  $nextData                 처리된 데이터
      * @param string $fieldTypeGeneratorMethod 요소 생성 메서드
      * @param string $nextElementName          다음 요소 이름
      * @param array  $propertyValue            속성 값
-     * @param mixed  $nextData                 다음 데이터
      * @param string $nextRuleName             다음 규칙 이름
      * @param string $propertyKey              속성 키
      * @param bool   $isArray                  배열 여부
      *
      * @return string 생성된 요소들
      */
-    private static function processElementData(
+    private static function generateElements(
+        $nextData,
         string $fieldTypeGeneratorMethod,
         string $nextElementName,
         array $propertyValue,
-        $nextData,
         string $nextRuleName,
         string $propertyKey,
         bool $isArray
@@ -826,108 +915,181 @@ class Group extends Fields
         $elements = '';
         $index    = 0;
 
-        // 데이터가 없거나 null인 경우의 처리
-        if (!static::isValue($nextData)) {
-            if (false === $isArray) {
-                // 비배열의 경우 기본값 또는 빈 값으로 요소 생성
-                $nextData = $propertyValue['default'] ?? '';
-                $parentId = static::getUniqueId();
-                $elements .= static::addElement(
-                    $fieldTypeGeneratorMethod::write(
-                        $nextElementName,
-                        $propertyValue,
-                        $nextData,
-                        $nextRuleName,
-                        $propertyKey
-                    ),
-                    $index,
-                    false, // 값이 없음을 명시
-                    $parentId,
-                    $propertyValue
-                );
-            } else {
-                // 배열의 경우 최소한 하나의 요소 생성
-                $parentId = static::getUniqueId();
-                $nextData = isset($propertyValue['default'])
-                    ? (\is_array($propertyValue['default'])
-                        ? $propertyValue['default']
-                        : [$propertyValue['default']])
-                    : [$parentId => null];
-
-                foreach ($nextData as $aKey => $aValue) {
-                    ++$index;
-
-                    // 고유 ID 생성 로직
-                    $parentId = match (true) {
-                        'only'        === $propertyValue['multiple'] => $aKey,
-                        17            === \strlen((string) $aKey)    => $aKey,
-                        'multichoice' === $propertyValue['type']     => '',
-                        default                                      => static::getUniqueId()
-                    };
-
-                    $elements .= static::addElement(
-                        $fieldTypeGeneratorMethod::write(
-                            $nextElementName . '[' . $parentId . ']',
-                            $propertyValue,
-                            $aValue,
-                            $nextRuleName . '[]',
-                            $propertyKey
-                        ),
-                        $index,
-                        false, // 값이 없음을 명시
-                        $parentId,
-                        $propertyValue
-                    );
-                }
-            }
+        if (false === $isArray) {
+            // 비배열 요소 생성
+            $parentId = static::getUniqueId();
+            $elements .= static::addElement(
+                $fieldTypeGeneratorMethod::write(
+                    $nextElementName,
+                    $propertyValue,
+                    $nextData,
+                    $nextRuleName,
+                    $propertyKey
+                ),
+                $index,
+                static::isValue($nextData),
+                $parentId,
+                $propertyValue
+            );
         } else {
-            // 기존의 값이 있는 경우의 로직 (이전과 동일)
-            if (false === $isArray) {
-                $parentId = static::getUniqueId();
+            // 배열 요소 생성
+            foreach ($nextData as $aKey => $aValue) {
+                ++$index;
+
+                // 고유 ID 생성 로직
+                $parentId = match (true) {
+                    'only'        === $propertyValue['multiple'] => $aKey,
+                    17            === \strlen((string) $aKey)    => $aKey,
+                    'multichoice' === $propertyValue['type']     => '',
+                    default                                      => static::getUniqueId()
+                };
+
                 $elements .= static::addElement(
                     $fieldTypeGeneratorMethod::write(
-                        $nextElementName,
+                        $nextElementName . '[' . $parentId . ']',
                         $propertyValue,
-                        $nextData,
-                        $nextRuleName,
+                        $aValue,
+                        $nextRuleName . '[]',
                         $propertyKey
                     ),
                     $index,
-                    static::isValue($nextData),
+                    static::isValue($aValue),
                     $parentId,
                     $propertyValue
                 );
-            } else {
-                foreach ($nextData as $aKey => $aValue) {
-                    ++$index;
-
-                    // 고유 ID 생성 로직
-                    $parentId = match (true) {
-                        'only'        === $propertyValue['multiple'] => $aKey,
-                        17            === \strlen((string) $aKey)    => $aKey,
-                        'multichoice' === $propertyValue['type']     => '',
-                        default                                      => static::getUniqueId()
-                    };
-
-                    $elements .= static::addElement(
-                        $fieldTypeGeneratorMethod::write(
-                            $nextElementName . '[' . $parentId . ']',
-                            $propertyValue,
-                            $aValue,
-                            $nextRuleName . '[]',
-                            $propertyKey
-                        ),
-                        $index,
-                        static::isValue($aValue),
-                        $parentId,
-                        $propertyValue
-                    );
-                }
             }
         }
 
         return $elements;
     }
+
+    // /**
+    //  * 요소 데이터 처리 및 요소 생성 메서드.
+    //  *
+    //  * @param mixed  $nextData                 다음 데이터
+    //  * @param string $fieldTypeGeneratorMethod 요소 생성 메서드
+    //  * @param string $nextElementName          다음 요소 이름
+    //  * @param array  $propertyValue            속성 값
+    //  * @param string $nextRuleName             다음 규칙 이름
+    //  * @param string $propertyKey              속성 키
+    //  * @param bool   $isArray                  배열 여부
+    //  *
+    //  * @return string 생성된 요소들
+    //  */
+    // private static function processElementDataWithNextDataRef(
+    //     &$nextData,
+    //     string $fieldTypeGeneratorMethod,
+    //     string $nextElementName,
+    //     array $propertyValue,
+    //     string $nextRuleName,
+    //     string $propertyKey,
+    //     bool $isArray
+    // ) : string {
+    //     $elements = '';
+    //     $index    = 0;
+
+    //     // 데이터가 없거나 null인 경우의 처리
+    //     if (!static::isValue($nextData)) {
+    //         if (false === $isArray) {
+    //             // 비배열의 경우 기본값 또는 빈 값으로 요소 생성
+    //             $nextData = $propertyValue['default'] ?? '';
+    //             $parentId = static::getUniqueId();
+    //             $elements .= static::addElement(
+    //                 $fieldTypeGeneratorMethod::write(
+    //                     $nextElementName,
+    //                     $propertyValue,
+    //                     $nextData,
+    //                     $nextRuleName,
+    //                     $propertyKey
+    //                 ),
+    //                 $index,
+    //                 false, // 값이 없음을 명시
+    //                 $parentId,
+    //                 $propertyValue
+    //             );
+    //         } else {
+    //             // 배열의 경우 최소한 하나의 요소 생성
+    //             $parentId = static::getUniqueId();
+    //             $nextData = isset($propertyValue['default'])
+    //                 ? (\is_array($propertyValue['default'])
+    //                     ? $propertyValue['default']
+    //                     : [$propertyValue['default']])
+    //                 : [$parentId => null];
+
+    //             foreach ($nextData as $aKey => $aValue) {
+    //                 ++$index;
+
+    //                 // 고유 ID 생성 로직
+    //                 $parentId = match (true) {
+    //                     'only'        === $propertyValue['multiple'] => $aKey,
+    //                     17            === \strlen((string) $aKey)    => $aKey,
+    //                     'multichoice' === $propertyValue['type']     => '',
+    //                     default                                      => static::getUniqueId()
+    //                 };
+
+    //                 $elements .= static::addElement(
+    //                     $fieldTypeGeneratorMethod::write(
+    //                         $nextElementName . '[' . $parentId . ']',
+    //                         $propertyValue,
+    //                         $aValue,
+    //                         $nextRuleName . '[]',
+    //                         $propertyKey
+    //                     ),
+    //                     $index,
+    //                     false, // 값이 없음을 명시
+    //                     $parentId,
+    //                     $propertyValue
+    //                 );
+    //             }
+    //         }
+    //     } else {
+    //         // 기존의 값이 있는 경우
+    //         if (false === $isArray) {
+    //             $parentId = static::getUniqueId();
+    //             $elements .= static::addElement(
+    //                 $fieldTypeGeneratorMethod::write(
+    //                     $nextElementName,
+    //                     $propertyValue,
+    //                     $nextData,
+    //                     $nextRuleName,
+    //                     $propertyKey
+    //                 ),
+    //                 $index,
+    //                 static::isValue($nextData),
+    //                 $parentId,
+    //                 $propertyValue
+    //             );
+    //         } else {
+    //             foreach ($nextData as $aKey => $aValue) {
+    //                 ++$index;
+
+    //                 // 고유 ID 생성 로직
+    //                 $parentId = match (true) {
+    //                     'only'        === $propertyValue['multiple'] => $aKey,
+    //                     17            === \strlen((string) $aKey)    => $aKey,
+    //                     'multichoice' === $propertyValue['type']     => '',
+    //                     default                                      => static::getUniqueId()
+    //                 };
+
+    //                 $elements .= static::addElement(
+    //                     $fieldTypeGeneratorMethod::write(
+    //                         $nextElementName . '[' . $parentId . ']',
+    //                         $propertyValue,
+    //                         $aValue,
+    //                         $nextRuleName . '[]',
+    //                         $propertyKey
+    //                     ),
+    //                     $index,
+    //                     static::isValue($aValue),
+    //                     $parentId,
+    //                     $propertyValue
+    //                 );
+    //             }
+    //         }
+    //     }
+
+    //     return $elements;
+    // }
 
     private static function getLocalizedValue(array $property, string $key) : ?string
     {

@@ -266,9 +266,7 @@ class ElementVisibilityManager
         $this->arr[$element]['class'] = \implode(' ', \array_unique($existingClasses));
 
         // 스타일 중복 방지
-        $existingStyles               = \explode(';', $this->arr[$element]['style'] ?? '');
-        $existingStyles[]             = 'display: none';
-        $this->arr[$element]['style'] = \implode('; ', \array_unique(\array_filter($existingStyles)));
+        $existingStyles = \explode(';', $this->arr[$element]['style'] ?? '');
 
         // $this->arr[$element]['class'] = ($this->arr[$element]['class'] ?? '') . ' ' . $elementClass;
         // $this->arr[$element]['style'] = ($this->arr[$element]['style'] ?? '') . '; display: none;'; // 기본적으로 숨김
@@ -279,6 +277,15 @@ class ElementVisibilityManager
 
         // 스크립트 키에 따른 조건별 스타일 설정
         $this->setupElementConditionStyles($element, $scriptKey);
+
+        // if (
+        //     false === isset($this->arr[$element]['display_target_condition_style'][$scriptKey])
+        //     && !$this->arr[$element]['display_target_condition_style'][$scriptKey]
+        // ) {
+        //     $existingStyles[] = 'display: none';
+        // }
+        // $existingStyles[]             = 'display: none';
+        $this->arr[$element]['style'] = \implode('; ', \array_unique(\array_filter($existingStyles)));
     }
 
     /**
@@ -300,6 +307,7 @@ class ElementVisibilityManager
                 $this->arr[$element]['display_target_condition_style'][$diffKey] = 'display: none;';
             }
         }
+        // \prx($this->arr[$element]['display_target_condition_style'], $scriptKey);
 
         // 현재 스크립트 키에 대해서는 표시 (block)
         $this->arr[$element]['display_target_condition_style'][$scriptKey] = 'display: block';
@@ -480,7 +488,6 @@ class ElementVisibilityManager
             var \$self = $(this);
             // 기본적으로 모든 요소 숨기기
             \$self.closest('.form-group').find('{$allElementsSelector}').hide();
-
             // 초기 선택값에 따라 요소 표시
         SQL;
 

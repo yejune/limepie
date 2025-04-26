@@ -106,6 +106,7 @@ class LanguageHandler
     {
         // 레이블 제거 및 append 모드 여부 확인
         $isRemoveLabel = ($value['remove_lang_title'] ?? false);
+        $isRemoveFrame = ($value['remove_lang_frame'] ?? false);
         $isLangAppend  = 'append' === $value['lang'];
         $orgClass      = $value['class'] ?? '';
         $result        = [];
@@ -175,6 +176,7 @@ class LanguageHandler
             $value,
             $isLangAppend,
             $isRemoveLabel,
+            $isRemoveFrame,
             $basepath
         );
         // \prx($langProperties, $result);
@@ -209,7 +211,7 @@ class LanguageHandler
                 $desiredOrder[] = $languageModel->getId();
 
                 // 언어별 기본 속성 설정 (국기 아이콘 등)
-                $properties = ['prepend' => '<i class="fi fi-' . $languageModel->getLocaleId() . '" title="' . $languageModel->getName() . '"></i>'];
+                $properties = ['prepend' => '<span class="lang-code" title="' . $languageModel->getName() . '">' . \strtoupper($languageModel->getId()) . '</span>'];
 
                 // 레이블 제거 옵션 처리
                 if ($isRemoveLabel) {
@@ -228,14 +230,14 @@ class LanguageHandler
 
             $languages = [
                 'ko' => ['name' => '한국어', 'locale' => 'kr'],
-                'en' => ['name' => '영어', 'locale' => 'us'],
-                'ja' => ['name' => '일본어', 'locale' => 'jp'],
-                'zh' => ['name' => '중국어', 'locale' => 'cn'],
+                'en' => ['name' => 'English', 'locale' => 'us'],
+                'ja' => ['name' => '日本語', 'locale' => 'jp'],
+                'zh' => ['name' => '中文', 'locale' => 'cn'],
             ];
 
             foreach ($languages as $code => $lang) {
                 // 언어별 기본 속성 설정 (국기 아이콘 등)
-                $properties = ['prepend' => '<i class="fi fi-' . $lang['locale'] . '" title="' . $lang['name'] . '"></i>'];
+                $properties = ['prepend' => '<span class="lang-code" title="' . $lang['name'] . '">' . \strtoupper($code) . '</span>'];
 
                 // 레이블 제거 옵션 처리
                 if ($isRemoveLabel) {
@@ -336,6 +338,7 @@ class LanguageHandler
         array $value,
         bool $isLangAppend,
         bool $isRemoveLabel,
+        bool $isRemoveFrame,
         string $basepath
     ) : array {
         // 클래스 설정 준비
@@ -351,12 +354,22 @@ class LanguageHandler
             $langGroupClass .= ' ' . $value['lang_group_class'];
         }
 
+        $appendGroupClass = '';
+
+        if ($isRemoveLabel) {
+            if ($isRemoveFrame) {
+                $appendGroupClass = ' p-0 border-0';
+            } else {
+                $appendGroupClass = ' p-1';
+            }
+        }
+
         // 기본 그룹 구성 생성
         $group = [
             'label'       => ($label ?? '') . ' - ' . $languagePackName,  // 레이블 - 언어팩
             'type'        => 'group',                                    // 그룹 타입
             'class'       => \trim($langClass) . ($isRemoveLabel ? ' border-0 pt-0' : ''),  // 스타일 클래스
-            'group_class' => \trim($langGroupClass) . ($isRemoveLabel ? ' p-1' : ''),       // 그룹 스타일 클래스
+            'group_class' => \trim($langGroupClass) . $appendGroupClass,       // 그룹 스타일 클래스
             'properties'  => $langProperties,                            // 언어별 필드 속성
         ];
 

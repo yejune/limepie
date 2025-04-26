@@ -595,7 +595,7 @@ class Mysql extends \Limepie\Pdo
                         $trace['file'],
                         'yejune/limepie/src/Limepie'
                     )
-                    && !($trace['object'] instanceof Mysql)
+                    // && !($trace['object'] instanceof Mysql)
                 ) {
                     $message .= $trace['file'] . ' in line ' . $trace['line'];
                 }

@@ -63,27 +63,33 @@ class CoverSimple extends Fields
 
         $button = '';
 
-        $html = <<<EOT
-            <div class="input-group">
-            <input type="text" class='form-control form-control-file url' value="{$data['url']}" readonly="readonly" />
-            EOT;
-        $html .= <<<EOT
-            <input type="{$inputType}" class='valid-target form-control-file form-control-filetext form-control-image url' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}[name]" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$data['url']}" accept="{$accept}" />
-            EOT;
-
-        $html .= <<<EOT
-            <input type="hidden" class="clone-element file_name_alias_seq" name="{$key}[file_name_alias_seq]"  value="{$data['file_name_alias_seq']}" />
-            EOT;
-        $html .= <<<EOT
-            <input type="hidden" class="clone-element url" name="{$key}[url]"  value="{$data['url']}" /><!--btn--></div>
-            EOT;
-
         if ($data['url']) {
+            $html = <<<EOT
+                <div class="input-group">
+                <input type="text" class='form-control form-control-file url' value="{$data['url']}" readonly="readonly" />
+                EOT;
             $html .= <<<EOT
-            <div class='form-preview clone-element'><div><a href="{$data['url']}" target="_new"><img {$style} src='{$data['url']}' class='form-preview-image'></a></div></div>
+                <input type="{$inputType}" class='valid-target form-control-file form-control-filetext form-control-image url' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}[name]" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$data['url']}" accept="{$accept}" />
+                EOT;
+
+            $html .= <<<EOT
+                <input type="hidden" class="clone-element file_name_alias_seq" name="{$key}[file_name_alias_seq]"  value="{$data['file_name_alias_seq']}" />
+                EOT;
+            $html .= <<<EOT
+                <input type="hidden" class="clone-element url" name="{$key}[url]"  value="{$data['url']}" /><!--btn--></div>
+                EOT;
+
+            if ($data['url']) {
+                $html .= <<<EOT
+                <div class='form-preview clone-element'><div><a href="{$data['url']}" target="_new"><img {$style} src='{$data['url']}' class='form-preview-image'></a></div></div>
+                EOT;
+            }
+        } else {
+            $value = '';
+            $html  = <<<EOT
+            <div class="input-group">{$prepend}<input type="text" class='form-control form-control-file' value="" readonly="readonly" /><input type="file" class='valid-target form-control-file form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" accept="{$accept}" /><!--btn--></div>
             EOT;
         }
-
         $button = <<<'EOT'
             <button class="btn btn-search btn-file-search-text" type="button">&nbsp;</button>
             EOT;

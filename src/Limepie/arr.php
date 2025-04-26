@@ -9,6 +9,108 @@ use Limepie\Di;
 use Limepie\Exception;
 use Limepie\Form\Parser;
 
+/**
+ * 점(.)으로 구분된 키를 가진 배열을 중첩 배열 구조로 변환합니다.
+ *
+ * @param array $flatArray 점(.)으로 구분된 키를 가진 1차원 배열
+ *                         예: ['a.b.c' => 'value']
+ *
+ * @return array 중첩된 다차원 배열
+ *               예: ['a' => ['b' => ['c' => 'value']]]
+ */
+function dot_to_nested(array $flatArray) : array
+{
+    $result = [];
+
+    foreach ($flatArray as $key => $value) {
+        $keys    = \explode('.', $key);
+        $current = &$result;
+
+        foreach ($keys as $i => $segment) {
+            if ($i === \count($keys) - 1) {
+                // 마지막 키에 값 할당
+                $current[$segment] = $value;
+            } else {
+                // 중첩 배열 구조 생성
+                if (!isset($current[$segment]) || !\is_array($current[$segment])) {
+                    $current[$segment] = [];
+                }
+                $current = &$current[$segment];
+            }
+        }
+
+        // 참조 해제
+        unset($current);
+    }
+
+    return $result;
+}
+/**
+ * 특정 키를 가진 배열 요소만 필터링하는 함수.
+ *
+ * @param array  $array 필터링할 입력 배열
+ * @param string $key   필터링 기준이 되는 키 이름 (기본값: 'images')
+ *
+ * @return array 지정된 키를 가진 요소들만 포함한 필터링된 배열
+ */
+function filter_has_key(null|array|ArrayObject $array, string $key = 'images') : array
+{
+    if (null === $array) {
+        return [];
+    }
+
+    $result = [];
+
+    foreach ($array as $index => $element) {
+        if (isset($element[$key])) {
+            $result[$index] = $element;
+        }
+    }
+
+    return $result;
+}
+
+/**
+ * 배열을 나열 순서에 따라 여러 그룹으로 분배하는 함수.
+ *
+ * 이 함수는 배열 요소의 키 값이 아닌 나열된 순서에 따라 여러 그룹으로 나눕니다.
+ * 예를 들어, 그룹 수가 2인 경우:
+ * - 첫 번째, 세 번째, 다섯 번째... 위치의 요소는 첫 번째 그룹으로
+ * - 두 번째, 네 번째, 여섯 번째... 위치의 요소는 두 번째 그룹으로 분배됩니다.
+ * 원본 배열의 키는 유지되며, 그룹 수는 매개변수로 조정할 수 있습니다.
+ *
+ * @param array $array  분리할 배열
+ * @param int   $groups 나눌 그룹 수 (기본값: 2)
+ *
+ * @return array 분배된 그룹의 배열 (원본 키 유지)
+ *
+ * @throws InvalidArgumentException 그룹 수가 1 미만인 경우
+ */
+function split(array $array, int $groups = 2) : array
+{
+    if ($groups <= 0) {
+        throw new \InvalidArgumentException('그룹 수는 양수여야 합니다');
+    }
+
+    // 그룹 배열 초기화
+    $result = [];
+
+    for ($i = 0; $i < $groups; ++$i) {
+        $result[$i] = [];
+    }
+
+    // 배열 요소를 순서대로 그룹에 분배
+    $index = 0;
+
+    foreach ($array as $key => $value) {
+        $groupIndex                = $index % $groups; // 순환하며 그룹 인덱스 계산
+        $result[$groupIndex][$key] = $value; // 원래 키를 유지
+        ++$index;
+    }
+
+    return $result;
+}
+
 function getIsDisplay($serviceModuleBannerItem)
 {
     $isDisplay = false;
@@ -172,6 +274,50 @@ function getDisplayStatus($serviceModuleBannerItem)
 
     return $status;
 }
+
+/**
+ * 다차원 배열에서 재귀적으로 null 값과 빈 문자열을 제거합니다.
+ * 중첩된 배열이 필터링 후 비어있으면 해당 배열도 제거합니다.
+ * 0, false, '0' 같은 값은 유지합니다.
+ *
+ * @param array $array 필터링할 다차원 배열
+ *
+ * @return array 필터링된 배열
+ */
+function filter_recursive($array)
+{
+    foreach ($array as $key => $value) {
+        if (\is_array($value)) {
+            $array[$key] = filter_recursive($value);
+
+            if (empty($array[$key])) {
+                unset($array[$key]);
+            }
+        } elseif (null === $value || '' === $value) {
+            // null과 빈 문자열만 제거하고 false는 유지
+            unset($array[$key]);
+        }
+    }
+
+    return $array;
+}
+
+/**
+ * 배열의 무작위 위치에 새 항목을 삽입합니다.
+ *
+ * @param array    $items   새 항목을 삽입할 원본 배열
+ * @param mixed    $newItem 삽입할 새 항목
+ * @param null|int $max     삽입 가능한 최대 위치(옵션, 기본값: 배열 길이)
+ *
+ * @return array 항목이 삽입된 새 배열
+ *
+ * @example
+ * // [1, 2, 3, 6, 4, 5] (예시 결과 - 무작위 위치에 삽입됨)
+ * $result = insert_random([1, 2, 3, 4, 5], 6);
+ *
+ * // [1, 6, 2, 3, 4, 5] (최대 위치 1로 제한)
+ * $result = insert_random([1, 2, 3, 4, 5], 6, 1);
+ */
 function insert_random($items, $newItem, $max = null)
 {
     // $items = [1, 2, 3, 4, 5];
@@ -370,21 +516,25 @@ function percent(array $numbers, $precision = 0)
  *
  * @param mixed $in
  */
-function to_html(array $in) : string
+function to_html(array $in, array $hidden_keys = ['password', 're_password']) : string
 {
     if (0 < \count($in)) {
-        $t = '<div class="table-responsive"><table  class="table table-sm table-bordered table-gray-bordered"><tbody>';
+        $t = '<div class="table-responsive"><table class="table table-sm table-bordered table-gray-bordered"><tbody>';
 
         foreach ($in as $key => $value) {
             if (true === is_assoc($in)) {
+                // 특정 키를 가지면 value를 히든 처리
+                $display_value = \in_array($key, $hidden_keys, true) ? '******' : $value;
+
                 if (true === \is_array($value)) {
-                    $t .= '<tr class="bg-soft-primary"><th>' . $key . '</th><td>' . \Limepie\arr\to_html($value) . '</td></tr>';
+                    // 배열인 경우 재귀적으로 to_html 호출 (히든 키도 전달)
+                    $t .= '<tr class="bg-soft-primary"><th>' . $key . '</th><td>' . \Limepie\arr\to_html($value, $hidden_keys) . '</td></tr>';
                 } else {
-                    $t .= '<tr class="bg-soft-primary"><th>' . $key . '</th><td>' . $value . '</td></tr>';
+                    $t .= '<tr class="bg-soft-primary"><th>' . $key . '</th><td>' . $display_value . '</td></tr>';
                 }
             } else {
                 if (true === \is_array($value)) {
-                    $t .= '<tr class="bg-soft-primary"><td>' . \Limepie\arr\to_html($value) . '</td></tr>';
+                    $t .= '<tr class="bg-soft-primary"><td>' . \Limepie\arr\to_html($value, $hidden_keys) . '</td></tr>';
                 } else {
                     $t .= '<tr class="bg-soft-primary"><td>' . $value . '</td></tr>';
                 }
@@ -1372,6 +1522,27 @@ function extractKeys(?array $array, array|string $keysToExtract, $isAll = true)
     }
 
     return null;
+}
+
+/**
+ * 주어진 키 순서대로 배열을 정렬합니다.
+ *
+ * @param array $array 정렬할 배열
+ * @param array $keys  정렬 순서를 정의하는 키 배열
+ *
+ * @return array 정렬된 배열
+ */
+function ksort($array, $keys)
+{
+    // 결과를 저장할 배열
+    $result = [];
+
+    // 주어진 키 순서대로 배열 재구성
+    foreach ($keys as $key) {
+        $result[$key] = $array[$key] ?? [];
+    }
+
+    return $result;
 }
 
 function key_sort(&$array, $path)

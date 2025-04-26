@@ -220,6 +220,11 @@ class Group extends Fields
             }
             // \pr($nextData, $fixPropertyKey);
 
+            if ('dummy' === $propertyValue['type']) {
+                echo '7777777777777777';
+                \prx($nextData, $elements);
+            }
+
             if (\is_object($nextData) && !($nextData instanceof ArrayObject)) {
                 $propertyValue = [...$propertyValue, ...$nextData->property];
                 $nextData      = $nextData->value;
@@ -237,6 +242,10 @@ class Group extends Fields
                 //  \pr($propertyValue);
 
                 continue;
+            }
+
+            if ('dummy' === $propertyValue['type']) {
+                \prx($nextData, $elements);
             }
 
             if (true === static::isValue($nextData)) {
@@ -359,6 +368,11 @@ class Group extends Fields
                         );
                     }
                 }
+            }
+
+            if ('dummy' === $propertyValue['type']) {
+                \prx($nextData, $elements);
+                echo '999999999999';
             }
 
             $title = '';
@@ -794,6 +808,10 @@ class Group extends Fields
                 <div class="{$addClassString}" style="{$addStyleString}" name="{$nextLineName}-layer">{$titleHtml}{$prependDescription}<div class="form-element">{$elements}</div>{$appendDescription}</div>
                 EOT;
             }
+
+            // if ('dummy' === $propertyValue['type']) {
+            //     \prx($nextData, $elements);
+            // }
         }
         $groupClass = [
             'form-group',

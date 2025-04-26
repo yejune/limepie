@@ -55,7 +55,6 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
                 // $data['type']       = 'multiple';
                 $data['attributes'] = $this->attributes;
             }
-
             // $data['orgiginal_attributes'] = $this->originAttributes ?? [];
 
             return $data;

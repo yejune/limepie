@@ -78,6 +78,8 @@ class Response
         511 => 'Network Authentication Required',  // RFC 6585, 6
     ];
 
+    public $message;
+
     public $content = '';
 
     public $assign = [];
@@ -143,6 +145,7 @@ class Response
         if (true === Di::has('dispatcher')) {
             return Di::get('dispatcher')->forward($rule);
         }
+
         // ERRORCODE: 20008, service provider not found
         throw new Exception('"dispatcher" service provider not found', 20008);
     }
@@ -229,9 +232,7 @@ class Response
      * $response->setContentType("text/plain", "UTF-8");
      *</code>
      *
-     * @param string     $contentType
-     * @param null|mixed $charset
-     * @param mixed      $assign
+     * @param mixed $assign
      */
     // public function xsetContentType(string $contentType, $charset = null) : self
     // {

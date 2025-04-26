@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Limepie\Form\Generator\Fields;
 
+use Limepie\Di;
 use Limepie\Form\Generator\Fields;
 use Limepie\RecursiveIterator\AdjacencyList;
 use Resource\Helper\Menu;
@@ -154,6 +155,19 @@ EOD;
             EOD;
         }
         $option = '';
+
+        if ($property['data'] ?? null) {
+            if ('locale' === $property['data']) {
+                $serviceLocales = Di::getCountryModels();
+                // \prx($serviceLocales);
+                $locales = $property['items'] ?? [];
+
+                foreach ($serviceLocales as $serviceLocale) {
+                    $locales[$serviceLocale->getId()] = $serviceLocale->getName();
+                }
+                $property['items'] = $locales;
+            }
+        }
 
         if (true === isset($property['items'])) {
             if ($property['items'] instanceof Menu) {
