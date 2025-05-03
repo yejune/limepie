@@ -70,11 +70,9 @@ class SelectModal extends Fields
         }
 
         $onchange = '';
-        $script   = ';';
 
         if (true === isset($property['onchange'])) {
             $onchange = 'onchange="' . \Limepie\minify_js($property['onchange']) . '"';
-            $script .= \Limepie\minify_js($property['onchange']);
         }
         $id = \Limepie\clean_str($key) . '_' . \uniqid();
 
@@ -96,19 +94,10 @@ class SelectModal extends Fields
                     $selectText = $itemText;
                     $checkClass = 'select-modal-selected';
                 }
-                $dataAttributes = [];
-
-                foreach ($item['data'] ?? [] as $dataKey => $dataValue) {
-                    // $dataValue        = \addslashes((string) $dataValue);
-                    $dataAttributes[] = 'data-' . \str_replace('_', '-', $dataKey) . "='{$dataValue}'";
-                }
-
-                $dataAttribute = \implode(' ', $dataAttributes);
-
                 $html .= \str_replace(PHP_EOL, '', <<<HTML
                     <label class="select-modal-label {$checkClass}">
                         <div class="fs-5 mb-2 d-flex align-items-center">
-                            <input type="radio" name="select-modal{$id}" value="{$itemValue}" onclick="selectModalItem(this, '{$itemValue}', '{$itemText}');{$script}" data-bs-dismiss="modal" {$dataAttribute} {$check}>
+                            <input type="radio" name="select-modal{$id}" onclick="selectModalItem(this, '{$itemValue}', '{$itemText}')" data-bs-dismiss="modal" {$check}>
                             <span class="title ms-1">{$itemText}</span>
                         </div>
                         <div class="border border-2 rounded rounded-3 p-3">
@@ -124,7 +113,7 @@ class SelectModal extends Fields
         }
 
         return <<<EOT
-        <div class="input-group select-modal-wrap"><div class="modal fade" id="select-modal{$id}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="select-modal-label{$id}" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h1 class="modal-title fs-5" id="select-modal-label">{$property['label']}.</h1><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body">{$html}</div><div class="modal-footer d-none"><button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Close</button><button type="button" class="btn btn-primary">선택하세요.</button></div></div></div></div><input type="hidden" name="{$key}" class="valid-target select-modal-value" id="value_{$id}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$value}"><div class="input-group dropdown-icon">{$prepend}<input type="text" id="target_{$id}" class="select-modal-text form-control cursor-pointer bg-white  {$class}"  {$style} placeholder="선택하세요." readonly  data-bs-toggle="modal" data-bs-target="#select-modal{$id}" value="{$selectText}">{$append}</div></div>
+        <div class="select-modal-wrap"><div class="modal fade" id="select-modal{$id}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="select-modal-label{$id}" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h1 class="modal-title fs-5" id="select-modal-label">{$property['label']}.</h1><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body">{$html}</div><div class="modal-footer d-none"><button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Close</button><button type="button" class="btn btn-primary">선택하세요.</button></div></div></div></div><input type="hidden" name="{$key}" class="valid-target select-modal-value" id="value_{$id}" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$value}"><div class="input-group dropdown-icon">{$prepend}<input type="text" id="target_{$id}" class="select-modal-text form-control cursor-pointer bg-white  {$class}"  {$style} placeholder="선택하세요." readonly  data-bs-toggle="modal" data-bs-target="#select-modal{$id}" value="{$selectText}">{$append}</div></div>
         EOT;
     }
 

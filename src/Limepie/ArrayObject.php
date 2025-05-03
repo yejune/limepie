@@ -447,6 +447,11 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return \count($this->attributes);
     }
 
+    public function chunk(int $size)
+    {
+        return \array_chunk($this->attributes, $size);
+    }
+
     // 첫번째 값을 빼서 리턴
     public function shift($default = null)
     {

@@ -82,24 +82,40 @@ class Switcher extends Fields
             } else {
                 $prepend = $property['prepend'];
             }
-            $prepend = '<div class="me-2 form-label' . ($prependClass ? ' ' . $prependClass : '') . '">' . $prepend . '</div>';
+            $prepend = '<div class="me-2 flex-shrink-0 form-label' . ($prependClass ? ' ' . $prependClass : '') . '">' . $prepend . '</div>';
         } else {
             $prepend = '';
         }
 
-        $onload = false;
+        $onload = '';
 
         if (true === isset($property['onload']) && $property['onload']) {
-            $onload = true;
+            $onload = ' data-onload="' . \Limepie\minify_js($property['onload']) . '" ';
+        }
+
+        $onchange = '';
+
+        // script 테그에 넣으면 dynamic copy시 동작안하므로 inline script 사용
+        if (true === isset($property['onchange'])) {
+            $onchange = ' onchange="' . \Limepie\minify_js($property['onchange']) . '" ';
         }
 
         $onclick = '';
 
-        // script 테그에 넣으면 dynamic copy시 동작안하므로 inline script 사용
         if (true === isset($property['onclick'])) {
             $onclick = ' onclick="' . \Limepie\minify_js($property['onclick']) . '" ';
         }
 
+        $elementStyle = '';
+
+        if (true === isset($property['element_style'])) {
+            $elementStyle = ' style="' . $property['element_style'] . '" ';
+        }
+        $switcherClass = '';
+
+        if (true === isset($property['switcher_class'])) {
+            $switcherClass = ' ' . $property['switcher_class'];
+        }
         $elementClass = '';
 
         if (true === isset($property['element_class'])) {
@@ -114,7 +130,7 @@ class Switcher extends Fields
         $readonly = '';
 
         if (true === isset($property['readonly']) && $property['readonly']) {
-            $readonly = ' disabled-group';
+            $readonly = ' pe-none';
         }
 
         $buttons = '';
@@ -128,28 +144,17 @@ class Switcher extends Fields
         //     <label for="{$id}" class="form-check-label {$elementClass}{$appendClass}"><span>{$append}</span></label>
         // EOD;
 
-        $script = <<<SCR
-        <script nonce="{$_SESSION['nonce']}">
-        // $(function () {
-        //     var f = $('#'+$.escapeSelector( '{$id}'));
-        //     if (f[0].onclick) {
-        //         console.log('{$id}');
-        //         //f.prop("checked", true);
-        //         f.trigger("click");
-        //     }
-        // });
-        </script>
+        $script = <<<'SCR'
+
         SCR;
 
         $html = <<<EOT
-            <div class="input-group{$readonly}">
-                <div class="d-flex">
-                    {$prepend}
-                    <div class="form-switch form-check mb-0">
-                        <input id="{$id}" class="valid-target form-check-input{$inputClass}" type="checkbox" name="{$key}" role="switch" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$sendValue}" data-is-default="{$default}" {$checked} {$onclick}>
-                    </div>
-                    <label for="{$id}" class="form-check-label {$elementClass}{$appendClass} noselect"><span>{$append}</span></label>
+            <div class="input-group d-flex align-items-center" {$onclick}>
+                {$prepend}
+                <div class="{$readonly} form-check form-switch mh-0 me-1 {$switcherClass}">
+                    <input id="{$id}" class="mb-0 valid-target form-check-input{$inputClass}" type="checkbox" name="{$key}" role="switch" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$sendValue}" data-is-default="{$default}" data-default-checked="{$checked}" {$elementStyle} {$onchange} {$onload} {$checked} />
                 </div>
+                <label for="{$id}" class="{$readonly} form-check-label {$elementClass}{$appendClass} noselect"><div class="d-flex align-items-center">{$append}</div></label>
             </div>
             {$script}
         EOT;

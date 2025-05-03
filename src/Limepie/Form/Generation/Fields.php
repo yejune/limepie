@@ -35,7 +35,7 @@ class Fields
             return $first . '[' . \implode('][', $parts) . ']';
         }
 
-        return $dotName;
+        return  null; // $dotName;
     }
 
     // public static function getMultipleHtml($key)

@@ -78,6 +78,8 @@ class Response
         511 => 'Network Authentication Required',  // RFC 6585, 6
     ];
 
+    public $errors = [];
+
     public $message;
 
     public $content = '';

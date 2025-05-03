@@ -23,6 +23,31 @@ function ___($domain, $string, $a, $b)
     return \dngettext($domain, $string, $a, $b);
 }
 
+// 확장자를 제외한 파이명을 length만큼 잘라줌
+function truncate_filename($filename, $maxLength = 200)
+{
+    $ext        = \pathinfo($filename, PATHINFO_EXTENSION);
+    $extWithDot = $ext ? '.' . $ext : '';
+    $name       = \mb_substr(\pathinfo($filename, PATHINFO_FILENAME), 0, $maxLength - \mb_strlen($extWithDot));
+
+    return $name . $extWithDot;
+}
+
+function str_uuid($string)
+{
+    $md5 = \md5((string) $string);
+
+    // UUID 형식으로 포맷팅 (8-4-4-4-12 문자 형식)
+    return \sprintf(
+        '%s-%s-%s-%s-%s',
+        \substr($md5, 0, 8),
+        \substr($md5, 8, 4),
+        \substr($md5, 12, 4),
+        \substr($md5, 16, 4),
+        \substr($md5, 20, 12)
+    );
+}
+
 /**
  * 큰 숫자를 간결한 형식으로 포맷팅하는 함수.
  *
@@ -2658,8 +2683,8 @@ function nl2br($string)
     return \str_replace(["\r\n", "\r", "\n"], '<br />', $string);
 }
 
-// 테그를 그대로 보여줌
-function bprint($content, $nl2br = false)
+// 테그를 그대로 보여줌, escape print
+function eprint($content, $nl2br = false)
 {
     $content = \trim((string) $content);
 
@@ -2688,7 +2713,7 @@ function cprint_tags($content, null|array|string $allowTags = null)
 
     return '';
 }
-// 테그를 삭제하고 보여줌. <테그아님>도 strip_tags에 의해 삭제됨
+// 테그를 삭제하고 보여줌. <테그아님>도 strip_tags에 의해 삭제됨, clean print
 function cprint($content, $nl2br = false)
 {
     $content = \trim((string) $content);

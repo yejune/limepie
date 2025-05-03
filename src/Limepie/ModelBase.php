@@ -118,7 +118,7 @@ class ModelBase extends ArrayObject
 
     public $joinTableAliasName;
 
-    public $duplications = [];
+    public $duplication;
 
     public function __construct(?\PDO $pdo = null, $attributes = null, $originAttributes = [])
     {
@@ -158,11 +158,6 @@ class ModelBase extends ArrayObject
     public function __call(string $name, array $arguments = [])
     {
         //        prx($name, $arguments);
-
-        if (0 === \strpos($name, 'duplication')) {
-            return $this->buildDuplication($name, $arguments);
-        }
-
         if (0 === \strpos($name, 'groupBy')) {
             return $this->buildGroupBy($name, $arguments, 7);
         }
@@ -549,14 +544,22 @@ class ModelBase extends ArrayObject
                             break;
                         case 'yml':
                         case 'yaml':
-                            $body = \yaml_parse($value);
+                            if ($value) {
+                                try {
+                                    $body = \yaml_parse($value);
+                                    $body = \yaml_parse($body);
 
-                            if ($body) {
-                                $value = new ArrayObject($body);
-                            } else {
-                                $value = null;
+                                    if ($body) {
+                                        $value = new ArrayObject($body);
+                                    } else {
+                                        $value = null;
+                                    }
+                                } catch (\Throwable $e) {
+                                    $value = null;
+                                }
                             }
-                            // no break
+
+                            break;
                         case 'int':
                         case 'tinyint':
                             (int) $value;
@@ -698,6 +701,13 @@ class ModelBase extends ArrayObject
     public function keyName(callable|string $keyName) : self
     {
         $this->keyName = $keyName;
+
+        return $this;
+    }
+
+    public function duplication(Model $duplication) : self
+    {
+        $this->duplication = $duplication;
 
         return $this;
     }
@@ -969,18 +979,18 @@ class ModelBase extends ArrayObject
         return $this;
     }
 
-    public function buildDuplication(string $name, array $arguments = [])
-    {
-        $columnNames = \Limepie\decamelize(\substr($name, 11));
+    // public function buildDuplication(string $name, array $arguments = [])
+    // {
+    //     $columnNames = \Limepie\decamelize(\substr($name, 11));
 
-        $keys = \explode('_with_', $columnNames);
+    //     $keys = \explode('_with_', $columnNames);
 
-        foreach ($keys as $index => $key) {
-            $this->duplications[$key] = $arguments[$index];
-        }
+    //     foreach ($keys as $index => $key) {
+    //         $this->duplications[$key] = $arguments[$index];
+    //     }
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     protected function buildNew(string $name, array $arguments) : self
     {

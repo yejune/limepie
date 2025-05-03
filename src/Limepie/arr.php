@@ -86,7 +86,7 @@ function filter_has_key(null|array|ArrayObject $array, string $key = 'images') :
  *
  * @throws InvalidArgumentException 그룹 수가 1 미만인 경우
  */
-function split(array $array, int $groups = 2) : array
+function split(array|ArrayObject $array, int $groups = 2) : array
 {
     if ($groups <= 0) {
         throw new \InvalidArgumentException('그룹 수는 양수여야 합니다');

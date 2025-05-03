@@ -506,6 +506,10 @@ class Group extends Fields
                     if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
                         $addStyle .= '; ' . $propertyValue['display_target_condition'][$targetValue];
                     }
+
+                    if (true === isset($propertyValue['display_target_condition_style'][$targetValue])) {
+                        $addStyle .= '; ' . $propertyValue['display_target_condition_style'][$targetValue];
+                    }
                 } elseif (true === isset($specs['properties'][$propertyValue['display_target']])) {
                     // 값이 없을때 default가 있는지 살펴봄
                     $targetSpec = $specs['properties'][$propertyValue['display_target']];
@@ -521,6 +525,10 @@ class Group extends Fields
 
                         if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
                             $addStyle .= '; ' . $propertyValue['display_target_condition'][$targetValue];
+                        }
+
+                        if (true === isset($propertyValue['display_target_condition_style'][$targetValue])) {
+                            $addStyle .= '; ' . $propertyValue['display_target_condition_style'][$targetValue];
                         }
                     }
                 } else {
@@ -579,6 +587,10 @@ class Group extends Fields
                             if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
                                 $addStyle .= '; ' . $propertyValue['display_target_condition'][$targetValue];
                             }
+
+                            if (true === isset($propertyValue['display_target_condition_style'][$targetValue])) {
+                                $addStyle .= '; ' . $propertyValue['display_target_condition_style'][$targetValue];
+                            }
                         } elseif (true === isset($targetSpec['default'])) {
                             $targetValue = $targetSpec['default'];
 
@@ -592,6 +604,10 @@ class Group extends Fields
 
                             if (true === isset($propertyValue['display_target_condition'][$targetValue])) {
                                 $addStyle .= '; ' . $propertyValue['display_target_condition'][$targetValue];
+                            }
+
+                            if (true === isset($propertyValue['display_target_condition_style'][$targetValue])) {
+                                $addStyle .= '; ' . $propertyValue['display_target_condition_style'][$targetValue];
                             }
                         }
                     }
@@ -750,7 +766,7 @@ EOT;
                 $innerhtml .= <<<EOT
                 <div class="wrap-form-group{$addClass}" style="{$addStyle}" name="{$dotKey}.layer">
                     {$titleHtml}
-                    <div class="form-group{$addClass2} {$sortableClass}">
+                    <div class="xform-group{$addClass2} {$sortableClass}">
                         {$elements}
                     </div>
                 </div>
@@ -892,7 +908,7 @@ EOT;
             } else {
                 $innerhtml .= <<<EOT
                 {$titleHtml}
-                <div class="form-group">
+                <div class="xform-group">
                     {$elements}
                 </div>
 EOT;

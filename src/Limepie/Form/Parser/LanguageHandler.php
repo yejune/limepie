@@ -177,7 +177,8 @@ class LanguageHandler
             $isLangAppend,
             $isRemoveLabel,
             $isRemoveFrame,
-            $basepath
+            $basepath,
+            $value['lang'] ?? ''
         );
         // \prx($langProperties, $result);
 
@@ -216,7 +217,7 @@ class LanguageHandler
                 // 레이블 제거 옵션 처리
                 if ($isRemoveLabel) {
                     unset($properties['label'], $appendLangProperties['label']);
-                    $properties['class'] = ($properties['class'] ?? '') . ' border-0 pb-1 pt-0';
+                    $properties['class'] = ($properties['class'] ?? '') . ' border-0 pb-1 pt-0 mt-1';
                 } else {
                     $properties['label'] = \Limepie\__('core', $languageModel->getName());
                 }
@@ -242,7 +243,7 @@ class LanguageHandler
                 // 레이블 제거 옵션 처리
                 if ($isRemoveLabel) {
                     unset($properties['label'], $appendLangProperties['label']);
-                    $properties['class'] = ($properties['class'] ?? '') . ' border-0 pb-1 pt-0';
+                    $properties['class'] = ($properties['class'] ?? '') . ' border-0 pb-1 pt-0 mt-1';
                 } else {
                     $properties['label'] = \Limepie\__('core', $lang['name']);
                 }
@@ -323,7 +324,6 @@ class LanguageHandler
      *
      * @param string $label            요소 레이블
      * @param string $languagePackName 언어팩 이름
-     * @param array  $langProperties   언어별 속성 배열
      * @param array  $value            원본 요소 설정
      * @param bool   $isLangAppend     append 모드 여부
      * @param bool   $isRemoveLabel    레이블 제거 여부
@@ -339,7 +339,8 @@ class LanguageHandler
         bool $isLangAppend,
         bool $isRemoveLabel,
         bool $isRemoveFrame,
-        string $basepath
+        string $basepath,
+        string $lang
     ) : array {
         // 클래스 설정 준비
         $langClass = '';
@@ -365,10 +366,15 @@ class LanguageHandler
         }
 
         // 기본 그룹 구성 생성
+        if ('append' == $lang) {
+            $defaultClass = \trim($langClass) . ($isRemoveLabel ? ' border-0 pt-0 mt-1' : '');
+        } else {
+            $defaultClass = \trim($langClass);
+        }
         $group = [
             'label'       => ($label ?? '') . ' - ' . $languagePackName,  // 레이블 - 언어팩
             'type'        => 'group',                                    // 그룹 타입
-            'class'       => \trim($langClass) . ($isRemoveLabel ? ' border-0 pt-0' : ''),  // 스타일 클래스
+            'class'       => $defaultClass,  // 스타일 클래스
             'group_class' => \trim($langGroupClass) . $appendGroupClass,       // 그룹 스타일 클래스
             'properties'  => $langProperties,                            // 언어별 필드 속성
         ];

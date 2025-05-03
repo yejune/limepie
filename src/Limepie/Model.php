@@ -8,7 +8,7 @@ class Model extends ModelUtil
 {
     public function replace() {}
 
-    public function create($on_duplicate_key_update = null)
+    public function buildCreate()
     {
         $columns = [];
         $binds   = [];
@@ -130,6 +130,17 @@ class Model extends ModelUtil
             }
         }
 
+        return [$columns, $binds, $values];
+    }
+
+    public function create($on_duplicate_key_update = null)
+    {
+        $columns = [];
+        $binds   = [];
+        $values  = [];
+
+        [$columns, $binds, $values] = $this->buildCreate($on_duplicate_key_update);
+
         $column = \implode(', ', $columns);
         $values = \implode(', ', $values);
         $sql    = <<<SQL
@@ -144,14 +155,11 @@ class Model extends ModelUtil
             $sql .= ' ' . $on_duplicate_key_update;
         }
 
-        if ($this->duplications) {
-            $add = [];
+        if ($this->duplication) {
+            [$duplicationColumns, $duplicationBinds, $duplicationSames] = $this->duplication->buildUpdate();
 
-            foreach ($this->duplications as $key => $value) {
-                $add[] = "`{$key}` = {$value}";
-            }
-
-            $sql .= ' ON DUPLICATE KEY UPDATE ' . \implode(', ', $add);
+            $sql .= ' ON DUPLICATE KEY UPDATE ' . \implode(', ', $duplicationColumns);
+            $binds += $duplicationBinds;
         }
 
         $primaryKey = '';
@@ -184,26 +192,11 @@ class Model extends ModelUtil
         return false;
     }
 
-    public function update($checkUpdatedTs = false)
+    public function buildUpdate()
     {
-        // if (false === isset($this->attributes[$this->primaryKeyName])) {
-        //     $debug = \debug_backtrace()[0];
-
-        //     throw (new Exception('not found ' . $this->primaryKeyName))
-        //         ->setDebugMessage('models update?', $debug['file'], $debug['line'])
-        //     ;
-        // }
-        if (!$this->primaryKeyValue) {
-            $debug = \debug_backtrace()[0];
-
-            throw (new Exception('not found ' . $this->primaryKeyName))
-                ->setDebugMessage('models update?', $debug['file'], $debug['line'])
-            ;
-        }
-
-        $this->changeBinds   = [];
-        $this->changeColumns = [];
-        $this->sameColumns   = [];
+        $columns = [];
+        $binds   = [];
+        $sames   = [];
 
         foreach ($this->allColumns as $column) {
             // db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 않음
@@ -221,7 +214,7 @@ class Model extends ModelUtil
                 && false === isset($this->minusAttributes[$column])
                 && false === isset($this->rawAttributes[$column])
             ) {
-                // $this->sameColumns[$column] = $origAttr;
+                $sames[$column] = $origAttr;
 
                 continue;
             }
@@ -253,25 +246,25 @@ class Model extends ModelUtil
                     } else {
                         // 수정 날짜는 변경 할수있음.
                         if ($this->attributes[$column] ?? false) {
-                            $this->changeColumns[]            = "`{$this->tableName}`." . '`' . $column . '` = :' . $column;
-                            $this->changeBinds[':' . $column] = $this->attributes[$column];
+                            $columns[]            = "`{$this->tableName}`." . '`' . $column . '` = :' . $column;
+                            $binds[':' . $column] = $this->attributes[$column];
                         }
                     }
                 } elseif ('ip' === $column) {
-                    $this->changeColumns[]            = "`{$this->tableName}`." . '`' . $column . '` = inet6_aton(:' . $column . ')';
-                    $this->changeBinds[':' . $column] = $this->attributes[$column] ?? \Limepie\getIp();
+                    $columns[]            = "`{$this->tableName}`." . '`' . $column . '` = inet6_aton(:' . $column . ')';
+                    $binds[':' . $column] = $this->attributes[$column] ?? \Limepie\getIp();
                 } elseif ('aes_serialize' === $this->dataStyles[$column]) {
-                    $this->changeColumns[]                           = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey)';
-                    $this->changeBinds[':' . $column]                = \serialize($this->attributes[$column] ?? null);
-                    $this->changeBinds[':' . $column . '_secretkey'] = Aes::$salt;
+                    $columns[]                           = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey)';
+                    $binds[':' . $column]                = \serialize($this->attributes[$column] ?? null);
+                    $binds[':' . $column . '_secretkey'] = Aes::$salt;
                 } elseif ('aes' === $this->dataStyles[$column]) {
-                    $this->changeColumns[]                           = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey)';
-                    $this->changeBinds[':' . $column]                = $this->attributes[$column] ?? null;
-                    $this->changeBinds[':' . $column . '_secretkey'] = Aes::$salt;
+                    $columns[]                           = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey)';
+                    $binds[':' . $column]                = $this->attributes[$column] ?? null;
+                    $binds[':' . $column . '_secretkey'] = Aes::$salt;
                 } elseif ('aes_hex' === $this->dataStyles[$column]) {
-                    $this->changeColumns[]                           = "`{$this->tableName}`." . '`' . $column . '` = HEX(AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey))';
-                    $this->changeBinds[':' . $column]                = $this->attributes[$column] ?? null;
-                    $this->changeBinds[':' . $column . '_secretkey'] = Aes::$salt;
+                    $columns[]                           = "`{$this->tableName}`." . '`' . $column . '` = HEX(AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey))';
+                    $binds[':' . $column]                = $this->attributes[$column] ?? null;
+                    $binds[':' . $column . '_secretkey'] = Aes::$salt;
                 } elseif (
                     true === isset($this->dataStyles[$column])
                     && 'point' == $this->dataStyles[$column]
@@ -284,10 +277,10 @@ class Model extends ModelUtil
                             throw new Exception('empty point value');
                         }
 
-                        $this->changeColumns[] = "`{$this->tableName}`." . '`' . $column . '` = point(:' . $column . '1, :' . $column . '2)';
+                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = point(:' . $column . '1, :' . $column . '2)';
 
-                        $this->changeBinds[':' . $column . '1'] = $value[0];
-                        $this->changeBinds[':' . $column . '2'] = $value[1];
+                        $binds[':' . $column . '1'] = $value[0];
+                        $binds[':' . $column . '2'] = $value[1];
                     }
                 } elseif (true === \array_key_exists($column, $this->attributes)) {
                     $value = $this->attributes[$column];
@@ -333,27 +326,42 @@ class Model extends ModelUtil
                     }
 
                     if (true === isset($this->plusAttributes[$column])) {
-                        $this->changeColumns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . "`{$this->tableName}`." . '`' . $column . '` + ' . $this->plusAttributes[$column];
+                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . "`{$this->tableName}`." . '`' . $column . '` + ' . $this->plusAttributes[$column];
                     } elseif (true === isset($this->minusAttributes[$column])) {
                         $name = "`{$this->tableName}`." . '`' . $column . '`';
 
-                        $this->changeColumns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . "IF({$name} > 0, {$name} - " . $this->minusAttributes[$column] . ', 0)';
+                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . "IF({$name} > 0, {$name} - " . $this->minusAttributes[$column] . ', 0)';
                     } elseif (true === isset($this->rawAttributes[$column])) {
-                        $this->changeColumns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . \str_replace('?', ':' . $column, $this->rawAttributes[$column]);
+                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . \str_replace('?', ':' . $column, $this->rawAttributes[$column]);
 
                         if (null === $value) {
                         } elseif (true === \is_array($value)) {
-                            $this->changeBinds += $value;
+                            $binds += $value;
                         } else {
                             throw new Exception($column . ' raw bind error');
                         }
                     } else {
-                        $this->changeColumns[]            = "`{$this->tableName}`." . '`' . $column . '` = :' . $column;
-                        $this->changeBinds[':' . $column] = $value;
+                        $columns[]            = "`{$this->tableName}`." . '`' . $column . '` = :' . $column;
+                        $binds[':' . $column] = $value;
                     }
                 }
             }
         }
+
+        return [$columns, $binds, $sames];
+    }
+
+    public function update($checkUpdatedTs = false)
+    {
+        if (!$this->primaryKeyValue) {
+            $debug = \debug_backtrace()[0];
+
+            throw (new Exception('not found ' . $this->primaryKeyName))
+                ->setDebugMessage('models update?', $debug['file'], $debug['line'])
+            ;
+        }
+
+        [$this->changeColumns, $this->changeBinds, $this->sameColumns] = $this->buildUpdate();
 
         if ($this->changeColumns) {
             $column = \implode(', ', $this->changeColumns);
