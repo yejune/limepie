@@ -119,7 +119,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
     public function merge(array $array)
     {
-        $attributes = \Limepie\arr\change_key_case_recursive($array, \CASE_LOWER);
+        $attributes = arr::change_key_case_recursive($array, \CASE_LOWER);
         $this->attribute += $attributes;
     }
 
@@ -456,7 +456,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
     public function shift($default = null)
     {
         if ($this->attributes) {
-            return \Limepie\arr\shift($this->attributes);
+            return arr::shift($this->attributes);
         }
 
         return $default;
@@ -466,7 +466,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
     public function pull($key, $default = null)
     {
         if (isset($this->attributes[$key]) && $this->attributes[$key]) {
-            return \Limepie\arr\pull($this->attributes, $key);
+            return arr::pull($this->attributes, $key);
         }
 
         return $default;

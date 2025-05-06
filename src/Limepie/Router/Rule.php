@@ -2,6 +2,7 @@
 
 namespace Limepie\Router;
 
+use Limepie\arr;
 use Limepie\Exception;
 
 class Rule
@@ -80,7 +81,7 @@ class Rule
                             $returns[$key] = $value;
                         } else {
                             if ('properties' === $key) {
-                                $returns['properties'] = \Limepie\arr\merge_deep($returns['properties'], $value);
+                                $returns['properties'] = arr::merge_deep($returns['properties'], $value);
                             } else {
                                 $returns['properties'][$key] = $value;
                             }

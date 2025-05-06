@@ -2,6 +2,7 @@
 
 namespace Limepie\Form\Generation\Fields;
 
+use Limepie\arr;
 use Limepie\Form\Generation\Fields;
 
 class Tui extends Fields
@@ -43,7 +44,7 @@ class Tui extends Fields
         $uuid = \Limepie\random_uuid();
 
         if (\preg_match_all('#(?P<eids>__[a-zA-Z0-9]{13}__)#', '__6288d7db50b82__' . $key, $match)) {
-            $id = \Limepie\arr\last($match['eids']);
+            $id = arr::last($match['eids']);
         } else {
             $id = \uniqid();
         }

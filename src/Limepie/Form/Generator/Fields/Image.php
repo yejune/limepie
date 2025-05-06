@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Limepie\Form\Generator\Fields;
 
+use Limepie\arr;
 use Limepie\Form\Generator\Fields;
 
 class Image extends Fields
@@ -51,7 +52,7 @@ class Image extends Fields
             EOD;
         }
 
-        if (true === \Limepie\arr\is_file_array($data, false)) {
+        if (true === arr::is_file_array($data, false)) {
             $value  = \htmlspecialchars((string) $data['name']);
             $button = '';
             $html   = <<<EOT
@@ -99,7 +100,7 @@ class Image extends Fields
     {
         $html = '';
 
-        if (true === \Limepie\arr\is_file_array($data, false)) {
+        if (true === arr::is_file_array($data, false)) {
             $value = \str_replace('', '', (string) $data['path']);
             $html  = <<<EOT
             <img src="{$value}" />

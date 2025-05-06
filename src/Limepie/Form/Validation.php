@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Limepie\Form;
 
+use Limepie\arr;
+
 class Validation
 {
     public static $methods = [];
@@ -150,7 +152,7 @@ class Validation
         });
 
         Validation::addMethod('in', function ($value, $name, $param) {
-            $enum = \Limepie\arr\value_flatten($param);
+            $enum = arr::value_flatten($param);
 
             return $this->optional($value) || false !== \in_array($value, $enum, false);
         });
@@ -198,11 +200,11 @@ class Validation
             if (true === \is_array($data)) {
                 foreach ($data as $v) {
                     if (true === \is_array($v)) {
-                        if (true === \Limepie\arr\is_file_array($v)) {
+                        if (true === arr::is_file_array($v)) {
                             $v = $v['name'];
                             // $v = $v['file_name_alias_seq'];
                         } else {
-                            // \pr($v, \Limepie\arr\is_file_array($v));
+                            // \pr($v, \Limepie\arr::is_file_array($v));
 
                             throw (new \Limepie\Exception('error'))->setDebugMessage('not support datatype', __FILE__, __LINE__);
                         }

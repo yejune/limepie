@@ -77,7 +77,7 @@ class Getter implements \Iterator, \ArrayAccess, \Countable
     // iterator_to_array
     public function toArray()
     {
-        if (true === \Limepie\arr\is_assoc($this->properties)) {
+        if (true === arr::is_assoc($this->properties)) {
             return $this->properties;
         }
         $properties = [];
@@ -114,6 +114,6 @@ class Getter implements \Iterator, \ArrayAccess, \Countable
     {
         $key = \key($this->properties);
 
-        return (null !== $key && false !== $key);
+        return null !== $key && false !== $key;
     }
 }

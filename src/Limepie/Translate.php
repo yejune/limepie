@@ -77,7 +77,7 @@ class Translate implements \Iterator, \ArrayAccess, \Countable
     // iterator_to_array
     public function toArray()
     {
-        if (true === \Limepie\arr\is_assoc($this->language)) {
+        if (true === arr::is_assoc($this->language)) {
             return $this->language;
         }
         $language = [];

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Limepie\Form\Generator\Fields;
 
+use Limepie\arr;
 use Limepie\ArrayObject;
 use Limepie\Exception;
 use Limepie\Form\Generator\Fields;
@@ -442,7 +443,7 @@ class Group extends Fields
             $nextData = $nextData->value;
 
             // 추출된 데이터가 연관 배열이면 배열 플래그 해제
-            if (\Limepie\arr\is_assoc($nextData)) {
+            if (arr::is_assoc($nextData)) {
                 $isArray = false;
             }
         }
@@ -672,7 +673,7 @@ class Group extends Fields
         $pathParts = \array_slice($pathParts, 0, \count($pathParts) - ($levelsUp - 1));
 
         // 해석된 경로 생성
-        if (empty(\Limepie\arr\filter_recursive($pathParts))) {
+        if (empty(arr::filter_recursive($pathParts))) {
             return $cleanPath;
         }
 

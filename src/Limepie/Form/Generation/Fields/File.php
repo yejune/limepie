@@ -2,13 +2,14 @@
 
 namespace Limepie\Form\Generation\Fields;
 
+use Limepie\arr;
 use Limepie\Form\Generation\Fields;
 
 class File extends Fields
 {
     public static function write($key, $property, $data, $ruleName)
     {
-        if (true === \Limepie\arr\is_file_array($data, false)) {
+        if (true === arr::is_file_array($data, false)) {
             $value  = \htmlspecialchars((string) $data['name']);
             $accept = $property['rules']['accept'] ?? '';
             $button = '';
@@ -38,7 +39,7 @@ EOT;
     {
         $html = '';
 
-        if (true === \Limepie\arr\is_file_array($data, false)) {
+        if (true === arr::is_file_array($data, false)) {
             $value = \str_replace('', '', (string) $data['path']);
             $html  = <<<EOT
             <img src="{$value}" />

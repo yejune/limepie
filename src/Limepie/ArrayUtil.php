@@ -48,7 +48,7 @@ class ArrayUtil
      */
     public static function mergeDeep(array $array1, array $array2) : array
     {
-        return \Limepie\arr\merge_deep($array1, $array2);
+        return arr::merge_deep($array1, $array2);
     }
 
     /**
@@ -56,6 +56,6 @@ class ArrayUtil
      */
     public static function remove(array $array, array $removeKeys) : array
     {
-        return \Limepie\arr\remove($array, $removeKeys);
+        return arr::remove($array, $removeKeys);
     }
 }

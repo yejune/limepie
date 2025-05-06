@@ -10,9 +10,7 @@
             "Limepie\\": "src/Limepie/"
         },
         "files": [
-            "src/Limepie.php",
-            "src/Limepie/arr.php",
-            "src/Limepie/dt.php"
+            "src/Limepie.php"
         ]
     }
 }

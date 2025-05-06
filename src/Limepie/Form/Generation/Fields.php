@@ -2,6 +2,7 @@
 
 namespace Limepie\Form\Generation;
 
+use Limepie\arr;
 use Limepie\ArrayObject;
 
 class Fields
@@ -71,7 +72,7 @@ class Fields
 
     public static function isValue($value)
     {
-        if (true === \Limepie\arr\is_file_array($value, true)) {
+        if (true === arr::is_file_array($value, true)) {
             return true;
         }
 
@@ -143,7 +144,7 @@ class Fields
 
     public static function isValue2($value)
     {
-        if (true === \Limepie\arr\is_file_array($value, true)) {
+        if (true === arr::is_file_array($value, true)) {
             return true;
         }
 

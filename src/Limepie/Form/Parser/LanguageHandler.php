@@ -2,6 +2,7 @@
 
 namespace Limepie\Form\Parser;
 
+use Limepie\arr;
 use Limepie\Di;
 use Limepie\Exception;
 use Limepie\Form\Parser;
@@ -276,7 +277,7 @@ class LanguageHandler
         $newLangProperties = [];
 
         // 연관 배열인 경우 (언어별 추가 설정이 있는 경우)
-        if (\Limepie\arr\is_assoc($langs)) {
+        if (arr::is_assoc($langs)) {
             // 원하는 순서대로 언어 키 정렬
             \uksort($langs, function ($a, $b) use ($desiredOrder) {
                 $posA = \array_search($a, $desiredOrder);
@@ -291,7 +292,7 @@ class LanguageHandler
                     if ($langProperty) {
                         // 언어별 추가 설정이 있는 경우 병합
                         unset($langProperties[$langKey]['langs']);
-                        $newLangProperties[$langKey] = \Limepie\arr\merge_deep($langProperties[$langKey], $langProperty);
+                        $newLangProperties[$langKey] = arr::merge_deep($langProperties[$langKey], $langProperty);
                     } else {
                         // 추가 설정 없이 기본 속성만 사용
                         $newLangProperties[$langKey] = $langProperties[$langKey];

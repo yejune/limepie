@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Limepie\Form\Generator\Fields;
 
+use Limepie\arr;
 use Limepie\Form\Generator\Fields;
 
 // file-name-alias-seq, cover-url로 구성된다.
@@ -97,7 +98,7 @@ class cover extends Fields
     {
         $html = '';
 
-        if (true === \Limepie\arr\is_file_array($data, false)) {
+        if (true === arr::is_file_array($data, false)) {
             $value = \str_replace('', '', (string) $data['path']);
             $html  = <<<EOT
             <img src="{$value}" />

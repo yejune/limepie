@@ -997,7 +997,7 @@ function legacy_yml_parse_file($file, ?\Closure $callback = null)
         $basepath = \dirname($filepath);
         $spec     = \yaml_parse_file($filepath);
 
-        $data = \Limepie\arr\legacy_refparse($spec, $basepath);
+        $data = arr::legacy_refparse($spec, $basepath);
 
         if (true === isset($callback) && $callback) {
             return $callback($data);
@@ -1617,7 +1617,7 @@ function strtoint($str)
 function http_build_query($data = [], $glue = '=', $separator = '&', $encode = false)
 {
     $results = [];
-    $isAssoc = \Limepie\arr\is_assoc($data);
+    $isAssoc = arr::is_assoc($data);
 
     foreach ($data as $k => $v) {
         if (true === \is_array($v)) {
@@ -1775,7 +1775,7 @@ function aes_decrypt($encrypted, $salt = null)
 
 function ato($array)
 {
-    return \Limepie\arr\to_object($array);
+    return arr::to_object($array);
 }
 
 function add_slash($string)
