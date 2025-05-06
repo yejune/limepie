@@ -8,9 +8,6 @@
     "autoload": {
         "psr-4": {
             "Limepie\\": "src/Limepie/"
-        },
-        "files": [
-            "src/Limepie.php"
-        ]
+        }
     }
 }
