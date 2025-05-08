@@ -6,6 +6,61 @@ namespace Limepie;
 
 class Model extends ModelUtil
 {
+    /**
+     * MySQL 풀텍스트 검색에서 사용할 수 있도록 검색어를 안전하게 만드는 함수.
+     *
+     * @param string $searchTerm 원래 검색어
+     *
+     * @return string 풀텍스트 검색에 안전한 정제된 검색어
+     */
+    public static function safe_fulltext_keyword($searchTerm)
+    {
+        // 공백 제거
+        $searchTerm = \trim($searchTerm);
+
+        if (empty($searchTerm)) {
+            return '';
+        }
+
+        // MySQL 풀텍스트 부울 연산자 제거 (구문 오류 방지)
+        $operators  = ['+', '-', '<', '>', '(', ')', '~', '*', '"', '@', '>', '<'];
+        $searchTerm = \str_replace($operators, ' ', $searchTerm);
+
+        // 여러 공백을 하나로 통합
+        $searchTerm = \preg_replace('/\s+/', ' ', $searchTerm);
+
+        // 단어로 분리
+        $words     = \explode(' ', $searchTerm);
+        $safeWords = [];
+
+        foreach ($words as $word) {
+            $word = \trim($word);
+
+            // 빈 단어 건너뛰기
+            if (empty($word)) {
+                continue;
+            }
+
+            // 너무 짧은 단어 건너뛰기 (MySQL에서 일반적으로 3글자 미만)
+            // MySQL의 ft_min_word_len 설정에 따라 조정이 필요할 수 있음
+            if (\mb_strlen($word) >= 3) {
+                // SQL 인젝션 방지를 위한 특수 문자 제거
+                $word = \preg_replace('/[^\p{L}\p{N}]/u', '', $word);
+
+                if (!empty($word)) {
+                    $safeWords[] = $word;
+                }
+            }
+        }
+
+        // 단어들을 결합
+        if (!empty($safeWords)) {
+            return \implode(' ', $safeWords);
+        }
+
+        return '';
+    }
+
     public function replace() {}
 
     public function buildCreate()
