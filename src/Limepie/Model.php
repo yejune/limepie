@@ -63,13 +63,15 @@ class Model extends ModelUtil
 
     public function replace() {}
 
-    public function buildCreate()
+    public function buildCreate($prefix = '')
     {
         $columns = [];
         $binds   = [];
         $values  = [];
 
         foreach ($this->allColumns as $column) {
+            $columnBindName = $prefix . $column;
+
             if ($this->sequenceName === $column) {
             } else {
                 // create시에는 시간 컬럼 추가하지 않음, 자동 입력
@@ -80,24 +82,24 @@ class Model extends ModelUtil
                         // $binds[':' . $column] = $this->attributes[$column];
                     }
                 } elseif ('ip' === $column) {
-                    $columns[]            = '`' . $column . '`';
-                    $binds[':' . $column] = $this->attributes[$column] ?? \Limepie\getIp();
-                    $values[]             = 'inet6_aton(:' . $column . ')';
+                    $columns[]                    = '`' . $column . '`';
+                    $binds[':' . $columnBindName] = $this->attributes[$column] ?? \Limepie\getIp();
+                    $values[]                     = 'inet6_aton(:' . $columnBindName . ')';
                 } elseif ('aes_serialize' === $this->dataStyles[$column]) {
-                    $columns[]                           = '`' . $column . '`';
-                    $binds[':' . $column]                = \serialize($this->attributes[$column] ?? null);
-                    $binds[':' . $column . '_secretkey'] = Aes::$salt;
-                    $values[]                            = 'AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey)';
+                    $columns[]                                   = '`' . $column . '`';
+                    $binds[':' . $columnBindName]                = \serialize($this->attributes[$column] ?? null);
+                    $binds[':' . $columnBindName . '_secretkey'] = Aes::$salt;
+                    $values[]                                    = 'AES_ENCRYPT(:' . $columnBindName . ', :' . $columnBindName . '_secretkey)';
                 } elseif ('aes' === $this->dataStyles[$column]) {
-                    $columns[]                           = '`' . $column . '`';
-                    $binds[':' . $column]                = $this->attributes[$column] ?? null;
-                    $binds[':' . $column . '_secretkey'] = Aes::$salt;
-                    $values[]                            = 'AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey)';
+                    $columns[]                                   = '`' . $column . '`';
+                    $binds[':' . $columnBindName]                = $this->attributes[$column] ?? null;
+                    $binds[':' . $columnBindName . '_secretkey'] = Aes::$salt;
+                    $values[]                                    = 'AES_ENCRYPT(:' . $columnBindName . ', :' . $columnBindName . '_secretkey)';
                 } elseif ('aes_hex' === $this->dataStyles[$column]) {
-                    $columns[]                           = '`' . $column . '`';
-                    $binds[':' . $column]                = $this->attributes[$column] ?? null;
-                    $binds[':' . $column . '_secretkey'] = Aes::$salt;
-                    $values[]                            = 'HEX(AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey))';
+                    $columns[]                                   = '`' . $column . '`';
+                    $binds[':' . $columnBindName]                = $this->attributes[$column] ?? null;
+                    $binds[':' . $columnBindName . '_secretkey'] = Aes::$salt;
+                    $values[]                                    = 'HEX(AES_ENCRYPT(:' . $columnBindName . ', :' . $columnBindName . '_secretkey))';
                 } elseif (
                     true === isset($this->dataStyles[$column])
                     && 'point' == $this->dataStyles[$column]
@@ -111,10 +113,10 @@ class Model extends ModelUtil
                     if (true === \is_null($value)) {
                         throw new Exception('empty point value');
                     }
-                    $binds[':' . $column . '1'] = $value[0];
-                    $binds[':' . $column . '2'] = $value[1];
+                    $binds[':' . $columnBindName . '1'] = $value[0];
+                    $binds[':' . $columnBindName . '2'] = $value[1];
 
-                    $values[] = 'point(:' . $column . '1, :' . $column . '2)';
+                    $values[] = 'point(:' . $columnBindName . '1, :' . $columnBindName . '2)';
                 } elseif (true === \array_key_exists($column, $this->attributes)) {
                     $value = $this->attributes[$column];
 
@@ -167,6 +169,16 @@ class Model extends ModelUtil
                     // } else
 
                     if (true === isset($this->rawAttributes[$column])) {
+                        // raw는
+                        // ->setRawLocation(
+                        //     'POINT(:x, :y)',
+                        //     [
+                        //         ':x' => $point['x'],
+                        //         ':y' => $point['y'],
+                        //     ]
+                        // )
+                        // 형태나 ? 형태로 들어오므로 bind변수를 prefix할 필요가 없음.
+
                         $columns[] = "`{$this->tableName}`." . '`' . $column . '`';
                         $values[]  = \str_replace('?', ':' . $column, $this->rawAttributes[$column]);
 
@@ -177,9 +189,9 @@ class Model extends ModelUtil
                             throw new Exception($column . ' raw bind error');
                         }
                     } else {
-                        $columns[]            = '`' . $column . '`';
-                        $binds[':' . $column] = $value;
-                        $values[]             = ':' . $column;
+                        $columns[]                    = '`' . $column . '`';
+                        $binds[':' . $columnBindName] = $value;
+                        $values[]                     = ':' . $columnBindName;
                     }
                 }
             }
@@ -211,7 +223,7 @@ class Model extends ModelUtil
         }
 
         if ($this->duplication) {
-            [$duplicationColumns, $duplicationBinds, $duplicationSames] = $this->duplication->buildUpdate();
+            [$duplicationColumns, $duplicationBinds, $duplicationSames] = $this->duplication->buildUpdate('dup_');
 
             $sql .= ' ON DUPLICATE KEY UPDATE ' . \implode(', ', $duplicationColumns);
             $binds += $duplicationBinds;
@@ -223,6 +235,8 @@ class Model extends ModelUtil
             $this->print($sql, $binds);
             Timer::start();
         }
+        $this->query = $sql;
+        $this->binds = $binds;
 
         if ($this->sequenceName) {
             $primaryKey                              = $this->getConnect()->setAndGetSequnce($sql, $binds);
@@ -247,13 +261,14 @@ class Model extends ModelUtil
         return false;
     }
 
-    public function buildUpdate()
+    public function buildUpdate($prefix = '')
     {
         $columns = [];
         $binds   = [];
         $sames   = [];
 
         foreach ($this->allColumns as $column) {
+            $columnBindName = $prefix . $column;
             // db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 않음
 
             $attr     = $this->attributes[$column]       ?? null;
@@ -301,25 +316,25 @@ class Model extends ModelUtil
                     } else {
                         // 수정 날짜는 변경 할수있음.
                         if ($this->attributes[$column] ?? false) {
-                            $columns[]            = "`{$this->tableName}`." . '`' . $column . '` = :' . $column;
-                            $binds[':' . $column] = $this->attributes[$column];
+                            $columns[]                    = "`{$this->tableName}`." . '`' . $column . '` = :' . $columnBindName;
+                            $binds[':' . $columnBindName] = $this->attributes[$column];
                         }
                     }
                 } elseif ('ip' === $column) {
-                    $columns[]            = "`{$this->tableName}`." . '`' . $column . '` = inet6_aton(:' . $column . ')';
-                    $binds[':' . $column] = $this->attributes[$column] ?? \Limepie\getIp();
+                    $columns[]                    = "`{$this->tableName}`." . '`' . $column . '` = inet6_aton(:' . $columnBindName . ')';
+                    $binds[':' . $columnBindName] = $this->attributes[$column] ?? \Limepie\getIp();
                 } elseif ('aes_serialize' === $this->dataStyles[$column]) {
-                    $columns[]                           = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey)';
-                    $binds[':' . $column]                = \serialize($this->attributes[$column] ?? null);
-                    $binds[':' . $column . '_secretkey'] = Aes::$salt;
+                    $columns[]                                   = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $columnBindName . ', :' . $columnBindName . '_secretkey)';
+                    $binds[':' . $columnBindName]                = \serialize($this->attributes[$column] ?? null);
+                    $binds[':' . $columnBindName . '_secretkey'] = Aes::$salt;
                 } elseif ('aes' === $this->dataStyles[$column]) {
-                    $columns[]                           = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey)';
-                    $binds[':' . $column]                = $this->attributes[$column] ?? null;
-                    $binds[':' . $column . '_secretkey'] = Aes::$salt;
+                    $columns[]                                   = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $columnBindName . ', :' . $columnBindName . '_secretkey)';
+                    $binds[':' . $columnBindName]                = $this->attributes[$column] ?? null;
+                    $binds[':' . $columnBindName . '_secretkey'] = Aes::$salt;
                 } elseif ('aes_hex' === $this->dataStyles[$column]) {
-                    $columns[]                           = "`{$this->tableName}`." . '`' . $column . '` = HEX(AES_ENCRYPT(:' . $column . ', :' . $column . '_secretkey))';
-                    $binds[':' . $column]                = $this->attributes[$column] ?? null;
-                    $binds[':' . $column . '_secretkey'] = Aes::$salt;
+                    $columns[]                                   = "`{$this->tableName}`." . '`' . $column . '` = HEX(AES_ENCRYPT(:' . $columnBindName . ', :' . $columnBindName . '_secretkey))';
+                    $binds[':' . $columnBindName]                = $this->attributes[$column] ?? null;
+                    $binds[':' . $columnBindName . '_secretkey'] = Aes::$salt;
                 } elseif (
                     true === isset($this->dataStyles[$column])
                     && 'point' == $this->dataStyles[$column]
@@ -332,10 +347,10 @@ class Model extends ModelUtil
                             throw new Exception('empty point value');
                         }
 
-                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = point(:' . $column . '1, :' . $column . '2)';
+                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = point(:' . $columnBindName . '1, :' . $columnBindName . '2)';
 
-                        $binds[':' . $column . '1'] = $value[0];
-                        $binds[':' . $column . '2'] = $value[1];
+                        $binds[':' . $columnBindName . '1'] = $value[0];
+                        $binds[':' . $columnBindName . '2'] = $value[1];
                     }
                 } elseif (true === \array_key_exists($column, $this->attributes)) {
                     $value = $this->attributes[$column];
@@ -387,6 +402,17 @@ class Model extends ModelUtil
 
                         $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . "IF({$name} > 0, {$name} - " . $this->minusAttributes[$column] . ', 0)';
                     } elseif (true === isset($this->rawAttributes[$column])) {
+                        // raw는
+                        // ->setRawLocation(
+                        //     'POINT(:x, :y)',
+                        //     [
+                        //         ':x' => $point['x'],
+                        //         ':y' => $point['y'],
+                        //     ]
+                        // )
+                        // 형태나 ? 형태로 들어오므로 bind변수를 prefix할 필요가 없음.
+                        // ? 의 경우에 대한 보완 필요. 겹칠수도 있음.
+
                         $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . \str_replace('?', ':' . $column, $this->rawAttributes[$column]);
 
                         if (null === $value) {
@@ -396,8 +422,8 @@ class Model extends ModelUtil
                             throw new Exception($column . ' raw bind error');
                         }
                     } else {
-                        $columns[]            = "`{$this->tableName}`." . '`' . $column . '` = :' . $column;
-                        $binds[':' . $column] = $value;
+                        $columns[]                    = "`{$this->tableName}`." . '`' . $column . '` = :' . $columnBindName;
+                        $binds[':' . $columnBindName] = $value;
                     }
                 }
             }

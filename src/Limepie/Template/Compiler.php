@@ -701,6 +701,7 @@ class Compiler
             \preg_match('/^
             (:P<unknown>(?:\.\s*)+)
             |(?P<number>(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+\-]?\d+)?)
+            |(?P<array_concat>\.\.\.)
             |(?P<assoc_array>=\>)
             |(?P<object_sign>-\>)
             |(?P<clone_sign>clone )
@@ -811,8 +812,13 @@ class Compiler
             }
 
             switch ($current['name']) {
+                case 'array_concat':
+                    // \prx($xpr, $prev, $current, __LINE__);
+                    $xpr .= $current['value'];
+
+                    break;
                 case 'string':
-                    if (false === \in_array($prev['name'], ['', 'clone_sign', 'right_parenthesis', 'left_parenthesis', 'left_bracket', 'assign', 'object_sign', 'static_object_sign', 'namespace_sigh', 'double_operator', 'operator', 'assoc_array', 'compare', 'quote_number_concat', 'assign', 'string_concat', 'comma', 'sam', 'sam2'], true)) {
+                    if (false === \in_array($prev['name'], ['', 'clone_sign', 'right_parenthesis', 'left_parenthesis', 'left_bracket', 'assign', 'object_sign', 'static_object_sign', 'namespace_sigh', 'double_operator', 'operator', 'assoc_array', 'compare', 'quote_number_concat', 'assign', 'string_concat', 'comma', 'sam', 'sam2', 'array_concat'], true)) {
                         if (true === $this->debug) {
                             \pr($xpr, $prev, $current, __LINE__);
                         }
@@ -1141,11 +1147,19 @@ class Compiler
 
                     break;
                 case 'right_bracket':
+                    // \prx($xpr, $prev, $current, __LINE__);
                     $last_stat = \array_pop($stat);
 
-                    if ('left_bracket' !== $last_stat['name']) {
+                    // try {
+                    if ($last_stat && 'left_bracket' !== $last_stat['name']) {
                         throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
+                    // } catch (\Exception $e) {
+                    //     \prx($xpr, $prev, $current, $last_stat, __LINE__);
+                    //     \prx($e);
+
+                    //     exit;
+                    // }
 
                     if (false === \in_array($prev['name'], ['quote', 'left_bracket', 'right_parenthesis', 'comma', 'string', 'number', 'string_number', 'right_bracket'], true)) {
                         throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);

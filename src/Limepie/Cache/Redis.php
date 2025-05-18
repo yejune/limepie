@@ -63,6 +63,7 @@ class Redis
      */
     public function set(string $key, $value, int $ttl = 0) : bool
     {
+        $key         = $this->getDomainKey($key);
         $storedValue = \is_int($value) ? $value : $this->serialize($value);
 
         if ($ttl <= 0) {
@@ -99,6 +100,8 @@ class Redis
      */
     public function delete(string $key) : bool
     {
+        $key = $this->getDomainKey($key);
+
         if (\str_ends_with($key, '*')) {
             // prefix로 끝나는 경우 scan으로 삭제
             $this->deleteScan($this->getDomainKey($key));
@@ -113,6 +116,7 @@ class Redis
     public function deleteScan(string $prefix)
     {
         $iterator = null;
+        $prefix   = $this->getDomainKey($prefix);
 
         do {
             // SCAN으로 키들을 가져오기 (한 번에 100개씩)
@@ -147,6 +151,8 @@ class Redis
      */
     public function increment(string $key, int $value = 1) : int
     {
+        $key = $this->getDomainKey($key);
+
         return $this->redis->incrBy($key, $value);
     }
 
@@ -160,6 +166,8 @@ class Redis
      */
     public function decrement(string $key, int $value = 1) : int
     {
+        $key = $this->getDomainKey($key);
+
         return $this->redis->decrBy($key, $value);
     }
 

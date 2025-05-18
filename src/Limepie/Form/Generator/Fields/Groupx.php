@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Limepie\Form\Generator\Fields;
 
+use Limepie\arr;
 use Limepie\ArrayObject;
 use Limepie\Exception;
 use Limepie\Form\Generator\Fields;
@@ -229,7 +230,7 @@ class Group extends Fields
                 $propertyValue = [...$propertyValue, ...$nextData->property];
                 $nextData      = $nextData->value;
 
-                if (\Limepie\arr\is_assoc($nextData)) {
+                if (arr::is_assoc($nextData)) {
                     $isArray = false;
                 }
             }

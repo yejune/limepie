@@ -94,6 +94,8 @@ class ModelBase extends ArrayObject
 
     public static $debug = false;
 
+    public static $debugBind = false;
+
     public $parentNode = false;
 
     public $parentNodeFlag = 0;
@@ -814,7 +816,15 @@ class ModelBase extends ArrayObject
             }
         }
         echo '<tr><td>';
-        echo (new SqlFormatter())->format($this->replaceQueryBinds($sql, $binds)); // , $binds);
+
+        if (self::$debugBind) {
+            echo (new SqlFormatter())->format($sql); // , $binds);
+            echo '<pre>';
+            \print_r($this->getQueryBinds($binds));
+            echo '</pre>';
+        } else {
+            echo (new SqlFormatter())->format($this->replaceQueryBinds($sql, $binds)); // , $binds);
+        }
 
         if ($data && isset($data[0])) {
             echo '<style>
@@ -1432,7 +1442,23 @@ class ModelBase extends ArrayObject
 
     public function getQuery()
     {
-        return $this->replaceQueryBinds($this->query, $this->binds);
+        return [$this->query, $this->binds];
+        // return $this->replaceQueryBinds($this->query, $this->binds);
+    }
+
+    public function getQueryBinds(array $binds = [])
+    {
+        $result = [];
+
+        foreach ($binds as $key => $value) {
+            if (0 === \strpos($key, ':aes_') || false !== \strpos($key, '_aes_')) {
+                $result[$key] = '[hidden]';
+            } else {
+                $result[$key] = $value;
+            }
+        }
+
+        return $result;
     }
 
     /**

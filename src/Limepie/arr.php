@@ -535,13 +535,13 @@ class Arr
                         // 배열인 경우 재귀적으로 to_html 호출 (히든 키도 전달)
                         $t .= '<tr class="bg-soft-primary"><th>' . $key . '</th><td>' . self::to_html($value, $hidden_keys) . '</td></tr>';
                     } else {
-                        $t .= '<tr class="bg-soft-primary"><th>' . $key . '</th><td>' . $display_value . '</td></tr>';
+                        $t .= '<tr class="bg-soft-primary"><th>' . $key . '</th><td>' . \Limepie\eprint($display_value) . '</td></tr>';
                     }
                 } else {
                     if (true === \is_array($value)) {
                         $t .= '<tr class="bg-soft-primary"><td>' . self::to_html($value, $hidden_keys) . '</td></tr>';
                     } else {
-                        $t .= '<tr class="bg-soft-primary"><td>' . $value . '</td></tr>';
+                        $t .= '<tr class="bg-soft-primary"><td>' . \Limepie\eprint($value) . '</td></tr>';
                     }
                 }
             }

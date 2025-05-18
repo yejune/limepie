@@ -1331,11 +1331,50 @@ function random_uuid()
     return \uuid_create(\UUID_TYPE_RANDOM);
 }
 
+/**
+ * UUID 생성 함수
+ * RFC9562 UUIDs(v6, v7)를 지원하는 util-linux 2.41 이상에서는 UUID v7을 사용.
+ *
+ * @param int $type UUID 타입 (기본값: UUID_TYPE_TIME)
+ *
+ * @return string 생성된 UUID 문자열
+ */
 function uuid(int $type = \UUID_TYPE_TIME) : string
 {
+    // UUID v7 지원 확인 및 사용 (util-linux 2.41 이상)
+    if (\defined('UUID_TYPE_TIME_V7') && \UUID_TYPE_TIME === $type) {
+        return \uuid_create(\UUID_TYPE_TIME_V7);
+    }
+
+    // 참고: UUID_TYPE_DCE는 더 이상 사용되지 않음 (대신 UUID_TYPE_RANDOM 사용)
+    // 참고: UUID_TYPE_NAME은 더 이상 사용되지 않음 (대신 UUID_TYPE_TIME 사용)
+
+    // 기존 타입 사용
     return \uuid_create($type);
 }
 
+function uuid7()
+{
+    static $last_timestamp = 0;
+    $unixts_ms             = (int) (\microtime(true) * 1000);
+
+    if ($last_timestamp >= $unixts_ms) {
+        $unixts_ms = $last_timestamp + 1;
+    }
+    $last_timestamp = $unixts_ms;
+    $data           = \random_bytes(10);
+    $data[0]        = \chr((\ord($data[0]) & 0x0F) | 0x70); // set version
+    $data[2]        = \chr((\ord($data[2]) & 0x3F) | 0x80); // set variant
+
+    return \vsprintf(
+        '%s%s-%s-%s-%s-%s%s%s',
+        \str_split(
+            \str_pad(\dechex($unixts_ms), 12, '0', \STR_PAD_LEFT)
+                . \bin2hex($data),
+            4
+        )
+    );
+}
 // The code is inspired by the following discussions and post:
 // http://stackoverflow.com/questions/5483851/manually-parse-raw-http-data-with-php/5488449#5488449
 // http://www.chlab.ch/blog/archives/webdevelopment/manually-parse-raw-http-data-php
@@ -2719,10 +2758,14 @@ function cprint($content, $nl2br = false)
     $content = \trim((string) $content);
 
     if ($content) {
+        // HTML 태그 제거
         $content = \strip_tags($content);
 
+        // HTML 엔티티 인코딩
+        $content = \htmlspecialchars($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
         if ($nl2br) {
-            $content = \nl2br($content);
+            $content = nl2br($content);
         }
 
         return $content;

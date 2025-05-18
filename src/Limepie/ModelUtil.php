@@ -43,10 +43,10 @@ class ModelUtil extends ModelBase
                             $this->binds[':' . $prefix . $alias . '_secretkey'] = Aes::$salt;
                         }
                     } elseif ('aes_hex' === $this->dataStyles[$alias]) {
-                        $columns[] = "AES_DECRYPT(UNHEX(`{$this->tableAliasName}`." . '`' . $alias . '`), :' . $prefix . $alias . '_secretkey' . $rand . ') AS `' . $prefix . $alias . '`';
+                        $columns[] = "AES_DECRYPT(UNHEX(`{$this->tableAliasName}`." . '`' . $alias . '`), :' . $prefix . $alias . '_secretkey_' . $rand . ') AS `' . $prefix . $alias . '`';
 
                         if (false === $isCount) {
-                            $this->binds[':' . $prefix . $alias . '_secretkey' . $rand . ''] = Aes::$salt;
+                            $this->binds[':' . $prefix . $alias . '_secretkey_' . $rand . ''] = Aes::$salt;
                         }
                     } elseif (
                         true === isset($this->dataStyles[$alias])
@@ -76,10 +76,10 @@ class ModelUtil extends ModelBase
                             }
                         } else {
                             if (isset($this->dataStyles[$alias->columnName]) && 'aes_hex' === $this->dataStyles[$alias->columnName]) {
-                                $columns[] = "AES_DECRYPT(UNHEX(`{$this->tableAliasName}`." . '`' . $alias->columnName . '`), :' . $prefix . $alias->aliasName . '_secretkey' . $rand . ') AS `' . $prefix . $alias->aliasName . '`';
+                                $columns[] = "AES_DECRYPT(UNHEX(`{$this->tableAliasName}`." . '`' . $alias->columnName . '`), :' . $prefix . $alias->aliasName . '_secretkey_' . $rand . ') AS `' . $prefix . $alias->aliasName . '`';
 
                                 if (false === $isCount) {
-                                    $this->binds[':' . $prefix . $alias->aliasName . '_secretkey' . $rand . ''] = Aes::$salt;
+                                    $this->binds[':' . $prefix . $alias->aliasName . '_secretkey_' . $rand . ''] = Aes::$salt;
                                 }
                             } elseif (false === \strpos($alias->columnName, '(')) {
                                 $columns[] = "`{$this->tableAliasName}`." . '`' . $alias->columnName . '`' . $aliasString;

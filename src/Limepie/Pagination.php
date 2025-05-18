@@ -201,7 +201,8 @@ class Pagination
         $urlPattern = null,
         $returnTypeNull = null,
         ?int $maxPage = null, // 최대 페이지 제한 추가
-        $page = null
+        $page = null,
+        $totalCount = null
     ) : array {
         if (!$listModel) {
             $listModel = clone $countModel;
@@ -209,7 +210,9 @@ class Pagination
 
         $argPage = (int) ($page ?? $_REQUEST['page'] ?? 1);
 
-        $totalCount = $countModel->getCount();
+        if (!$totalCount) {
+            $totalCount = $countModel->getCount();
+        }
 
         if (!$urlPattern) {
             $qs = $_SERVER['QUERY_STRING'] ?? '';
