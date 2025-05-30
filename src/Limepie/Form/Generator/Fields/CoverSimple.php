@@ -47,8 +47,15 @@ class CoverSimple extends Fields
         }
 
         if (true === isset($property['prepend']) && $property['prepend']) {
+            $prependText = $property['prepend'];
+
+            if (\is_array($property['prepend']) && $property['prepend'][\Limepie\get_language()]) {
+                $prependText = $property['prepend'][\Limepie\get_language()];
+            } else {
+                $prependText = '';
+            }
             $prepend = <<<EOD
-            <span class="input-group-text{$prependClass}">{$property['prepend']}</span>
+            <span class="input-group-text{$prependClass}">{$prependText}</span>
             EOD;
         }
 
@@ -57,10 +64,14 @@ class CoverSimple extends Fields
         if ($data) {
             $inputType = 'text';
         }
+
+        $fileColumnName  = $property['file_column_name']  ?? 'file_name_alias_seq';
+        $imageColumnName = $property['image_column_name'] ?? 'url';
+
         // $value  = \htmlspecialchars((string) $data['name']);
         $data                        = $data ?: [];
-        $data['url']                 = $data['url']                 ?? '';
-        $data['file_name_alias_seq'] = $data['file_name_alias_seq'] ?? '';
+        $data['url']                 = $data[$imageColumnName] ?? '';
+        $data['file_name_alias_seq'] = $data[$fileColumnName]  ?? '';
 
         $button = '';
 

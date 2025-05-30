@@ -472,6 +472,16 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         return $default;
     }
 
+    public function values()
+    {
+        return \array_values($this->attributes);
+    }
+
+    public function keys()
+    {
+        return \array_keys($this->attributes);
+    }
+
     public function children(array $data, array $maps = [], $params = [])
     {
         $request   = Di::getRequest();

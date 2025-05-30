@@ -10,6 +10,8 @@ class Exception extends \Exception
 
     public $statusCode = 400;
 
+    public $value;
+
     public function field($field)
     {
         return $this->setField($field);
@@ -59,5 +61,10 @@ class Exception extends \Exception
     public function getStatusCode()
     {
         return $this->statusCode;
+    }
+
+    public function getValue()
+    {
+        return $this->value;
     }
 }

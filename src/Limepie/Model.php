@@ -1058,9 +1058,10 @@ class Model extends ModelUtil
         $condition .= $this->condition;
         $binds += $this->binds;
 
-        $orderBy = $this->getOrderBy();
-        $limit   = $this->getLimit();
-        $join    = '';
+        $orderBy    = $this->getOrderBy();
+        $limit      = $this->getLimit();
+        $groupLimit = $this->getGroupLimit();
+        $join       = '';
 
         if ($this->joinModels) {
             $joinInfomation = $this->getJoin();
@@ -1211,6 +1212,7 @@ class Model extends ModelUtil
         $groupBy    = $this->getGroupBy();
         $orderBy    = $this->getOrderBy();
         $limit      = $this->getLimit();
+        $groupLimit = $this->getGroupLimit();
         $join       = '';
         $forceIndex = \implode(', ', $this->forceIndexes);
 
@@ -1245,18 +1247,44 @@ class Model extends ModelUtil
         if ($this->rawColumnString) {
             $selectColumns .= ',' . $this->rawColumnString;
         }
-        $sql = <<<SQL
-            SELECT
+
+        $sql = '';
+
+        if ($groupLimit) {
+            $sql = <<<SQL
+                SELECT
                 {$selectColumns}
+                ,
+                ROW_NUMBER() OVER (PARTITION BY `{$this->tableAliasName}`.`{$this->rightKeyName}` {$orderBy}) as row_num
+            SQL;
+        } else {
+            $sql = <<<SQL
+                SELECT
+                {$selectColumns}
+
+            SQL;
+        }
+        $sql .= <<<SQL
+
             FROM
                 `{$this->tableName}` AS `{$this->tableAliasName}`
-            {$forceIndex}
-            {$join}
-            {$condition}
-            {$groupBy}
-            {$orderBy}
-            {$limit}
+                {$forceIndex}
+                {$join}
+                {$condition}
+                {$groupBy}
         SQL;
+
+        if ($groupLimit) {
+            $sql = <<<SQL
+                SELECT *
+                FROM (
+                    {$sql}
+                ) AS ranked
+                WHERE ranked.row_num <= 6
+            SQL;
+        } else {
+            $sql .= $orderBy . ' ' . $limit;
+        }
 
         $this->condition = $condition;
         $this->query     = $sql;
@@ -1449,9 +1477,9 @@ class Model extends ModelUtil
                     $keyName = ($this->keyName)($row);
                 } else {
                     if (false === \array_key_exists($this->keyName, $row)) {
-                        if ($parentTableName) {
-                            throw new Exception('gets ' . $this->tableName . ' "> ' . $parentTableName . ' ' . $this->keyName . '" column not found #5');
-                        }
+                        // if ($parentTableName) {
+                        //     throw new Exception('gets ' . $this->tableName . ' "> ' . $parentTableName . ' ' . $this->keyName . '" column not found #5');
+                        // }
 
                         throw new Exception('gets ' . $this->tableName . ' "' . $this->keyName . '" column not found #5');
                     }

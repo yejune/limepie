@@ -12,6 +12,8 @@ class Message
 
     public $type;
 
+    public $value;
+
     public function __construct($message)
     {
         $this->message = $message;
@@ -78,5 +80,10 @@ class Message
     public function getMessage()
     {
         return $this->message;
+    }
+
+    public function getValue()
+    {
+        return $this->value;
     }
 }

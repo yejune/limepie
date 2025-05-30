@@ -23,7 +23,69 @@ function ___($domain, $string, $a, $b)
     return \dngettext($domain, $string, $a, $b);
 }
 
-// 확장자를 제외한 파이명을 length만큼 잘라줌
+function validate_csrf_token($token)
+{
+    // 세션 확인
+    if (\PHP_SESSION_ACTIVE !== \session_status()) {
+        return false;
+    }
+
+    // 기본 검증
+    if (empty($token)
+        || empty($_SESSION['csrf_token'])
+        || empty($_SESSION['csrf_token_expiry'])) {
+        return false;
+    }
+
+    // 만료 시간 확인
+    if (\time() > $_SESSION['csrf_token_expiry']) {
+        return false;
+    }
+
+    // 토큰 비교
+    return $_SESSION['csrf_token'] == $token;
+}
+
+/**
+ * CSRF 토큰 강제 새로 생성 (기존 토큰 무시).
+ *
+ * @param int $expiry 토큰 만료 시간(초), 기본값: 3600초(1시간)
+ *
+ * @return string 새로운 CSRF 토큰
+ */
+function regenerate_csrf_token(int $expiry = 3600) : string
+{
+    // 세션이 시작되지 않았다면 시작
+    if (\PHP_SESSION_NONE === \session_status()) {
+        \session_start();
+    }
+
+    if (empty($_SESSION['csrf_token']) || \time() > $_SESSION['csrf_token_expiry']) {
+        $_SESSION['csrf_token']        = \bin2hex(\random_bytes(32));
+        $_SESSION['csrf_token_expiry'] = \time() + 3600; // 삭제하지 않아도 1시간만 유효
+    }
+
+    return $_SESSION['csrf_token'];
+}
+
+/**
+ * CSRF 토큰 완전 삭제.
+ *
+ * @return bool 삭제 성공 여부
+ */
+function remove_csrf_token() : bool
+{
+    if (\PHP_SESSION_ACTIVE !== \session_status()) {
+        return false;
+    }
+
+    // 세션에서 CSRF 토큰 관련 데이터 모두 제거
+    unset($_SESSION['csrf_token'], $_SESSION['csrf_token_expiry']);
+
+    return true;
+}
+
+// 확장자를 제외한 파일명을 length만큼 잘라줌
 function truncate_filename($filename, $maxLength = 200)
 {
     $ext        = \pathinfo($filename, PATHINFO_EXTENSION);
@@ -31,6 +93,19 @@ function truncate_filename($filename, $maxLength = 200)
     $name       = \mb_substr(\pathinfo($filename, PATHINFO_FILENAME), 0, $maxLength - \mb_strlen($extWithDot));
 
     return $name . $extWithDot;
+}
+
+function gen_handle(int $length = 15) : string
+{
+    $chars    = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    $maxIndex = \strlen($chars) - 1;
+    $id       = '';
+
+    for ($i = 0; $i < $length; ++$i) {
+        $id .= $chars[\random_int(0, $maxIndex)];
+    }
+
+    return $id;
 }
 
 function str_uuid($string)
@@ -1342,8 +1417,12 @@ function random_uuid()
 function uuid(int $type = \UUID_TYPE_TIME) : string
 {
     // UUID v7 지원 확인 및 사용 (util-linux 2.41 이상)
-    if (\defined('UUID_TYPE_TIME_V7') && \UUID_TYPE_TIME === $type) {
-        return \uuid_create(\UUID_TYPE_TIME_V7);
+    if (\UUID_TYPE_TIME === $type) {
+        if (\defined('UUID_TYPE_TIME_V7')) {
+            return \uuid_create(\UUID_TYPE_TIME_V7);
+        }
+
+        return \Limepie\uuid7();
     }
 
     // 참고: UUID_TYPE_DCE는 더 이상 사용되지 않음 (대신 UUID_TYPE_RANDOM 사용)
@@ -1353,28 +1432,73 @@ function uuid(int $type = \UUID_TYPE_TIME) : string
     return \uuid_create($type);
 }
 
+/**
+ * RFC 9562 명세를 따르는 UUID v7 생성.
+ *
+ * UUID v7 형식:
+ * - 처음 48비트: Unix 타임스탬프(밀리초)
+ * - 다음 12비트: 시퀀스 카운터 또는 랜덤
+ * - 2비트: 변형(10xx)
+ * - 4비트: 버전(0111)
+ * - 나머지 62비트: 랜덤 데이터
+ *
+ * @return string 표준 UUID v7 문자열
+ */
 function uuid7()
 {
     static $last_timestamp = 0;
-    $unixts_ms             = (int) (\microtime(true) * 1000);
+    static $counter        = 0;
 
-    if ($last_timestamp >= $unixts_ms) {
-        $unixts_ms = $last_timestamp + 1;
+    // 현재 시간 (밀리초 단위)
+    $timestamp_ms = (int) (\microtime(true) * 1000);
+
+    // 타임스탬프 충돌 처리
+    if ($timestamp_ms === $last_timestamp) {
+        $counter = ($counter + 1) & 0xFFF;
+
+        if (0 === $counter) {
+            ++$timestamp_ms;
+        }
+    } else {
+        $counter        = 0;
+        $last_timestamp = $timestamp_ms;
     }
-    $last_timestamp = $unixts_ms;
-    $data           = \random_bytes(10);
-    $data[0]        = \chr((\ord($data[0]) & 0x0F) | 0x70); // set version
-    $data[2]        = \chr((\ord($data[2]) & 0x3F) | 0x80); // set variant
 
-    return \vsprintf(
-        '%s%s-%s-%s-%s-%s%s%s',
-        \str_split(
-            \str_pad(\dechex($unixts_ms), 12, '0', \STR_PAD_LEFT)
-                . \bin2hex($data),
-            4
-        )
+    // 48비트 타임스탬프를 16진수로 변환
+    $time_hex = \str_pad(\dechex($timestamp_ms), 12, '0', STR_PAD_LEFT);
+
+    // 카운터를 16진수로 변환
+    $counter_hex = \str_pad(\dechex($counter), 3, '0', STR_PAD_LEFT);
+
+    // 랜덤 데이터 생성 (충분한 양의 랜덤 바이트 확보)
+    $random_bytes = \random_bytes(16); // 충분한 랜덤 바이트 생성
+
+    // 버전 비트 설정 (버전 7)
+    $version_byte    = \chr((\ord($random_bytes[0]) & 0x0F) | 0x70);
+    $random_bytes[0] = $version_byte;
+
+    // 변형 비트 설정 (RFC 4122 변형)
+    $variant_byte    = \chr((\ord($random_bytes[1]) & 0x3F) | 0x80);
+    $random_bytes[1] = $variant_byte;
+
+    // 랜덤 바이트를 16진수로 변환
+    $random_hex = \bin2hex($random_bytes);
+
+    // UUID 형식으로 조합
+    return \sprintf(
+        '%s-%s-%s-%s-%s',
+        \substr($time_hex, 0, 8),          // 8자
+        \substr($time_hex, 8, 4),          // 4자
+        '7' . \substr($counter_hex, 0, 3), // 4자 (버전 + 카운터)
+        \substr($random_hex, 2, 4),        // 4자 (변형 비트 포함)
+        \substr($random_hex, 6, 12)        // 12자
     );
 }
+
+// 사용 예시
+// $uuid = uuid7();
+// echo "Generated UUID v7: " . $uuid;
+
 // The code is inspired by the following discussions and post:
 // http://stackoverflow.com/questions/5483851/manually-parse-raw-http-data-with-php/5488449#5488449
 // http://www.chlab.ch/blog/archives/webdevelopment/manually-parse-raw-http-data-php
@@ -2722,50 +2846,189 @@ function nl2br($string)
     return \str_replace(["\r\n", "\r", "\n"], '<br />', $string);
 }
 
-// 테그를 그대로 보여줌, escape print
-function eprint($content, $nl2br = false)
+/**
+ * 태그를 안전하게 텍스트로 표시하는 함수 (Escape Print)
+ * HTML 태그, 인코딩된 XSS 및 다양한 주입 공격으로부터 보호합니다.
+ *
+ * @param mixed|string $content 출력할 콘텐츠
+ * @param bool         $nl2br   줄바꿈을 <br> 태그로 변환할지 여부
+ *
+ * @return string 안전하게 처리된 출력 문자열
+ */
+function eprint($content, $nl2br = false) : string
 {
+    // 입력 정리 및 문자열 변환
     $content = \trim((string) $content);
 
-    if ($content) {
-        if (true) {
-            $content = \str_replace(['<', '>'], ['&lt;', '&gt;'], $content);
-        }
-
-        if ($nl2br) {
-            $content = \nl2br($content);
-        }
-
-        return $content;
+    if (empty($content)) {
+        return '';
     }
 
-    return '';
-}
+    // 1. 인코딩된 XSS 복원 (예: &lt;script&gt;)
+    $content = \html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-function cprint_tags($content, null|array|string $allowTags = null)
-{
-    $content = \trim((string) $content);
+    // 2. 모든 위험 문자 이스케이프 (<, >, ", ', &)
+    $content = \htmlspecialchars($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-    if ($content) {
-        return \strip_tags($content, $allowTags);
+    // 3. 줄바꿈 처리 (선택 사항)
+    if ($nl2br) {
+        $content = \nl2br($content);
     }
 
-    return '';
+    return $content;
 }
-// 테그를 삭제하고 보여줌. <테그아님>도 strip_tags에 의해 삭제됨, clean print
-function cprint($content, $nl2br = false)
+
+// Clean Print
+function cprint_tags(string $content, null|array|string $allowedTags = [], bool $sanitizeAttributes = false) : string
+{
+    // 설정 변수들을 정의
+    $allowedDomains = [
+        // YouTube 관련 도메인
+        'youtube.com',
+        'www.youtube.com',
+        'youtu.be',           // YouTube 단축 URL
+        'm.youtube.com',      // 모바일 버전
+        'youtube-nocookie.com', // 프라이버시 강화 버전
+        'www.youtube-nocookie.com',
+        'yt3.ggpht.com',      // YouTube 썸네일 도메인
+        'i.ytimg.com',        // YouTube 이미지 도메인
+        'youtubei.googleapis.com', // YouTube API 도메인
+
+        // Instagram 관련 도메인
+        'instagram.com',
+        'www.instagram.com',
+        'm.instagram.com',     // 모바일 버전
+        'instagr.am',          // 단축 도메인
+        'cdninstagram.com',    // Instagram CDN
+        'scontent.cdninstagram.com',
+        'scontent-gmp1-1.cdninstagram.com', // 지역별 CDN
+        'graph.instagram.com', // Instagram API
+    ];
+
+    // CSS 함수들
+    $dangerousCssFunctions = [
+        'expression',
+        'behavior',
+        'eval',
+        'url',
+        'calc',
+        'attr',
+    ];
+
+    //  프로토콜들
+    $dangerousProtocols = [
+        'javascript',
+        'data',
+        'vbscript',
+        'file',  // file: 프로토콜도 위험할 수 있음
+    ];
+
+    $content = \trim($content);
+
+    if (!$content) {
+        return '';
+    }
+
+    // 1. 인코딩된 XSS 우회 제거
+    $content = \html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+    // 2. 허용 태그 처리 - 코드 가독성 개선
+    $allowedTagsStr = '';
+
+    if (\is_array($allowedTags)) {
+        $allowedTagsStr = '<' . \implode('><', \array_map('trim', $allowedTags)) . '>';
+    } elseif (\is_string($allowedTags)) {
+        if (\str_contains($allowedTags, ',')) {
+            $allowedTagsStr = '<' . \implode('><', \array_map('trim', explode(',', $allowedTags))) . '>';
+        } else {
+            $allowedTagsStr = $allowedTags; // 이미 포맷된 경우
+        }
+    }
+
+    // 3. strip_tags 처리
+    $filtered = \strip_tags($content, $allowedTagsStr);
+
+    // 4. 속성 필터링
+    if ($sanitizeAttributes) {
+        // on* 속성 제거 - 이스케이프 패턴 개선
+        $filtered = \preg_replace('/\s+on\w+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]*)/i', '', $filtered);
+
+        // 위험한 프로토콜 제거 - 동적 프로토콜 목록 사용
+        $protocolPattern = \implode('|', $dangerousProtocols);
+        $filtered        = \preg_replace('/\s+(href|src|action|formaction)\s*=\s*([\'"]?)(' . $protocolPattern . '):[^\'">\s]*/i', ' $1=$2#', $filtered);
+
+        // style 속성 정제 - 동적 CSS 함수 목록 사용
+        $filtered = \preg_replace_callback('/\s+style\s*=\s*("[^"]*"|\'[^\']*\')/i', function ($match) use ($dangerousCssFunctions) {
+            $style      = $match[1];
+            $cssPattern = '(' . \implode('|', $dangerousCssFunctions) . ')\s*\(/i';
+            $cleaned    = \preg_replace($cssPattern, 'removed(', $style);
+
+            return ' style=' . $cleaned;
+        }, $filtered);
+
+        // iframe/object/embed src 도메인 화이트리스트 - 개선된 도메인 체크
+        $filtered = \preg_replace_callback('/<(iframe|object|embed)([^>]*)>/i', function ($matches) use ($allowedDomains) {
+            $tag   = $matches[1];
+            $attrs = $matches[2];
+
+            if (\preg_match('/\s+src\s*=\s*([\'"])(.*?)\1/i', $attrs, $srcMatch)) {
+                $src       = $srcMatch[2];
+                $isAllowed = false;
+
+                // URL에서 도메인 추출 (URL 파싱)
+                $domain = '';
+
+                if (\preg_match('/^https?:\/\/([^\/]+)/', $src, $domainMatch)) {
+                    $domain = \strtolower($domainMatch[1]);
+                    // 서브도메인 처리 (foo.example.com -> example.com)
+                    $domainParts = explode('.', $domain);
+
+                    if (count($domainParts) > 2) {
+                        $domain = \implode('.', \array_slice($domainParts, -2));
+                    }
+                }
+
+                // 허용 도메인 체크
+                foreach ($allowedDomains as $allowedDomain) {
+                    if ($domain                                             === \strtolower($allowedDomain)
+                        || \substr($domain, -(\strlen($allowedDomain) + 1)) === '.' . \strtolower($allowedDomain)) {
+                        $isAllowed = true;
+
+                        break;
+                    }
+                }
+
+                if (!$isAllowed) {
+                    $attrs = \preg_replace('/\s+src\s*=\s*([\'"])(.*?)\1/i', ' src=$1#$1', $attrs);
+                }
+            }
+
+            return "<{$tag}{$attrs}>";
+        }, $filtered);
+
+        // 추가: SVG 및 기타 태그 속성 정제 (나쁜 속성 제거)
+        $filtered = \preg_replace('/\s+(xmlns|xlink|SVG\w*)\s*=\s*([\'"])(.*?)\2/i', '', $filtered);
+    }
+
+    return $filtered;
+}
+
+// Clean Print
+// <tab> 삭제됨, htmlspecialchars함
+// 유저가 입력한 문자열을 강력하게 체크할 때 사용
+function cprint($content, $nl2br = false) : string
 {
     $content = \trim((string) $content);
 
     if ($content) {
-        // HTML 태그 제거
+        // 인코딩된 XSS 복원 → 제거 → 출력 시 이스케이프
+        $content = \str_replace('&nbsp;', ' ', $content);
+        $content = \html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $content = \strip_tags($content);
-
-        // HTML 엔티티 인코딩
         $content = \htmlspecialchars($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         if ($nl2br) {
-            $content = nl2br($content);
+            $content = \nl2br($content);
         }
 
         return $content;

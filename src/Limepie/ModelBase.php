@@ -50,6 +50,8 @@ class ModelBase extends ArrayObject
 
     public $limit;
 
+    public $groupLimit;
+
     public $query;
 
     public $binds = [];
@@ -912,6 +914,18 @@ class ModelBase extends ArrayObject
         $this->oneToMany[] = $class;
 
         return $this;
+    }
+
+    public function groupLimit(int $limit)
+    {
+        $this->groupLimit = $limit;
+
+        return $this;
+    }
+
+    public function getGroupLimit()
+    {
+        return $this->groupLimit ?? '';
     }
 
     public function limit(int $offset, int $limit)

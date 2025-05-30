@@ -47,8 +47,16 @@ class Image extends Fields
         }
 
         if (true === isset($property['prepend']) && $property['prepend']) {
+            $prependText = $property['prepend'];
+
+            if (\is_array($property['prepend']) && $property['prepend'][\Limepie\get_language()]) {
+                $prependText = $property['prepend'][\Limepie\get_language()];
+            } else {
+                $prependText = '';
+            }
+
             $prepend = <<<EOD
-            <span class="input-group-text{$prependClass}">{$property['prepend']}</span>
+            <span class="input-group-text{$prependClass}">{$prependText}</span>
             EOD;
         }
 

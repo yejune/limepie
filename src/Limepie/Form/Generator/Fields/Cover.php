@@ -47,24 +47,34 @@ class cover extends Fields
         }
 
         if (true === isset($property['prepend']) && $property['prepend']) {
+            $prependText = $property['prepend'];
+
+            if (\is_array($property['prepend']) && $property['prepend'][\Limepie\get_language()]) {
+                $prependText = $property['prepend'][\Limepie\get_language()];
+            } else {
+                $prependText = '';
+            }
             $prepend = <<<EOD
-            <span class="input-group-text{$prependClass}">{$property['prepend']}</span>
+            <span class="input-group-text{$prependClass}">{$prependText}</span>
             EOD;
         }
 
-        if (isset($data['file_name_alias_seq'])) {
+        $fileColumnName  = $property['column_name']['file_name_seq'] ?? 'file_name_alias_seq';
+        $imageColumnName = $property['column_name']['url']           ?? 'cover_url';
+
+        if (isset($data[$fileColumnName])) {
             // $value  = \htmlspecialchars((string) $data['name']);
             $button = '';
             $html   = <<<EOT
             <div class="input-group">
-                <input type="text" class='form-control form-control-file' value="{$data['cover_url']}" readonly="readonly" />
+                <input type="text" class='form-control form-control-file' value="{$data[$imageColumnName]}" readonly="readonly" />
             EOT;
             $html .= <<<EOT
-            <input type="text" class='valid-target form-control-file form-control-filetext form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}[name]" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$data['cover_url']}" accept="{$accept}" />
+            <input type="text" class='valid-target form-control-file form-control-filetext form-control-image' data-max-width="{$maxWidth}" data-min-width="{$minWidth}" data-max-height="{$maxHeight}" data-min-height="{$minHeight}" data-preview-max-width="{$viewWidth}" data-preview-max-height="{$viewHeight}" name="{$key}[name]" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$data[$imageColumnName]}" accept="{$accept}" />
             EOT;
 
             foreach ($data as $key1 => $value1) {
-                if (\in_array($key1, ['file_name_alias_seq', 'cover_url'])) {
+                if (\in_array($key1, [$fileColumnName, $imageColumnName])) {
                     if ('tmp_name' === $key1) {
                     } else {
                         $html .= <<<EOT

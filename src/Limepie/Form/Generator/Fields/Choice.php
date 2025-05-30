@@ -105,6 +105,12 @@ class Choice extends Fields
             }
         }
 
+        if (true === isset($property['disableds']) && $property['disableds']) {
+            foreach ($property['disableds'] as $disabled) {
+                $readonlyItems[$disabled] = true;
+            }
+        }
+
         $buttons = '';
         $script  = '';
         $random  = \Limepie\genRandomString(5);
