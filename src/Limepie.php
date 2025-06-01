@@ -23,6 +23,11 @@ function ___($domain, $string, $a, $b)
     return \dngettext($domain, $string, $a, $b);
 }
 
+function lang(array $data, string $key, string $language = 'ko')
+{
+    return $data[$key . '_langs'][$language] ?? $data[$key] ?? '';
+}
+
 function validate_csrf_token($token)
 {
     // 세션 확인
