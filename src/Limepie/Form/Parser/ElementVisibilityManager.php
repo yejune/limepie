@@ -79,6 +79,13 @@ class ElementVisibilityManager
     private $diffKeys = [];
 
     /**
+     * 필드의 기본값 (default 설정값).
+     *
+     * @var mixed
+     */
+    private $defaultValue;
+
+    /**
      * 생성자.
      *
      * @param array  &$arr   처리할 폼 구성 배열 (참조로 전달)
@@ -91,6 +98,7 @@ class ElementVisibilityManager
         $this->fields        = $fields;
         $this->key           = $key;
         $this->uniqueClassId = \Limepie\genRandomString();
+        $this->defaultValue  = $fields['default'] ?? null;
     }
 
     /**
@@ -265,12 +273,6 @@ class ElementVisibilityManager
         $existingClasses[]            = $elementClass;
         $this->arr[$element]['class'] = \implode(' ', \array_unique($existingClasses));
 
-        // 스타일 중복 방지
-        $existingStyles = \explode(';', $this->arr[$element]['style'] ?? '');
-
-        // $this->arr[$element]['class'] = ($this->arr[$element]['class'] ?? '') . ' ' . $elementClass;
-        // $this->arr[$element]['style'] = ($this->arr[$element]['style'] ?? '') . '; display: none;'; // 기본적으로 숨김
-
         // 표시 조건 설정 - 어떤 요소의 값에 따라 표시 여부가 결정되는지 지정
         $this->arr[$element]['display_target']                 = '.' . $this->key;
         $this->arr[$element]['display_target_condition_class'] = [];
@@ -278,20 +280,15 @@ class ElementVisibilityManager
         // 스크립트 키에 따른 조건별 스타일 설정
         $this->setupElementConditionStyles($element, $scriptKey);
 
-        // if (
-        //     false === isset($this->arr[$element]['display_target_condition_style'][$scriptKey])
-        //     && !$this->arr[$element]['display_target_condition_style'][$scriptKey]
-        // ) {
-        //     $existingStyles[] = 'display: none';
-        // }
-        // $existingStyles[]             = 'display: none';
-        $this->arr[$element]['style'] = \implode('; ', \array_unique(\array_filter($existingStyles)));
+        // 기본 스타일 설정 (기본값 고려)
+        $this->setInitialElementStyle($element);
     }
 
     /**
      * 요소의 조건별 스타일 설정.
      *
      * 각 조건값(scriptKey)에 따른 요소의 표시 스타일을 설정합니다.
+     * 기본값(default)을 고려하여 초기 상태를 올바르게 설정합니다.
      *
      * @param string $element   설정할 요소 이름
      * @param mixed  $scriptKey 요소가 표시될 조건 값
@@ -307,7 +304,6 @@ class ElementVisibilityManager
                 $this->arr[$element]['display_target_condition_style'][$diffKey] = 'display: none;';
             }
         }
-        // \prx($this->arr[$element]['display_target_condition_style'], $scriptKey);
 
         // 현재 스크립트 키에 대해서는 표시 (block)
         $this->arr[$element]['display_target_condition_style'][$scriptKey] = 'display: block';
@@ -321,6 +317,37 @@ class ElementVisibilityManager
                 $this->arr[$element]['display_target_condition_style'][$otherKey] = 'display: none';
             }
         }
+    }
+
+    /**
+     * 요소의 초기 스타일 설정.
+     *
+     * 요소의 기본 스타일을 설정합니다.
+     * 기본값(default)이 있는 경우 해당 값에 따른 표시 상태를 결정합니다.
+     *
+     * @param string $element 설정할 요소 이름
+     */
+    private function setInitialElementStyle(string $element) : void
+    {
+        $existingStyles = \explode(';', $this->arr[$element]['style'] ?? '');
+
+        // 기본값이 있고 해당 값에 대한 조건이 설정되어 있는 경우
+        if (null !== $this->defaultValue
+            && isset($this->arr[$element]['display_target_condition_style'][$this->defaultValue])) {
+            // 기본값에 따른 초기 표시 상태 설정
+            $defaultStyle = $this->arr[$element]['display_target_condition_style'][$this->defaultValue];
+
+            // display 스타일이 none인 경우에만 기본 스타일에 추가
+            if (false !== \strpos($defaultStyle, 'display: none')) {
+                $existingStyles[] = 'display: none';
+            }
+            // block인 경우는 기본적으로 표시되므로 추가하지 않음
+        } else {
+            // 기본값이 없거나 조건이 없는 경우 기본적으로 숨김
+            $existingStyles[] = 'display: none';
+        }
+
+        $this->arr[$element]['style'] = \implode('; ', \array_unique(\array_filter($existingStyles)));
     }
 
     /**
