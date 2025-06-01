@@ -386,63 +386,56 @@ class Compiler
 
                     break;
                 case '#':
-                    // scope a b:c => $a, $b = $c;
+                    $ID = '[a-zA-Z0-9\-_]+';
 
-                    // if (1 === \preg_match('`^#\s?(?P<filename>[^ ]+\.tpl)(\s+(?P<scope>.*))?$`', $statement, $tmp)) {
-                    //     // #a.tpl scope variable
-                    //     $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 333)];
-                    // } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
-                    //     // #define_id scope variable
-                    //     $result = [2, $this->compileDefine('#' . $tmp['define'], $line, $tmp['scope'] ?? '')];
-                    // } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?:\'|")(?P<filename>[^ ]+)(?:\'|")(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
-                    //     // #define_id "a.tpl" scope variable
-                    //     $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 444)];
-                    // } elseif (1 === \preg_match('`^#([\s+])?(?P<define>[a-zA-Z0-9\-_\.]+)([\s+])(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
-                    //     // #define_id a.tpl scope variable
-                    //     $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 555)];
-                    // } elseif (1 === \preg_match('`^#([\s+])?(?:\'|")(?P<filename>[^"\']+)(?:\'|")(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
-                    //     // #"a.tpl" scope variable
-                    //     $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 111)];
-                    // } elseif (1 === \preg_match('`^#([\s+])?(?P<filename>[^ ]+)(([\s+])scope([\s+])(?P<scope>.*))?$`', $statement, $tmp)) {
-                    //     // #a.tpl scope variable
-                    //     $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 222)];
-                    // } else {
-                    //     $result = [1, $statement];
-                    // }
+                    // 합칠수 없음.
+                    $patterns = [
+                        // #define_id [filename expression] [scope variable]
+                        [
+                            'regex'   => "`^#\\s*(?P<define>{$ID})(?:\\s+(?P<filename>.+?))?(?:\\s+scope\\s+(?P<scope>.*))?$`",
+                            'handler' => function ($tmp, $self, $line) {
+                                $scope = $tmp['scope'] ?? '';
 
-                    // 공통 패턴 정의
-                    $SCOPE = '(?:\s+scope\s+(?P<scope>.*))?';  // scope와 변수들
-                    $ID    = '[a-zA-Z0-9\-_\.]+';                 // 식별자
-                    $FILE  = '[^ ]+';                           // 파일명
+                                // filename이 없으면 define만 (원래 첫 번째 패턴)
+                                if (empty($tmp['filename'])) {
+                                    return [2, $self->compileDefine('#' . $tmp['define'], $scope, null, null, 111, $line)];
+                                }
 
-                    if (1 === \preg_match("`^#\\s*(?P<filename>{$FILE}\\.tpl){$SCOPE}$`", $statement, $tmp)) {
-                        // echo 1;
-                        // #a.tpl scope variable
-                        $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 333)];
-                    } elseif (1 === \preg_match("`^#\\s*(?P<define>{$ID}){$SCOPE}$`", $statement, $tmp)) {
-                        // echo 2;
-                        // #define_id scope variable
-                        $result = [2, $this->compileDefine('#' . $tmp['define'], $line, $tmp['scope'] ?? '')];
-                    } elseif (1 === \preg_match("`^#\\s*(?P<define>{$ID})\\s+['\"](?P<filename>{$FILE})['\"]{$SCOPE}$`", $statement, $tmp)) {
-                        // echo 3;
-                        // #define_id "a.tpl" scope variable
-                        $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 444)];
-                    } elseif (1 === \preg_match("`^#\\s*(?P<define>{$ID})\\s+(?P<filename>{$FILE}){$SCOPE}$`", $statement, $tmp)) {
-                        // echo 4;
-                        // #define_id a.tpl scope variable
-                        $result = [2, $this->compileInDefine('#' . $tmp['define'], $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 555)];
-                    } elseif (1 === \preg_match("`^#\\s*['\"](?P<filename>{$FILE})['\"]{$SCOPE}$`", $statement, $tmp)) {
-                        // echo 5;
-                        // #"a.tpl" scope variable
-                        $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 111)];
-                    } elseif (1 === \preg_match("`^#\\s*(?P<filename>{$FILE}){$SCOPE}$`", $statement, $tmp)) {
-                        // echo 6;
-                        // #a.tpl scope variable
-                        $result = [2, $this->compileInDefine('#*', $this->basepath . '/' . $tmp['filename'], $line, $tmp['scope'] ?? '', 222)];
-                    } else {
-                        // echo 7;
-                        $result = [1, $statement];
+                                // 문자열 표현식이므로 컴파일
+                                if (false !== \strpos($tmp['filename'], '"') || false !== \strpos($tmp['filename'], "'")) {
+                                    $tmp['filename'] = $self->compileStatement($tmp['filename'], 0, '')[1];
+                                }
+
+                                return [2, $self->compileDefine($tmp['define'], $scope, $self->basepath, $tmp['filename'], 555, $line)];
+                            },
+                        ],
+                        // #filename expression [scope variable]
+                        [
+                            'regex'   => '`^#\s*(?P<filename>.+?)(?:\s+scope\s+(?P<scope>.*))?$`',
+                            'handler' => function ($tmp, $self, $line) {
+                                $scope = $tmp['scope'] ?? '';
+
+                                // 문자열 표현식이므로 컴파일
+                                if (false !== \strpos($tmp['filename'], '"') || false !== \strpos($tmp['filename'], "'")) {
+                                    $tmp['filename'] = $self->compileStatement($tmp['filename'], 0, '')[1];
+                                }
+
+                                return [2, $self->compileDefine('#*', $scope, $self->basepath, $tmp['filename'], 2221, $line)];
+                            },
+                        ],
+                    ];
+
+                    // 패턴 순회하여 처리
+                    $result = [1, $statement];
+
+                    foreach ($patterns as $pattern) {
+                        if (1 === \preg_match($pattern['regex'], $statement, $tmp)) {
+                            $result = $pattern['handler']($tmp, $this, $line);
+
+                            break;
+                        }
                     }
+                    // \prx($result);
 
                     break;
                 case '*':
@@ -525,12 +518,23 @@ class Compiler
         return $result;
     }
 
-    public function compileInDefine($statement, $file, $line, $scope = '', $echo = '')
+    public function compileDefine($statement, $scope = '', $basepath = null, $file = null, $echo = '', $line = 0)
     {
+        $defineStatement = $scopeDefines = '';
+        $scopeVars       = '[]';
+
+        // 파일이 있으면 define 추가
+        if ($file) {
+            if (false !== \strpos($file, '"') || false !== \strpos($file, "'") || false !== \strpos($file, '$')) {
+            } else {
+                $file = '"' . $file . '"';
+            }
+            $defineStatement = "self::define('" . \trim(\substr($statement, 1)) . "', '" . $basepath . "/'." . $file . ');';
+        }
+
+        // scope 처리
         if ($scope) {
-            $scopeDefines = '';
-            $scopeVars    = '';
-            $parts        = [];
+            $parts = [];
 
             foreach (\explode(' ', $scope) as $item) {
                 if (false === \strpos($item, ':')) {
@@ -545,43 +549,9 @@ class Compiler
                 $parts[] = "'" . $key . "'";
             }
             $scopeVars = '[' . \implode(',', $parts) . ']';
-
-            return $scopeDefines . "self::define('" . \trim(\substr($statement, 1)) . "', '" . $file . "');/*" . $echo . "*/;self::printContents('" . \trim(\substr($statement, 1)) . "', [], " . $scopeVars . ')';
         }
 
-        return "self::define('" . \trim(\substr($statement, 1)) . "', '" . $file . "');/*" . $echo . "*/;self::printContents('" . \trim(\substr($statement, 1)) . "')";
-    }
-
-    public function compileDefine($statement, $line, $scope = '')
-    {
-        if ($scope) {
-            $scopeDefines = '';
-            $scopeVars    = '';
-            $parts        = [];
-
-            /*
-             * {order = payload.order} {#row Row.tpl scope order}
-             * =>
-             * {#row Row.tpl scope order:payload.order}
-             */
-            foreach (\explode(' ', $scope) as $item) {
-                if (false === \strpos($item, ':')) {
-                    $key   = $item;
-                    $value = $this->compileStatement($item, 0, '')[1];
-                } else {
-                    [$key, $value] = \explode(':', $item);
-                    $value         = $this->compileStatement($value, 0, '')[1];
-                }
-
-                $scopeDefines .= 'self::setScope("' . $key . '", ' . $value . ');';
-                $parts[] = "'" . $key . "'";
-            }
-            $scopeVars = '[' . \implode(',', $parts) . ']';
-
-            return $scopeDefines . "self::printContents('" . \trim(\substr($statement, 1)) . "', [], " . $scopeVars . ')';
-        }
-
-        return "self::printContents('" . \trim(\substr($statement, 1)) . "')";
+        return $defineStatement . $scopeDefines . "self::printContents('" . \trim(\substr($statement, 1)) . "', [], " . $scopeVars . ');/*' . $echo . '*/';
     }
 
     public function compileIfDefine($statement, $line)
