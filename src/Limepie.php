@@ -28,6 +28,24 @@ function lang(array $data, string $key, string $language = 'ko')
     return $data[$key . '_langs'][$language] ?? $data[$key] ?? '';
 }
 
+/**
+ * 특정 선택지의 득표율(%)을 계산.
+ *
+ * @param float|int $choiceVotes 해당 선택지의 투표 수
+ * @param float|int $totalVotes  전체 투표 수
+ * @param int       $precision   소수점 자리수 (기본: 1)
+ *
+ * @return float 퍼센트 (0~100)
+ */
+function get_percent($choiceVotes, $totalVotes, $precision = 1)
+{
+    if ($totalVotes > 0) {
+        return \round(($choiceVotes / $totalVotes) * 100, $precision);
+    }
+
+    return 0;
+}
+
 function validate_csrf_token($token)
 {
     // 세션 확인
@@ -144,7 +162,7 @@ function format_large_number($number, $language = 'ko')
     }
 
     // 절대값으로 처리
-    $absNumber = \abs($number);
+    $absNumber = \abs((int) $number);
 
     // 언어별 단위 정의 (큰 단위부터 내림차순)
     $units = [
