@@ -1280,7 +1280,7 @@ class Model extends ModelUtil
                 FROM (
                     {$sql}
                 ) AS ranked
-                WHERE ranked.row_num <= 6
+                WHERE ranked.row_num <= {$groupLimit}
             SQL;
         } else {
             $sql .= $orderBy . ' ' . $limit;
