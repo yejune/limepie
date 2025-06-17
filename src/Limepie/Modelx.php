@@ -1018,9 +1018,9 @@ class Model extends ModelUtil
                 $condition = ' WHERE ' . $condition;
             }
 
-            // if ($this->rawColumnString) {
-            //     $selectColumns .= ',' . $this->rawColumnString;
-            // }
+            if ($this->rawColumnString) {
+                $selectColumns .= ',' . $this->rawColumnString;
+            }
             $sql = <<<SQL
                 SELECT
                     {$selectColumns}
@@ -1084,9 +1084,9 @@ class Model extends ModelUtil
             $condition = ' WHERE ' . $condition;
         }
 
-        // if ($this->rawColumnString) {
-        //     $selectColumns .= ',' . $this->rawColumnString;
-        // }
+        if ($this->rawColumnString) {
+            $selectColumns .= ',' . $this->rawColumnString;
+        }
 
         $sql = <<<SQL
             SELECT
@@ -1196,15 +1196,15 @@ class Model extends ModelUtil
                 }
             }
 
-            if ($this->addColumns) {
-                if (\is_array($this->attributes)) {
-                    foreach ($this->addColumns as $columnName => $aliasName) {
-                        if ($aliasName instanceof \Closure) {
-                            $this->attributes[$columnName] = $aliasName($this);
-                        }
-                    }
-                }
-            }
+            // if ($this->addColumns) {
+            //     if (\is_array($this->attributes)) {
+            //         foreach ($this->addColumns as $columnName => $aliasName) {
+            //             if ($aliasName instanceof \Closure) {
+            //                 $this->attributes[$columnName] = $aliasName($this);
+            //             }
+            //         }
+            //     }
+            // }
 
             return $this;
         }
@@ -1258,9 +1258,9 @@ class Model extends ModelUtil
             $condition = ' WHERE ' . $condition;
         }
 
-        // if ($this->rawColumnString) {
-        //     $selectColumns .= ',' . $this->rawColumnString;
-        // }
+        if ($this->rawColumnString) {
+            $selectColumns .= ',' . $this->rawColumnString;
+        }
 
         $sql = '';
 
@@ -1286,7 +1286,6 @@ class Model extends ModelUtil
                 {$join}
                 {$condition}
                 {$groupBy}
-                {$orderBy}
         SQL;
 
         if ($groupLimit) {
@@ -1298,7 +1297,7 @@ class Model extends ModelUtil
                 WHERE ranked.row_num <= {$groupLimit}
             SQL;
         } else {
-            $sql .= ' ' . $limit;
+            $sql .= $orderBy . ' ' . $limit;
         }
 
         $this->condition = $condition;
@@ -1381,61 +1380,22 @@ class Model extends ModelUtil
 
             $groupBy = $this->getGroupBy();
 
-            // if ($this->rawColumnString) {
-            //     $selectColumns .= ',' . $this->rawColumnString;
-            // }
-
-            $groupLimit = $this->getGroupLimit();
-
-            if ($groupLimit) {
-                $sql = <<<SQL
-                SELECT
-                {$selectColumns}
-                ,
-                ROW_NUMBER() OVER (PARTITION BY `{$this->tableAliasName}`.`{$this->rightKeyName}` {$orderBy}) as row_num
-            SQL;
-            } else {
-                $sql = <<<SQL
-                SELECT
-                {$selectColumns}
-
-            SQL;
+            if ($this->rawColumnString) {
+                $selectColumns .= ',' . $this->rawColumnString;
             }
-            $sql .= <<<SQL
 
-            FROM
-                `{$this->tableName}` AS `{$this->tableAliasName}`
+            $sql = <<<SQL
+                SELECT
+                    {$selectColumns}
+                FROM
+                    `{$this->tableName}` AS `{$this->tableAliasName}`
                 {$forceIndex}
                 {$join}
                 {$condition}
                 {$groupBy}
                 {$orderBy}
-        SQL;
-
-            if ($groupLimit) {
-                $sql = <<<SQL
-                SELECT *
-                FROM (
-                    {$sql}
-                ) AS ranked
-                WHERE ranked.row_num <= {$groupLimit}
+                {$limit}
             SQL;
-            } else {
-                $sql .= ' ' . $limit;
-            }
-
-            // $sql = <<<SQL
-            //     SELECT
-            //         {$selectColumns}
-            //     FROM
-            //         `{$this->tableName}` AS `{$this->tableAliasName}`
-            //     {$forceIndex}
-            //     {$join}
-            //     {$condition}
-            //     {$groupBy}
-            //     {$orderBy}
-            //     {$limit}
-            // SQL;
             $this->condition = $condition;
         } else {
             $orderBy = $this->getOrderBy($args['order'] ?? null);

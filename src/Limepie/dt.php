@@ -469,57 +469,83 @@ class Dt
         return \date('Y-m-d', $start) . $startHour . ' ~ ' . \date('Y-m-d', $end) . $endtHour;
     }
 
-    public static function display_dday($startDate, $endDate)
+    public static function display_dday($startDate, $endDate, $keepTime = false)
     {
-        // 모집 시작일과 종료일을 DateTime 객체로 변환하고 시간 부분을 제거
-        $startDate = new \DateTime($startDate);
-        $startDate->setTime(0, 0);
+        // DateTime 객체로 변환
+        $startDateTime = new \DateTime($startDate);
+        $endDateTime   = new \DateTime($endDate);
+        $now           = new \DateTime();
 
-        $endDate = new \DateTime($endDate);
-        $endDate->setTime(0, 0);
-
-        // 오늘 날짜 DateTime 객체로 가져오고 시간 부분을 제거
-        $today = new \DateTime();
-        $today->setTime(0, 0);
+        // 시간 유지 여부에 따라 처리
+        if (!$keepTime) {
+            // 기존 방식: 시간 부분 제거
+            $startDateTime->setTime(0, 0);
+            $endDateTime->setTime(0, 0);
+            $now->setTime(0, 0);
+        }
 
         // 종료일이 이미 지난 경우
-        if ($today > $endDate) {
+        if ($now > $endDateTime) {
             return null;
         }
 
-        // 모집 시작일까지 남은 일수 계산
-        $daysUntilStart = $today->diff($startDate)->days;
-
-        // 모집 종료일까지 남은 일수 계산
-        $daysUntilEnd = $today->diff($endDate)->days;
-
         // 시작일이 아직 오지 않은 경우
-        if ($today < $startDate) {
-            return -$daysUntilStart;
+        if ($now < $startDateTime) {
+            $diff = $startDateTime->diff($now);
+
+            return -$diff->days;
         }
 
-        // 오늘이 모집 종료일인 경우
-        if ($today == $endDate) {
+        // 오늘이 모집 종료일인 경우 (시간 유지 모드에서는 정확한 시간 비교)
+        if (!$keepTime && $now->format('Y-m-d') == $endDateTime->format('Y-m-d')) {
             return 0;
         }
 
         // 종료일까지 남은 일수 반환
-        return $daysUntilEnd;
+        $diff = $endDateTime->diff($now);
+
+        return $diff->days;
     }
 
     public static function display_dday_message($startDate, $endDate, $messages = [], $classes = [])
     {
-        // 내부 display_dday 함수 호출
-        $days = self::display_dday($startDate, $endDate);
+        // **시간을 고려하여 display_dday 호출**
+        $days = self::display_dday($startDate, $endDate, true);
 
         // 기본 메시지
         $defaultMessages = [
-            'ended'           => '종료',
-            'starts_in'       => '%d일 후 시작',
-            'ends_today'      => '오늘 %s에 종료',
-            'days_left'       => '%d일 남음',
-            'starts_tomorrow' => '내일 %s에 시작',
-            'ends_tomorrow'   => '내일 %s에 종료',
+            'ko' => [
+                'ended'           => '종료',
+                'starts_in'       => '%d일 후 시작',
+                'ends_today'      => '오늘 %s에 종료',
+                'days_left'       => '%d일 남음',
+                'starts_tomorrow' => '내일 %s에 시작',
+                'ends_tomorrow'   => '내일 %s에 종료',
+            ],
+            'ja' => [
+                'ended'           => '終了',
+                'starts_in'       => '%d日後開始',
+                'ends_today'      => '今日 %sに終了',
+                'days_left'       => '%d日残り',
+                'starts_tomorrow' => '明日 %sに開始',
+                'ends_tomorrow'   => '明日 %sに終了',
+            ],
+            'en' => [
+                'ended'           => 'Ended',
+                'starts_in'       => '%d days later start',
+                'ends_today'      => 'Today %s ends',
+                'days_left'       => '%d days left',
+                'starts_tomorrow' => 'Tomorrow %s starts',
+                'ends_tomorrow'   => 'Tomorrow %s ends',
+            ],
+            'zh' => [
+                'ended'           => '已结束',
+                'starts_in'       => '%d天后开始',
+                'ends_today'      => '今天 %s结束',
+                'days_left'       => '%d天后结束',
+                'starts_tomorrow' => '明天 %s开始',
+                'ends_tomorrow'   => '明天 %s结束',
+            ],
         ];
 
         // 기본 클래스
@@ -532,11 +558,9 @@ class Dt
             'ends_tomorrow'   => 'color-ends-tomorrow',
         ];
 
-        // 사용자 정의 메시지가 있는 경우 기본 메시지를 덮어쓰기
-        $messages = \array_merge($defaultMessages, $messages);
-
-        // 사용자 정의 클래스가 있는 경우 기본 클래스를 덮어쓰기
-        $classes = \array_merge($defaultColors, $classes);
+        $lang     = Di::getLanguageModel()->getId();
+        $messages = \array_merge($defaultMessages[$lang], $messages);
+        $classes  = \array_merge($defaultColors, $classes);
 
         // DateTime 객체로 변환
         $startDateTime = new \DateTime($startDate);
@@ -600,6 +624,24 @@ class Dt
                     'end'         => '終了',
                     'scheduled'   => '予定',
                     'ongoing'     => '募集中',
+                ],
+                'en' => [
+                    'today_end'   => 'Today ends',
+                    'days_before' => 'D-%d',
+                    'recruit_end' => 'Recruitment ends',
+                    'announce'    => 'Announcement of winners',
+                    'end'         => 'Ended',
+                    'scheduled'   => 'Scheduled',
+                    'ongoing'     => 'Ongoing',
+                ],
+                'zh' => [
+                    'today_end'   => '今天结束',
+                    'days_before' => 'D-%d',
+                    'recruit_end' => '招募结束',
+                    'announce'    => '获奖者公布',
+                    'end'         => '结束',
+                    'scheduled'   => '预定',
+                    'ongoing'     => '进行中',
                 ],
                 // 다른 언어에 대한 메시지 추가 가능
             ];

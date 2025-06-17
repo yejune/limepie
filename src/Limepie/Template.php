@@ -175,7 +175,8 @@ class Template
             return;
         }
 
-        if (true === isset($this->var_[$fid])) {
+        // $fid와 scope가 같으면 문제가 되어서 주석처리 -> $scope가 없을때 처리하도록 변경
+        if (!$scope && true === isset($this->var_[$fid])) {
             $scope = $fid;
         }
         $this->requireFile($this->getCompilePath($fid), $addAssign, $scope);

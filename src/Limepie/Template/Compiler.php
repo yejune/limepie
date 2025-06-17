@@ -406,7 +406,7 @@ class Compiler
                                     $tmp['filename'] = $self->compileStatement($tmp['filename'], 0, '')[1];
                                 }
 
-                                return [2, $self->compileDefine($tmp['define'], $scope, $self->basepath, $tmp['filename'], 555, $line)];
+                                return [2, $self->compileDefine('#' . $tmp['define'], $scope, $self->basepath, $tmp['filename'], 555, $line)];
                             },
                         ],
                         // #filename expression [scope variable]

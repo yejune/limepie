@@ -18,7 +18,7 @@ class ModelBase extends ArrayObject
 
     public $tableAliasName;
 
-    public $primaryKeyName;
+    public $primaryKeyName = 'seq';
 
     public $sequenceName;
 
@@ -338,6 +338,10 @@ class ModelBase extends ArrayObject
             return $this->buildGetColumn($name, $arguments);
         }
 
+        if (0 === \strpos($name, 'addRawColumn')) {
+            return $this->buildAddRawColumn($name, $arguments);
+        }
+
         throw (new Exception('"' . $name . '" method not found', 404))
             ->setDisplayMessage('page not found', __FILE__, __LINE__)
         ;
@@ -638,14 +642,14 @@ class ModelBase extends ArrayObject
         return $this;
     }
 
-    public $rawColumnString = '';
+    // public $rawColumnString = '';
 
-    public function addRawColumn($rawColumnString) : self
-    {
-        $this->rawColumnString = $rawColumnString;
+    // public function addRawColumn($rawColumnString) : self
+    // {
+    //     $this->rawColumnString = $rawColumnString;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function removeColumn($column) : self
     {
@@ -1284,15 +1288,19 @@ class ModelBase extends ArrayObject
         return $this;
     }
 
+    public $addColumns = [];
+
     /**
      * @example
      *     $userModels = (new UserModel)($slave1)
      *         ->addColumn('seq', 'cash', '(SELECT COALESCE(SUM(amount), 0) FROM point WHERE to_user_seq = %s AND status = 1 AND expired_ts > now())')
      */
-    public function addColumn(string $columnName, ?string $aliasName = null, ?string $format = null)
+    public function addColumn(string $columnName, null|\Closure|string $aliasName = null, ?string $format = null)
     {
         if (null === $aliasName) { // alias name이 없으면 index로 넣음
             $this->selectColumns[] = $columnName;
+        } elseif (\is_callable($aliasName)) {
+            $this->addColumns[$columnName] = $aliasName;
         } else {
             $this->selectColumns[$aliasName] = new class ($columnName, $aliasName, $format) {
                 public $columnName;
@@ -1612,5 +1620,199 @@ class ModelBase extends ArrayObject
                 $this->extraBinds     = $extraBinds;
             }
         };
+    }
+
+    public $rawColumnAliasNames = [];
+
+    public function buildAddRawColumn(string $name, array $arguments = [])
+    {
+        $columnName = \Limepie\decamelize(\substr($name, 12));
+
+        $this->rawColumnAliasNames[$columnName] = $arguments[0];
+
+        return $this;
+    }
+
+    public function addColumnIsStartEndDtRange()
+    {
+        $this->addRawColumnIsStartEndDtRange('
+            (
+                `' . $this->tableAliasName . '`.`start_dt` < NOW()
+                AND `' . $this->tableAliasName . '`.`end_dt` > NOW()
+            )
+        ');
+
+        return $this;
+    }
+
+    public function addColumnIsDisplayCondition()
+    {
+        $this->addRawColumnIsDisplayCondition('
+            (
+                -- 디스플레이 상태 조건
+                (
+                    `' . $this->tableAliasName . '`.`is_display` = 1
+                    OR (
+                        `' . $this->tableAliasName . '`.`is_display` = 2
+                        AND `' . $this->tableAliasName . '`.`display_start_dt` < NOW()
+                        AND `' . $this->tableAliasName . '`.`display_end_dt` > NOW()
+                    )
+                    OR (
+                        `' . $this->tableAliasName . '`.`is_display` = 3
+                        AND `' . $this->tableAliasName . '`.`display_start_dt` < NOW()
+                    )
+                )
+                AND (
+                    -- 전체 표시이거나 요일별 표시 조건
+                    `' . $this->tableAliasName . '`.`is_display` = 1
+                    OR (
+                        `' . $this->tableAliasName . '`.`is_allday` = 0
+                        OR (
+                            `' . $this->tableAliasName . '`.`is_allday` = 1
+                            AND (
+                                -- 요일별 표시 조건
+                                (
+                                    `' . $this->tableAliasName . '`.`is_sunday` = 1
+                                    AND DAYOFWEEK(NOW()) = 1
+                                )
+                                OR (
+                                    `' . $this->tableAliasName . '`.`is_monday` = 1
+                                    AND DAYOFWEEK(NOW()) = 2
+                                )
+                                OR (
+                                    `' . $this->tableAliasName . '`.`is_tuesday` = 1
+                                    AND DAYOFWEEK(NOW()) = 3
+                                )
+                                OR (
+                                    `' . $this->tableAliasName . '`.`is_wednesday` = 1
+                                    AND DAYOFWEEK(NOW()) = 4
+                                )
+                                OR (
+                                    `' . $this->tableAliasName . '`.`is_thursday` = 1
+                                    AND DAYOFWEEK(NOW()) = 5
+                                )
+                                OR (
+                                    `' . $this->tableAliasName . '`.`is_friday` = 1
+                                    AND DAYOFWEEK(NOW()) = 6
+                                )
+                                OR (
+                                    `' . $this->tableAliasName . '`.`is_saturday` = 1
+                                    AND DAYOFWEEK(NOW()) = 7
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        ');
+
+        return $this;
+    }
+
+    public function conditionDisplayCondition()
+    {
+        $this
+            ->condition('(')
+            ->conditionIsDisplay(1)
+            ->or('(')
+            ->conditionIsDisplay(2)
+            ->andLtDisplayStartDt(\date('Y-m-d H:i:s'))
+            ->andGtDisplayEndDt(\date('Y-m-d H:i:s'))
+            ->condition(')')
+            ->or('(')
+            ->conditionIsDisplay(3)
+            ->andLtDisplayStartDt(\date('Y-m-d H:i:s'))
+            ->condition(')')
+            ->condition(')')
+            ->and('(')
+            ->conditionIsDisplay(1)
+            ->or('(')
+            ->conditionIsAllday(0)
+            ->or('(')
+            ->conditionIsAllday(1)
+            ->and('(')
+            ->condition('(')
+            ->conditionIsSunday(1)->and('DAYOFWEEK(NOW()) = 1')
+            ->condition(')')
+            ->or()
+            ->condition('(')
+            ->conditionIsMonday(1)->and('DAYOFWEEK(NOW()) = 2')
+            ->condition(')')
+            ->or()
+            ->condition('(')
+            ->conditionIsTuesday(1)->and('DAYOFWEEK(NOW()) = 3')
+            ->condition(')')
+            ->or()
+            ->condition('(')
+            ->conditionIsWednesday(1)->and('DAYOFWEEK(NOW()) = 4')
+            ->condition(')')
+            ->or()
+            ->condition('(')
+            ->conditionIsThursday(1)->and('DAYOFWEEK(NOW()) = 5')
+            ->condition(')')
+            ->or()
+            ->condition('(')
+            ->conditionIsFriday(1)->and('DAYOFWEEK(NOW()) = 6')
+            ->condition(')')
+            ->or()
+            ->condition('(')
+            ->conditionIsSaturday(1)->and('DAYOFWEEK(NOW()) = 7')
+            ->condition(')')
+            ->condition(')')
+            ->condition(')')
+            ->condition(')')
+            ->condition(')')
+        ;
+
+        return $this;
+    }
+
+    public function andDisplayCondition()
+    {
+        $this->and()->conditionDisplayCondition();
+
+        return $this;
+    }
+
+    /**
+     * 지정된 시간 또는 현재 시간 기준으로 활성화된 기간 필터링 조건 추가
+     *
+     * @param null|string $currentTime 기준 시간 (null인 경우 현재 시간 사용)
+     *
+     * @return self
+     */
+    public function conditionStartEndDtRange($currentTime = null)
+    {
+        $time = $currentTime ?? \date('Y-m-d H:i:s');
+
+        $this->condition('(')
+            ->conditionLtStartDt($time)
+            ->andGtEndDt($time)
+            ->condition(')')
+        ;
+
+        return $this;
+    }
+
+    public function andStartEndDtRange($currentTime = null)
+    {
+        $time = $currentTime ?? \date('Y-m-d H:i:s');
+
+        $this->and()->conditionStartEndDtRange($time);
+
+        return $this;
+    }
+
+    public function onStartEndDtRange()
+    {
+        $sql = '(`' . $this->tableAliasName . '`.`start_dt` < NOW() AND `' . $this->tableAliasName . '`.`end_dt` > NOW())';
+
+        if ($this->onCondition) {
+            $this->onCondition .= ' AND ' . $sql;
+        } else {
+            $this->onCondition = $sql;
+        }
+
+        return $this;
     }
 }

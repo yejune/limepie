@@ -29,6 +29,145 @@ function lang(array $data, string $key, string $language = 'ko')
 }
 
 /**
+ * Base62 디코딩.
+ *
+ * @param mixed $str
+ */
+function base62_decode($str)
+{
+    $chars   = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    $charMap = \array_flip(\str_split($chars));
+
+    $num = 0;
+
+    for ($i = 0; $i < \strlen($str); ++$i) {
+        $num = $num * 62 + $charMap[$str[$i]];
+    }
+
+    return $num;
+}
+/**
+ * Base62 인코딩.
+ *
+ * @param mixed $num
+ */
+function base62_encode($num)
+{
+    $chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+
+    if (0 == $num) {
+        return \str_repeat('0', 11);
+    }
+
+    $result = '';
+
+    while ($num > 0) {
+        $result = $chars[$num % 62] . $result;
+        $num    = (int) ($num / 62);
+    }
+
+    return \str_pad($result, 11, '0', STR_PAD_LEFT);
+}
+/**
+ * Base64 패딩 제거 함수
+ * URL-safe Base64로 변환하고 패딩(=) 제거.
+ *
+ * @param mixed $data
+ */
+function base64_url_encode($data)
+{
+    return \rtrim(\strtr(\base64_encode($data), '+/', '-_'), '=');
+}
+
+/**
+ * Base64 패딩 복원 및 디코딩 함수
+ * 패딩을 복원하고 URL-safe Base64를 일반 Base64로 변환 후 디코딩.
+ *
+ * @param mixed $data
+ */
+function base64_url_decode($data)
+{
+    // URL-safe 문자를 일반 Base64 문자로 변환
+    $base64 = \strtr($data, '-_', '+/');
+
+    // 패딩 복원
+    $padLength = 4 - (\strlen($base64) % 4);
+
+    if (4 !== $padLength) {
+        $base64 .= \str_repeat('=', $padLength);
+    }
+
+    return \base64_decode($base64);
+}
+
+/**
+ * UUID를 압축된 Base64로 변환.
+ *
+ * @param mixed $uuid
+ */
+function compress_uuid($uuid)
+{
+    // 하이픈 제거
+    $hex = \str_replace('-', '', $uuid);
+
+    // 16진수를 바이너리로 변환
+    $binary = \hex2bin($hex);
+
+    // Base64 인코딩 후 패딩 제거
+    return base64_url_encode($binary);
+}
+
+/**
+ * 압축된 Base64를 UUID로 복원.
+ *
+ * @param mixed $compressed
+ */
+function decompress_uuid($compressed)
+{
+    // Base64 디코딩
+    $binary = base64_url_decode($compressed);
+
+    // 바이너리를 16진수로 변환
+    $hex = \bin2hex($binary);
+
+    // UUID 형식으로 변환
+    return \sprintf(
+        '%s-%s-%s-%s-%s',
+        \substr($hex, 0, 8),
+        \substr($hex, 8, 4),
+        \substr($hex, 12, 4),
+        \substr($hex, 16, 4),
+        \substr($hex, 20, 12)
+    );
+}
+
+/**
+ * 표준 Base64 패딩만 제거 (URL-safe 변환 없이).
+ *
+ * @param mixed $base64
+ */
+function removeBase64Padding($base64)
+{
+    return \rtrim($base64, '=');
+}
+
+/**
+ * Base64 패딩 복원 (URL-safe 변환 없이).
+ *
+ * @param mixed $base64
+ */
+function restoreBase64Padding($base64)
+{
+    $padLength = 4 - (\strlen($base64) % 4);
+
+    if (4 !== $padLength) {
+        $base64 .= \str_repeat('=', $padLength);
+    }
+
+    return $base64;
+}
+
+/**
  * 특정 선택지의 득표율(%)을 계산.
  *
  * @param float|int $choiceVotes 해당 선택지의 투표 수

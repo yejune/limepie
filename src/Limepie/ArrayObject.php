@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Limepie;
 
+use Random\Randomizer;
+
 class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializable // , \Serializable
 {
     public $attributes = [];
@@ -170,7 +172,6 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             && true === \array_key_exists(0, $arguments)
         ) {
             $default = $arguments[0]; // 디폴트가 []로 들어올 경우에도 허용.
-            // \var_dump([$name, $default]);
 
             if (true === \is_array($default)) {
                 return new Model();
@@ -398,7 +399,17 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
      */
     private function getRow(string $method, ?string $key = null, bool $nullable = true)
     {
-        $row = $this->attributes[$method($this->attributes)];
+        if (empty($this->attributes)) {
+            return null;
+        }
+
+        $rowKey = $method($this->attributes);
+
+        if (null === $rowKey) {
+            return null;
+        }
+
+        $row = $this->attributes[$rowKey];
 
         if (!$key) {
             return $row;
@@ -406,6 +417,10 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
 
         if ($nullable) {
             return $row[$key] ?? null;
+        }
+
+        if (!isset($row[$key])) {
+            throw new \Exception("Key '{$key}' not found");
         }
 
         return $row[$key];
@@ -425,6 +440,19 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
     public function last(?string $key = null, bool $nullable = true)
     {
         return $this->getRow('array_key_last', $key, $nullable);
+    }
+
+    // this->attributes  에서 랜덤으로 count개 가져오기
+    public function rand($count = 1)
+    {
+        if (empty($this->attributes)) {
+            return null;
+        }
+
+        $randomizer = new Randomizer();
+        $keys       = $randomizer->pickArrayKeys($this->attributes, $count);
+
+        return \array_map(fn ($key) => $this->attributes[$key], $keys);
     }
 
     /**

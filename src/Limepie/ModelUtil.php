@@ -125,7 +125,16 @@ class ModelUtil extends ModelBase
             }
         }
 
-        return \implode(PHP_EOL . '        , ', $columns);
+        $rawColumns = [];
+
+        foreach ($this->rawColumnAliasNames as $alias => $rawColumn) {
+            $rawColumns[] = $rawColumn . ' AS `' . $prefix . $alias . '`';
+        }
+
+        return \implode(PHP_EOL . '        , ', $columns)
+        . ($rawColumns ? PHP_EOL . '        , ' . \implode(PHP_EOL . '        , ', $rawColumns) : '');
+
+        // return \implode(PHP_EOL . '        , ', $columns);
     }
 
     public function getJoin($isCount = false) : array
@@ -146,6 +155,9 @@ class ModelUtil extends ModelBase
             $join .= PHP_EOL . '    ';
 
             if ($joinModel['type']) {
+                // if ($isCount) {
+                //     continue;
+                // }
                 $join .= 'LEFT';
             } else {
                 $join .= 'INNER';
@@ -245,6 +257,37 @@ class ModelUtil extends ModelBase
         return [];
     }
 
+    public function getConditionOperator($key, $value)
+    {
+        if (0 === \strpos($key, 'gt_')) {
+            return ' > ';
+        }
+
+        if (0 === \strpos($key, 'lt_')) {
+            return ' < ';
+        }
+
+        if (0 === \strpos($key, 'ge_')) {
+            return ' >= ';
+        }
+
+        if (0 === \strpos($key, 'le_')) {
+            return ' <= ';
+        }
+
+        if (0 === \strpos($key, 'eq_')) {
+            return ' = ';
+        }
+
+        if (0 === \strpos($key, 'ne_')) {
+            if (null === $value) {
+                return ' IS NOT NULL';
+            }
+
+            return ' != ';
+        }
+    }
+
     // where, and, or등의 추가 구문을 붙이지 않고 처리
     protected function getConditions(string $name, array $arguments, int $offset = 0) : array
     {
@@ -286,18 +329,29 @@ class ModelUtil extends ModelBase
                     $queryString = $key;
 
                     // throw new \Limepie\Exception($key . ': numbers of columns of arguments do not match');
-                } elseif (0 === \strpos($key, 'fulltext_boolean_')) {
+                } elseif (0 === \strpos($key, 'fulltext_boolean_')) { // fulltext의 with는 여러 컬럼을 처리
                     $fixedKey = \str_replace('_with_', "`, `{$this->tableAliasName}`.`", \substr($key, 17));
 
                     $queryString = "MATCH(`{$this->tableAliasName}`." . '`' . $fixedKey . '` ) AGAINST (CONCAT("+", :' . $bindKeyname . ', "*") IN BOOLEAN MODE)';
 
                     $binds[':' . $bindKeyname] = \str_replace(' ', ' +', \trim($arguments[$index]));
-                } elseif (0 === \strpos($key, 'fulltext_')) {
+                } elseif (0 === \strpos($key, 'fulltext_')) {// fulltext의 with는 여러 컬럼을 처리
                     $fixedKey = \str_replace('_with_', "`, `{$this->tableAliasName}`.`", \substr($key, 9));
 
                     $queryString = "MATCH(`{$this->tableAliasName}`." . '`' . $fixedKey . '` ) AGAINST (:' . $bindKeyname . ' IN NATURAL LANGUAGE MODE)';
 
                     $binds[':' . $bindKeyname] = \str_replace(' ', ' +', \trim($arguments[$index]));
+                } elseif (false !== \strpos($key, '_with_')) { // with는 다른 테이블을 참조하기 위해 사용함, ->andColumn1WithColumn2(table instance)
+                    $tmp               = \explode('_with_', $key);
+                    $fixedleftkey      = $tmp[0];
+                    $conditionOperator = $this->getConditionOperator($key, $arguments[$index]);
+
+                    if ($conditionOperator) {
+                        $fixedleftkey = \substr($tmp[0], 3);
+                    } else {
+                        $conditionOperator = ' = ';
+                    }
+                    $queryString = "`{$this->tableAliasName}`." . '`' . $fixedleftkey . '` ' . $conditionOperator . ' ' . "`{$arguments[$index]->tableAliasName}`." . '`' . $tmp[1] . '`';
                 } elseif (0 === \strpos($key, 'between_')) {
                     $fixedKey = \substr($key, 8);
 
