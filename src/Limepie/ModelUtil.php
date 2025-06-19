@@ -127,7 +127,7 @@ class ModelUtil extends ModelBase
 
         $rawColumns = [];
 
-        foreach ($this->rawColumnAliasNames as $alias => $rawColumn) {
+        foreach ($this->rawColumnAliasNames ?? [] as $alias => $rawColumn) {
             $rawColumns[] = $rawColumn . ' AS `' . $prefix . $alias . '`';
         }
 
@@ -595,6 +595,12 @@ class ModelUtil extends ModelBase
             throw new Exception($class->tableName . ': Undefined left key "' . $leftKeyName . '"');
         }
 
+        if (($class->possibleRelationKey ?? false) && isset($attribute[$class->possibleRelationKey])) {
+            if ($attribute[$class->possibleRelationKey] !== $class->possibleRelationValue) {
+                return $attribute;
+            }
+        }
+
         $args = [$row[$leftKeyName]];
 
         foreach ($class->and as $key => $value) {
@@ -717,6 +723,12 @@ class ModelUtil extends ModelBase
 
             if (true === \array_key_exists($leftKeyName, $row)) {
                 if (null !== $row[$leftKeyName]) {
+                    if (($class->possibleRelationKey ?? false) && isset($attribute[$class->possibleRelationKey])) {
+                        if ($attribute[$class->possibleRelationKey] !== $class->possibleRelationValue) {
+                            continue;
+                        }
+                    }
+
                     $seqs[] = $row[$leftKeyName];
                 }
             } else {

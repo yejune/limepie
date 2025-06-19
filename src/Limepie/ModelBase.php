@@ -124,6 +124,10 @@ class ModelBase extends ArrayObject
 
     public $duplication;
 
+    public $possibleRelationKey = '';
+
+    public $possibleRelationValue = '';
+
     public function __construct(?\PDO $pdo = null, $attributes = null, $originAttributes = [])
     {
         if ($pdo) {
@@ -219,6 +223,10 @@ class ModelBase extends ArrayObject
 
         if (0 === \strpos($name, 'match')) {
             return $this->buildMatch($name, $arguments);
+        }
+
+        if (0 === \strpos($name, 'possible')) {
+            return $this->buildPossible($name, $arguments);
         }
 
         if (0 === \strpos($name, 'relations')) {
@@ -1566,6 +1574,16 @@ class ModelBase extends ArrayObject
         } else {
             throw new Exception('"' . $name . '" syntax error', 1999);
         }
+
+        return $this;
+    }
+
+    public function buildPossible(string $name, $arguments) : self
+    {
+        $tmp = \substr($name, 8);
+
+        $this->possibleRelationKey   = \Limepie\decamelize($tmp);
+        $this->possibleRelationValue = $arguments[0];
 
         return $this;
     }
