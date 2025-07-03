@@ -427,42 +427,84 @@ function getHttpHeader()
 
     return $headers;
 }
+
 /**
- * 명확하고 혼동되지 않는 추천 코드를 생성하는 함수.
+ * 추천 코드 생성 함수.
  *
- * @param int  $length     코드 길이 (기본값: 6)
- * @param bool $mixPattern 문자와 숫자를 섞을지 여부 (기본값: false)
+ * 혼동 가능성이 적은 문자와 숫자를 사용하여 추천 코드를 생성합니다.
+ * 0, 1, 2, 5, 8, B, I, L, O, S, Z 등 헷갈리기 쉬운 문자는 제외했습니다.
+ *
+ * @param int    $length             생성할 코드의 총 길이 (기본값: 8)
+ * @param bool   $mixPattern         true: 문자/숫자 랜덤 섞기, false: 문자+숫자 순서대로 (기본값: false)
+ * @param string $separator          구분자 문자 (빈 문자열이면 구분자 없음, 기본값: '')
+ * @param bool   $avoidQuadDuplicate true: 4연속 중복 방지, false: 중복 허용 (기본값: false)
  *
  * @return string 생성된 추천 코드
+ *
+ * @example
+ * // 기본 사용 - 8자리, 문자+숫자 분리
+ * referral_code() // "ACEF3467"
+ *
+ * // 구분자 추가
+ * referral_code(8, false, '-') // "ACEF-3467"
+ *
+ * // 랜덤 섞기 + 구분자
+ * referral_code(8, true, '-') // "ACE4-G679"
+ *
+ * // 4연속 중복 방지
+ * referral_code(8, false, '', true) // "AAAC3467" (AAAA 방지)
+ *
+ * @throws Exception random_int() 함수에서 발생할 수 있는 예외
  */
-function referral_code(int $length = 8, bool $mixPattern = false) : string
+function referral_code(int $length = 8, bool $mixPattern = false, string $separator = '', bool $avoidQuadDuplicate = false) : string
 {
-    // 혼동 가능성이 적은 문자들만 사용
     $allowedChars = 'ACDEFGHJKMNPQRTUVWXY';
     $allowedNums  = '34679';
+
+    // 중복 체크 로직을 클로저로
+    $getChar = function ($chars) use (&$code, $avoidQuadDuplicate) {
+        $newChar = $chars[\random_int(0, \strlen($chars) - 1)];
+
+        if ($avoidQuadDuplicate && \strlen($code) >= 3) {
+            $lastThree = \substr($code, -3);
+
+            if ($lastThree[0]    === $lastThree[1]
+                && $lastThree[1] === $lastThree[2]
+                && $lastThree[2] === $newChar) {
+                $newChar = ($newChar === $chars[0]) ? $chars[1] : $chars[0];
+            }
+        }
+
+        return $newChar;
+    };
 
     $code = '';
 
     if ($mixPattern) {
-        // 문자와 숫자를 랜덤하게 섞는 방식
         $allAllowed = $allowedChars . $allowedNums;
 
         for ($i = 0; $i < $length; ++$i) {
-            $code .= $allAllowed[\random_int(0, \strlen($allAllowed) - 1)];
+            $code .= $getChar($allAllowed);
+
+            if ($separator && $i === (int) ($length / 2) - 1) {
+                $code .= $separator;
+            }
         }
     } else {
-        // 문자와 숫자를 절반씩 사용하는 방식 (기본)
         $charsLength = (int) ceil($length / 2);
-        $numsLength  = $length - $charsLength;
 
-        // 문자 부분 생성
+        // 문자 부분
         for ($i = 0; $i < $charsLength; ++$i) {
-            $code .= $allowedChars[\random_int(0, \strlen($allowedChars) - 1)];
+            $code .= $getChar($allowedChars);
         }
 
-        // 숫자 부분 생성
-        for ($i = 0; $i < $numsLength; ++$i) {
-            $code .= $allowedNums[\random_int(0, \strlen($allowedNums) - 1)];
+        if ($separator) {
+            $code .= $separator;
+        }
+
+        // 숫자 부분
+        for ($i = 0; $i < $length - $charsLength; ++$i) {
+            $code .= $getChar($allowedNums);
         }
     }
 
@@ -751,6 +793,145 @@ function highlight_keyword($text, $keywords, $useHash = false, $className = 'hig
     }, $text);
 }
 
+/**
+ * 숫자를 레벨로 변환하는 함수.
+ *
+ * 2000포인트마다 1레벨씩 상승하는 시스템
+ * 0~1999: 1레벨, 2000~3999: 2레벨, 4000~5999: 3레벨...
+ *
+ * @param int $number 변환할 숫자 (포인트, 경험치 등)
+ *
+ * @return int 계산된 레벨 (최소 1레벨부터 시작)
+ *
+ * @example
+ * number_to_level(0)     // 1레벨 (시작 레벨)
+ * number_to_level(1999)  // 1레벨 (아직 2레벨 못됨)
+ * number_to_level(2000)  // 2레벨 (정확히 2레벨 달성)
+ * number_to_level(5500)  // 3레벨 (2레벨을 넘어서 3레벨)
+ */
+function number_to_level(int $number) : int
+{
+    return (int) ($number / 2000) + 1;
+}
+
+/**
+ * 레벨을 해당 레벨의 시작 숫자로 변환 (역함수).
+ *
+ * 특정 레벨이 되려면 최소 몇 포인트가 필요한지 계산
+ *
+ * @param int $level 레벨 (1 이상)
+ *
+ * @return int 해당 레벨의 시작 포인트
+ *
+ * @example
+ * level_to_start_number(1)  // 0 (1레벨은 0포인트부터)
+ * level_to_start_number(2)  // 2000 (2레벨은 2000포인트부터)
+ * level_to_start_number(5)  // 8000 (5레벨은 8000포인트부터)
+ */
+function level_to_start_number(int $level) : int
+{
+    return ($level - 1) * 2000;
+}
+
+/**
+ * 다음 레벨까지 필요한 포인트 계산.
+ *
+ * 현재 포인트에서 다음 레벨 달성까지 얼마나 더 필요한지 계산
+ *
+ * @param int $number 현재 포인트
+ *
+ * @return int 다음 레벨까지 부족한 포인트
+ *
+ * @example
+ * points_to_next_level(1500)  // 500 (2000까지 500 부족)
+ * points_to_next_level(3200)  // 800 (4000까지 800 부족)
+ * points_to_next_level(2000)  // 2000 (이미 2레벨이므로 4000까지 2000 부족)
+ */
+function points_to_next_level(int $number) : int
+{
+    $current_level    = number_to_level($number);
+    $next_level_start = level_to_start_number($current_level + 1);
+
+    return $next_level_start - $number;
+}
+
+/**
+ * 현재 레벨에서의 진행도 계산.
+ *
+ * 현재 레벨 내에서 얼마나 진행했는지 0~1999 범위로 반환
+ *
+ * @param int $number 현재 포인트
+ *
+ * @return int 현재 레벨 내 진행도 (0~1999)
+ *
+ * @example
+ * get_level_progress(1500)  // 1500 (1레벨에서 1500만큼 진행)
+ * get_level_progress(3200)  // 1200 (2레벨에서 1200만큼 진행)
+ * get_level_progress(2000)  // 0 (2레벨 시작점이므로 진행도 0)
+ */
+function get_level_progress(int $number) : int
+{
+    return $number % 2000;
+}
+
+/**
+ * 현재 레벨 진행률을 퍼센트로 계산.
+ *
+ * 현재 레벨에서 다음 레벨까지의 진행률을 0~100% 사이로 반환
+ *
+ * @param int $number 현재 포인트
+ *
+ * @return float 진행률 (0.0 ~ 100.0)
+ *
+ * @example
+ * get_level_progress_percent(1000)  // 50.0 (1레벨에서 50% 진행)
+ * get_level_progress_percent(3500)  // 75.0 (2레벨에서 75% 진행)
+ */
+function get_level_progress_percent(int $number) : float
+{
+    $progress = get_level_progress($number);
+
+    return \round(($progress / 2000) * 100, 1);
+}
+
+/**
+ * 레벨 정보를 배열로 반환 (종합 정보).
+ *
+ * 한 번의 함수 호출로 레벨 관련 모든 정보를 가져올 수 있음
+ *
+ * @param int $number 현재 포인트
+ *
+ * @return array 레벨 정보가 담긴 배열
+ *
+ * @example
+ * get_level_info(3750)
+ * // 반환값: [
+ * //   'current_level' => 2,
+ * //   'current_points' => 3750,
+ * //   'level_progress' => 1750,
+ * //   'points_to_next' => 250,
+ * //   'progress_percent' => 87.5,
+ * //   'next_level' => 3,
+ * //   'next_level_start' => 4000
+ * // ]
+ */
+function get_level_info(int $number) : array
+{
+    $current_level    = number_to_level($number);
+    $level_progress   = get_level_progress($number);
+    $points_to_next   = points_to_next_level($number);
+    $progress_percent = get_level_progress_percent($number);
+
+    return [
+        'current_level'    => $current_level,
+        'current_points'   => $number,
+        'level_progress'   => $level_progress,
+        'points_to_next'   => $points_to_next,
+        'progress_percent' => $progress_percent,
+        'next_level'       => $current_level + 1,
+        'next_level_start' => level_to_start_number($current_level + 1),
+    ];
+}
 function get_level($points)
 {
     $level_config = [
@@ -1962,34 +2143,32 @@ function http_build_query($data = [], $glue = '=', $separator = '&', $encode = f
 
     return \implode($separator, $results);
 }
+
 function getIp()
 {
-    if (true === isset($_SERVER['HTTP_CLIENT_IP'])) {
-        return $_SERVER['HTTP_CLIENT_IP'];
-    }
+    $keys = [
+        'HTTP_CLIENT_IP',
+        'HTTP_X_FORWARDED_FOR',
+        'HTTP_X_FORWARDED',
+        'HTTP_X_CLUSTER_CLIENT_IP',
+        'HTTP_FORWARDED_FOR',
+        'HTTP_FORWARDED',
+        'REMOTE_ADDR',
+    ];
 
-    if (true === isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        return $_SERVER['HTTP_X_FORWARDED_FOR'];
-    }
+    foreach ($keys as $key) {
+        if (! empty($_SERVER[$key])) {
+            $ips = explode(',', $_SERVER[$key]);
 
-    if (true === isset($_SERVER['HTTP_X_FORWARDED'])) {
-        return $_SERVER['HTTP_X_FORWARDED'];
-    }
+            foreach ($ips as $ip) {
+                $ip = \trim($ip);
 
-    if (true === isset($_SERVER['HTTP_X_CLUSTER_CLIENT_IP'])) {
-        return $_SERVER['HTTP_X_CLUSTER_CLIENT_IP'];
-    }
-
-    if (true === isset($_SERVER['HTTP_FORWARDED_FOR'])) {
-        return $_SERVER['HTTP_FORWARDED_FOR'];
-    }
-
-    if (true === isset($_SERVER['HTTP_FORWARDED'])) {
-        return $_SERVER['HTTP_FORWARDED'];
-    }
-
-    if (true === isset($_SERVER['REMOTE_ADDR'])) {
-        return $_SERVER['REMOTE_ADDR'];
+                // 공인·사설·예약 구분 없이 유효한 IP만 허용
+                if (\filter_var($ip, FILTER_VALIDATE_IP)) {
+                    return $ip;
+                }
+            }
+        }
     }
 
     return '127.0.0.1';
@@ -2614,6 +2793,70 @@ function get_current_url()
 {
     // 서버 변수로부터 현재 URL 경로를 가져옵니다.
     return $_SERVER['REQUEST_URI'];
+}
+
+function build_qs_return_current_url()
+{
+    // get_return_url 함수를 사용하여 URL을 가져옵니다.
+    $urlRequestUrl = get_current_url();
+
+    if ($urlRequestUrl) {
+        return '?return_url=' . rawurlencode($urlRequestUrl);
+    }
+
+    return '';
+}
+
+function get_signin_url($returnUrl = null)
+{
+    if (!$returnUrl) {
+        $returnUrl = get_current_url();
+    }
+
+    $path = '/user/sign/in';
+
+    if ($returnUrl) {
+        $path .= '?return_url=' . rawurlencode($returnUrl);
+    }
+
+    return $path;
+}
+
+function get_signin_url_back_step($number = 0)
+{
+    // number를 무조건 마이너스로
+    $number = -\abs($number);
+
+    $returnUrl = get_current_url();
+
+    // 현재 path 가져오기
+    $currentPath = \parse_url($returnUrl, PHP_URL_PATH);
+
+    // '/'로 나누고 빈 값 제거
+    $pathArray = \array_filter(explode('/', $currentPath));
+
+    // number만큼 뒤에서 제거
+    for ($i = 0; $i < \abs($number); ++$i) {
+        \array_pop($pathArray);
+    }
+
+    // 다시 합치기
+    $newPath = '/' . \implode('/', $pathArray);
+
+    if (!empty($pathArray)) {
+        $newPath .= '/';
+    }
+
+    // 새로운 return URL 만들기
+    $returnUrl = \str_replace(\parse_url($returnUrl, PHP_URL_PATH), $newPath, $returnUrl);
+
+    $path = '/user/sign/in';
+
+    if ($returnUrl) {
+        $path .= '?return_url=' . rawurlencode($returnUrl);
+    }
+
+    return $path;
 }
 
 function get_daum_postcode(?array $raw = null)

@@ -984,10 +984,10 @@ class ModelBase extends ArrayObject
         return \key($this->attributes);
     }
 
-    public function save()
+    public function save($checkUpdatedTs = false)
     {
         if (0 < \strlen((string) $this->primaryKeyValue)) {
-            return $this->update();
+            return $this->update($checkUpdatedTs);
         }
 
         return $this->create();

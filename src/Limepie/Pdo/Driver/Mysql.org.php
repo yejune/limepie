@@ -14,10 +14,6 @@ class Mysql extends \Limepie\Pdo
 
     public $debug = false;
 
-    public $deadlockLog = '/var/www/var/deadlock.log';
-
-    public $isDeadlockLog = true;
-
     public $dbname;
 
     public $host;
@@ -404,178 +400,111 @@ class Mysql extends \Limepie\Pdo
     }
 
     /**
+     * @return mixed
+     *
      * @throws \Exception
      */
-    // public function transaction(\Closure $callback)
-    // {
-    //     if ($this->readonly) {
-    //         throw new \Limepie\Exception('This is readonly mode: #4 ' . $this->getErrorMessage());
-    //     }
-
-    //     try {
-    //         if ($this->xbegin()) {
-    //             $callback = $callback->bindTo($this);
-    //             $return   = $callback();
-
-    //             if (!$return) {
-    //                 throw new Exception\Transaction('Transaction Failure', 50003);
-    //             }
-
-    //             if ($this->xcommit()) {
-    //                 return $return;
-    //             }
-    //         }
-
-    //         throw new Exception\Transaction('Transaction Failure', 50005);
-    //     } catch (\PDOException $e) {
-    //         $this->xrollback();
-
-    //         // 데드락에 의한 실패일 경우 한번더 실행
-    //         if ($e->errorInfo && 40001 === $e->errorInfo[0]) {
-    //             // 1초 지연
-    //             $cho = 1000000;
-    //             \usleep($cho / 2);
-
-    //             if ($this->xbegin()) {
-    //                 $callback = $callback->bindTo($this);
-    //                 $return   = $callback();
-
-    //                 if (!$return) {
-    //                     throw new Exception\DeadLock('Deadlock Retry Failure', 50003);
-    //                 }
-
-    //                 if ($this->xcommit()) {
-    //                     return $return;
-    //                 }
-    //             }
-    //         }
-
-    //         throw new Exception\DeadLock('Deadlock Retry Failure', 50005);
-    //     } catch (\Throwable $e) {
-    //         $this->xrollback();
-
-    //         throw $e;
-    //     }
-    // }
-
-    private function executeTransaction(\Closure $callback) : mixed
-    {
-        if ($this->xbegin()) {
-            try {
-                $callback = $callback->bindTo($this);
-                $return   = $callback();
-
-                if (!$return) {
-                    throw new Exception\Transaction('Transaction callback returned false', 50003);
-                }
-
-                if ($this->xcommit()) {
-                    return $return;
-                }
-            } catch (\Throwable $e) {
-                $this->xrollback();
-
-                throw $e;
-            }
-        }
-
-        throw new Exception\Transaction('Failed to begin transaction', 50005);
-    }
-
-    private function isDeadlock(\PDOException $e) : bool
-    {
-        $status
-            = '40001' == $e->getCode()
-            || (isset($e->errorInfo[0]) && 40001 == $e->errorInfo[0])
-            || '1213' == $e->getCode()
-            || false !== \strpos($e->getMessage(), 'Deadlock');
-
-        if ($this->isDeadlockLog) {
-            try {
-                \file_put_contents(
-                    $this->deadlockLog,
-                    PHP_EOL . PHP_EOL
-                    . 'deadlock: ' . \date('Y-m-d H:i:s') . ' ' . $e->getMessage() . ' in ' . $e->getFile() . ' line ' . $e->getLine(),
-                    FILE_APPEND
-                );
-            } catch (\Throwable $e) {
-                // ignore
-            }
-        }
-
-        return $status;
-    }
-
     public function transaction(\Closure $callback)
     {
         if ($this->readonly) {
             throw new \Limepie\Exception('This is readonly mode: #4 ' . $this->getErrorMessage());
         }
 
-        $attempt    = 1;
-        $maxRetries = 3;
+        try {
+            if ($this->xbegin()) {
+                $callback = $callback->bindTo($this);
+                $return   = $callback();
 
-        while ($attempt <= $maxRetries) {
-            try {
-                if ($this->isDeadlockLog) {
-                    if ($attempt > 1) {
-                        try {
-                            \file_put_contents(
-                                $this->deadlockLog,
-                                PHP_EOL . PHP_EOL
-                                . 'deadlock: ' . \date('Y-m-d H:i:s') . ' retry: ' . $attempt,
-                                FILE_APPEND
-                            );
-                        } catch (\Throwable $e) {
-                            // ignore
-                        }
-                    }
+                if (!$return) {
+                    throw new Exception\Transaction('Transaction Failure', 50003);
                 }
 
-                return $this->executeTransaction($callback);
-            } catch (\PDOException $e) {
-                if ($this->isDeadlock($e)) {
-                    if ($attempt < $maxRetries) {
-                        $delay = $this->calculateDelay($attempt);
-
-                        \usleep($delay);
-                        ++$attempt;
-
-                        continue; // 다음 시도
-                    }
-
-                    // 최대 재시도 횟수 초과 - 데드락 전용 예외
-                    throw new Exception\Deadlock(
-                        "Transaction failed after {$maxRetries} deadlock retries",
-                        40001,
-                        $maxRetries
-                    );
-                } else {
-                    // 데드락이 아닌 PDO 에러
-                    throw $e;
-                    // throw new Exception\Transaction(
-                    //     "Transaction PDO error on attempt {$attempt}",
-                    //     50002,
-                    // );
+                if ($this->xcommit()) {
+                    return $return;
                 }
-            } catch (\Throwable $e) {
-                // 일반 예외
-                throw $e;
-                // throw new Exception\Transaction(
-                //     "Transaction general error on attempt {$attempt}",
-                //     50001,
-                // );
             }
+
+            throw new Exception\Transaction('Transaction Failure', 50005);
+        } catch (\PDOException $e) {
+            \print_r($e);
+            $this->xrollback();
+
+            // 데드락에 의한 실패일 경우 한번더 실행
+            if ($e->errorInfo && 40001 === $e->errorInfo[0]) {
+                // 1초 지연
+                $cho = 1000000;
+                \usleep($cho / 2);
+
+                if ($this->xbegin()) {
+                    $callback = $callback->bindTo($this);
+                    $return   = $callback();
+
+                    if (!$return) {
+                        throw $e;
+                    }
+
+                    if ($this->xcommit()) {
+                        return $return;
+                    }
+                }
+            }
+
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->xrollback();
+
+            throw $e;
         }
     }
 
-    private function calculateDelay(int $attempt) : int
+    public function transaction2(callable $callback)
     {
-        $baseDelay = 50000; // 50ms
-        $backoff   = $baseDelay * (2 ** ($attempt - 1));
-        $jitter    = \rand(0, $baseDelay);
+        if ($this->readonly) {
+            throw new \Limepie\Exception('This is readonly mode: #5 ' . $this->getErrorMessage());
+        }
 
-        return \min($backoff + $jitter, 1000000); // 최대 1초
+        try {
+            if ($this->xbegin()) {
+                $return = $callback($this);
+
+                if (!$return) {
+                    throw new Exception\Transaction('Transaction Failure', 50003);
+                }
+
+                if ($this->xcommit()) {
+                    return $return;
+                }
+            }
+
+            throw new Exception\Transaction('Transaction Failure', 50005);
+        } catch (\PDOException $e) {
+            $this->xrollback();
+
+            // 데드락에 의한 실패일 경우 한번더 실행
+            if (40001 === $e->errorInfo[0]) {
+                // 1초 지연
+                $cho = 1000000;
+                \usleep($cho / 2);
+
+                if ($this->xbegin()) {
+                    $return = $callback($this);
+
+                    if (!$return) {
+                        throw $e;
+                    }
+
+                    if ($this->xcommit()) {
+                        return $return;
+                    }
+                }
+            }
+
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->xrollback();
+
+            throw $e;
+        }
     }
 
     private function execute($statement, $bindParameters = [], $ret = false)

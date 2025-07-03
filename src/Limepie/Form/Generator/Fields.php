@@ -434,7 +434,9 @@ class Fields
 
             $plusBtn  = 'btn-plus';
             $minusBtn = 'btn-minus';
-            $btnGroupHtml .= '<button class="btn ' . $plusBtn . '" type="button"' . $dynamicOnchangeScript . '>&nbsp;</button>';
+            $max      = isset($propertyValue['multiple_max']) ? 'data-multiple-max="' . $propertyValue['multiple_max'] . '"' : '';
+
+            $btnGroupHtml .= '<button class="btn ' . $plusBtn . '" ' . $max . ' type="button"' . $dynamicOnchangeScript . '>&nbsp;</button>';
 
             if (true === isset($propertyValue['multiple_copy']) && $propertyValue['multiple_copy']) {
                 $plusBtn = 'btn-copy';

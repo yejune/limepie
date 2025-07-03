@@ -1032,7 +1032,7 @@ class Compiler
 
                     break;
                 case 'namespace_sigh':
-                    if (false === \in_array($prev['name'], ['compare', 'static_object_sign', 'quote_number_concat', 'left_bracket', 'left_parenthesis', 'string', 'assign', 'comma', 'operator', 'sam2', 'sam', ''], true)) {
+                    if (false === \in_array($prev['name'], ['compare', 'static_object_sign', 'quote_number_concat', 'left_bracket', 'left_parenthesis', 'string', 'assign', 'comma', 'operator', 'sam2', 'sam', 'string_concat', ''], true)) {
                         if (true === $this->debug) {
                             \pr($xpr, $prev, $current, __LINE__);
                         }
@@ -1044,6 +1044,8 @@ class Compiler
 
                     if ('static_object_sign' === $prev['name']) {
                         $xpr .= \substr($current['value'], 1);
+                    } elseif ('string_concat' === $prev['name']) {
+                        $xpr .= '.' . $current['value'];
                     } else {
                         $xpr .= $current['value'];
                     }

@@ -2,6 +2,8 @@
 
 namespace Limepie;
 
+use Limepie\RecursiveIterator\AdjacencyList;
+
 class Menu
 {
     public $sequence = 0;
@@ -30,10 +32,15 @@ class Menu
 
         // url에 ?가 있을 경우 querystring까지 확인한다.
         if (false !== \strpos($url, '?')) {
-            $query       = \Limepie\Di::getRequest()->getQueryString();
+            $query       = Di::getRequest()->getQueryString();
             $this->query = '?' . \trim($query, '/');
         }
-        $this->fullpath = \rtrim(\Limepie\Di::getRequest()->getPathByUrl(0), '/') . $this->query;
+
+        if (0 === \strpos($url, '?')) {
+            $this->fullpath = $this->query;
+        } else {
+            $this->fullpath = \rtrim(Di::getRequest()->getPathByUrl(0), '/');
+        }
     }
 
     public function __invoke($name, $link = '', $parent = 0)
@@ -56,7 +63,7 @@ class Menu
             'params' => $params,
         ];
 
-        $target = \rtrim(\Limepie\Di::getRequest()->getPathByUrl(0, \substr_count($this->prefix . $url, '/')), '/') . $this->query;
+        $target = \rtrim(Di::getRequest()->getPathByUrl(0, \substr_count($this->prefix . $url, '/')), '/') . $this->query;
 
         if ($this->prefix . $url) {
             if ($this->prefix . $url === $target) {
@@ -92,16 +99,18 @@ class Menu
             'params' => $params,
         ];
 
-        $target = \rtrim(\Limepie\Di::getRequest()->getPathByUrl(0, \substr_count($this->prefix . $url, '/')), '/') . $this->query;
+        $target = \rtrim(Di::getRequest()->getPathByUrl(0, \substr_count($this->prefix . $url, '/')), '/') . $this->query;
 
         if ($this->prefix . $url) {
             if ($this->prefix . $url === $target) {
                 if (false === $this->finalize || $this->prefix . $url === $this->fullpath) {
+                    // \prx($this->prefix . $url, $target, $this->fullpath);
                     $this->active = $sequence;
                 }
             }
 
             if (false === $this->finalize) {
+                // \prx($this->prefix . $url, $target, $this->fullpath);
                 $this->finalize = $this->prefix . $url === $this->fullpath;
             }
         } else {
@@ -166,6 +175,17 @@ class Menu
         return $location;
     }
 
+    public function getActivesTree($parent = 0)
+    {
+        $this->start = $parent;
+
+        foreach ($this->getActives() as $seq) {
+            $this->menu[$seq]['active'] = 1;
+        }
+
+        return $this->menu;
+    }
+
     public function get($parent = 0)
     {
         $this->start = $parent;
@@ -197,6 +217,7 @@ class Menu
     {
         ++$depth;
         $return = [];
+
         // Traverse the tree and search for direct children of the parent
         foreach ($tree as $child => $value) {
             // A direct child is found
@@ -228,7 +249,7 @@ class Menu
         }
 
         return new \RecursiveIteratorIterator(
-            new \Limepie\RecursiveIterator\AdjacencyList($this->menu),
+            new AdjacencyList($this->menu),
             \RecursiveIteratorIterator::SELF_FIRST
         );
     }

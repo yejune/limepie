@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Limepie;
 
+use Limepie\Pdo\Exception\OptimisticLock;
+
 class Model extends ModelUtil
 {
     /**
@@ -45,7 +47,7 @@ class Model extends ModelUtil
             // MySQL의 ft_min_word_len 설정에 따라 조정이 필요할 수 있음
             if (\mb_strlen($word) >= 3) {
                 // SQL 인젝션 방지를 위한 특수 문자 제거
-                $word = \preg_replace('/[^\p{L}\p{N}]/u', '', $word);
+                $word = \preg_replace('/[^\p{L}\p{N}]/u', ' ', $word);
 
                 if (!empty($word)) {
                     $safeWords[] = $word;
@@ -469,6 +471,10 @@ class Model extends ModelUtil
             }
 
             if ($this->getConnect()->set($sql, $this->changeBinds)) {
+                if (true === $checkUpdatedTs && 0 == $this->getConnect()->last_row_count()) {
+                    throw new OptimisticLock($this->tableName . ' updated_ts is changed');
+                }
+
                 if (static::$debug) {
                     echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
                 }

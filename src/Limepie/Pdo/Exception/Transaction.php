@@ -2,7 +2,9 @@
 
 namespace Limepie\Pdo\Exception;
 
-class Transaction extends \Limepie\Exception
+use Limepie\Exception;
+
+class Transaction extends Exception
 {
     // public function __construct($e, int $code = 0)
     // {

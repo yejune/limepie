@@ -51,8 +51,8 @@ class Image extends Fields
 
             if (\is_array($property['prepend']) && $property['prepend'][\Limepie\get_language()]) {
                 $prependText = $property['prepend'][\Limepie\get_language()];
-            } else {
-                $prependText = '';
+                // } else {
+                //     $prependText = '';
             }
 
             $prepend = <<<EOD
