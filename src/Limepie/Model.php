@@ -1284,27 +1284,34 @@ class Model extends ModelUtil
 
             SQL;
         }
-        $sql .= <<<SQL
 
+        $sql .= <<<SQL
             FROM
                 `{$this->tableName}` AS `{$this->tableAliasName}`
                 {$forceIndex}
                 {$join}
                 {$condition}
                 {$groupBy}
-                {$orderBy}
         SQL;
 
         if ($groupLimit) {
+            $newOrderBy = \str_replace(
+                '`' . $this->tableAliasName . '`.',
+                'ranked.',
+                $orderBy
+            );
+
             $sql = <<<SQL
                 SELECT *
                 FROM (
                     {$sql}
                 ) AS ranked
                 WHERE ranked.row_num <= {$groupLimit}
+                {$newOrderBy}
             SQL;
         } else {
-            $sql .= ' ' . $limit;
+            $sql .= ' ' . $orderBy
+                  . ' ' . $limit;
         }
 
         $this->condition = $condition;
