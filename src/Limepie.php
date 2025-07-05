@@ -29,6 +29,77 @@ function lang(array $data, string $key, string $language = 'ko')
 }
 
 /**
+ * Google reCAPTCHA 토큰을 검증합니다.
+ *
+ * @param string      $token            클라이언트로부터 받은 g-recaptcha-response
+ * @param string      $secretKey        reCAPTCHA 비밀 키
+ * @param null|string $userIp           사용자의 IP (선택사항)
+ * @param int         $timeoutSeconds   토큰 유효 시간(초), 기본 120초
+ * @param null|string $expectedHostname 예상 호스트명 (선택사항)
+ *
+ * @return array ['success' => bool, 'errors' => array]
+ */
+function verify_recaptcha(
+    string $token,
+    string $secretKey,
+    ?string $userIp = null,
+    int $timeoutSeconds = 120,
+    ?string $expectedHostname = null
+) : array {
+    // 1) 토큰 유무 확인
+    if ('' === \trim($token)) {
+        return ['success' => false, 'errors' => ['missing-input-response']];
+    }
+
+    // 2) siteverify 호출용 파라미터 준비
+    $postData = [
+        'secret'   => $secretKey,
+        'response' => $token,
+    ];
+
+    if ($userIp) {
+        $postData['remoteip'] = $userIp;
+    }
+
+    // 3) cURL 요청
+    $ch = \curl_init('https://www.google.com/recaptcha/api/siteverify');
+    \curl_setopt($ch, CURLOPT_POST, true);
+    \curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
+    \curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = \curl_exec($ch);
+
+    \curl_close($ch);
+
+    // 4) JSON 디코딩
+    $result  = \json_decode($response, true);
+    $success = $result['success']     ?? false;
+    $errors  = $result['error-codes'] ?? [];
+
+    // 5) 추가 옵션 검증: 타임아웃
+    if ($success && isset($result['challenge_ts'])) {
+        $ts = \strtotime($result['challenge_ts']);
+
+        if (false === $ts || (\time() - $ts) > $timeoutSeconds) {
+            $success  = false;
+            $errors[] = 'timeout-or-duplicate';
+        }
+    }
+
+    // 6) 추가 옵션 검증: hostname
+    if ($success && $expectedHostname && isset($result['hostname'])) {
+        if ($result['hostname'] !== $expectedHostname) {
+            $success  = false;
+            $errors[] = 'hostname-mismatch';
+        }
+    }
+
+    return [
+        'success' => (bool) $success,
+        'errors'  => $errors,
+    ];
+}
+
+/**
  * BigInt → UUID 토큰 인코딩 (CRC32×2 기반 다변화 마스크).
  *
  * Payload 구성:
