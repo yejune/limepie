@@ -29,6 +29,197 @@ function lang(array $data, string $key, string $language = 'ko')
 }
 
 /**
+ * BigInt → UUID 토큰 인코딩 (CRC32×2 기반 다변화 마스크).
+ *
+ * Payload 구성:
+ *  • nonce(4B, 평문)
+ *  • time(4B, big-endian)
+ *  • bigint(8B, 64-bit native)
+ *
+ * 뒤 12바이트(time+bigint)에만 CRC32(key . nonce)와 CRC32(nonce . key)
+ * 그리고 이 둘의 XOR 결과로 생성한 12바이트 마스크를 XOR 처리합니다.
+ *
+ * @param int|string $bigint 원본 정수
+ * @param string     $key    최소 8바이트 이상의 비밀 키
+ *
+ * @return string UUID 형식 토큰
+ *
+ * @throws \InvalidArgumentException
+ */
+function int_to_uuid(int|string $bigint, string $key) : string
+{
+    if (\strlen($key) < 8) {
+        throw new \InvalidArgumentException('Key must be at least 8 bytes.');
+    }
+
+    // 1) nonce 4바이트 (평문)
+    $nonce = \random_bytes(4);
+    // 2) 발급 시각(초 단위) 4바이트 BE
+    $timePack = \pack('N', \time());
+    // 3) BigInt 8바이트 native
+    $dataPack = \pack('J', (int) $bigint);
+
+    // 4) payload plain 12바이트 = timePack(4) │ dataPack(8)
+    $plain12 = $timePack . $dataPack;
+
+    // 5) CRC32 기반 시드 생성
+    $seed1 = \crc32($key . $nonce);
+    $seed2 = \crc32($nonce . $key);
+    $seed3 = $seed1 ^ $seed2;
+
+    // 6) 12바이트 마스크 생성
+    $mask = \pack('N', $seed1)
+          . \pack('N', $seed2)
+          . \pack('N', $seed3);
+
+    // 7) XOR 암호화 → 12바이트 cipher
+    $cipher12 = $plain12 ^ $mask;
+
+    // 8) 최종 토큰 바이너리 = nonce(4) || cipher12(12)
+    $bin = $nonce . $cipher12;
+
+    // 9) UUID 포맷 변환 (16B → 32 hex → 8-4-4-4-12)
+    $hex             = \bin2hex($bin);
+    [$a,$b,$c,$d,$e] = \sscanf($hex, '%8s%4s%4s%4s%12s');
+
+    return \implode('-', [$a, $b, $c, $d, $e]);
+}
+
+/**
+ * UUID 토큰 → BigInt 복호화 (만료 검증 포함).
+ *
+ * @param string $uuid UUID 형식 토큰
+ * @param string $key  인코딩 때 사용한 동일 키
+ * @param int    $ttl  유효기간(초), 0 이면 만료 검사 생략
+ *
+ * @return int 원본 BigInt
+ *
+ * @throws \InvalidArgumentException
+ */
+function uuid_to_int(string $uuid, string $key, int $ttl) : int
+{
+    // 1) 하이픈 제거 & hex→bin
+    $clean = \str_replace('-', '', $uuid);
+
+    if (32 !== \strlen($clean) || false === ($bin = \hex2bin($clean))) {
+        throw new \InvalidArgumentException('Invalid token format.');
+    }
+
+    if (\strlen($key) < 8) {
+        throw new \InvalidArgumentException('Key must be at least 8 bytes.');
+    }
+
+    if ($ttl < 0) {
+        throw new \InvalidArgumentException('TTL must be non-negative.');
+    }
+
+    // 2) nonce(4B) 추출
+    $nonce = \substr($bin, 0, 4);
+    // 3) 동일 마스크 재생성
+    $seed1 = \crc32($key . $nonce);
+    $seed2 = \crc32($nonce . $key);
+    $seed3 = $seed1 ^ $seed2;
+    $mask  = \pack('N', $seed1)
+              . \pack('N', $seed2)
+              . \pack('N', $seed3);
+
+    // 4) cipher12 복원 → plain12
+    $cipher12 = \substr($bin, 4, 12);
+    $plain12  = $cipher12 ^ $mask;
+
+    // 5) plain12 분리: time(4B) │ bigint(8B)
+    $issued = \unpack('N', \substr($plain12, 0, 4))[1];
+    $bigint = \unpack('J', \substr($plain12, 4, 8))[1];
+
+    // 6) 만료 검사
+    if ($ttl > 0 && \time() > ($issued + $ttl)) {
+        throw new \InvalidArgumentException('Token has expired.');
+    }
+
+    return $bigint;
+}
+
+/**
+ * UUID 토큰에서 발급 시각(초 단위)만 추출.
+ *
+ * @param string $uuid UUID 토큰
+ * @param string $key  동일 키
+ *
+ * @return int Unix epoch seconds
+ *
+ * @throws \InvalidArgumentException
+ */
+function uuid_get_issued_time(string $uuid, string $key) : int
+{
+    $clean = \str_replace('-', '', $uuid);
+    $bin   = \hex2bin($clean) ?: throw new \InvalidArgumentException('Invalid token format.');
+
+    if (\strlen($key) < 8) {
+        throw new \InvalidArgumentException('Key must be at least 8 bytes.');
+    }
+
+    $nonce = \substr($bin, 0, 4);
+    $seed1 = \crc32($key . $nonce);
+    $seed2 = \crc32($nonce . $key);
+    $seed3 = $seed1 ^ $seed2;
+    $mask  = \pack('N', $seed1)
+             . \pack('N', $seed2)
+             . \pack('N', $seed3);
+
+    $plain12 = \substr($bin, 4, 12) ^ $mask;
+
+    return \unpack('N', \substr($plain12, 0, 4))[1];
+}
+
+/**
+ * TTL 기준으로 만료 여부만 체크.
+ *
+ * @param string $uuid UUID 토큰
+ * @param string $key  동일 키
+ * @param int    $ttl  유효기간(초)
+ *
+ * @return bool true=만료됨, false=유효
+ *
+ * @throws \InvalidArgumentException
+ */
+function uuid_is_expired(string $uuid, string $key, int $ttl) : bool
+{
+    $issued = uuid_get_issued_time($uuid, $key);
+
+    return $ttl > 0 && (\time() > ($issued + $ttl));
+}
+
+function uuid2int(string $uuid, string $key, int $ttl = 3600) : int
+{
+    return uuid_to_int($uuid, $key, $ttl);
+}
+function int2uuid(int|string $bigint, string $key) : string
+{
+    return int_to_uuid($bigint, $key);
+}
+
+/**
+ * 숫자를 최소 20 이상으로, 20 초과시 10단위로 올림하여 반환.
+ *
+ * 1~20: 20 반환
+ * 21 이후: 10단위로 올림 (21->30, 25->30, 31->40)
+ *
+ * @param mixed $level
+ *
+ * @return int 올림 처리된 숫자
+ *
+ * @example referral_limit(15) // 20
+ * @example referral_limit(25) // 30
+ * @example referral_limit(31) // 40
+ */
+function referral_limit($level)
+{
+    // max(20, ...)로 최소값 20 보장
+    // ceil($number / 10) * 10으로 10단위 올림
+    return \max(20, ceil($level / 10) * 10);
+}
+
+/**
  * Base62 디코딩.
  *
  * @param mixed $str
