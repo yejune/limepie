@@ -29,6 +29,17 @@ function lang(array $data, string $key, string $language = 'ko')
 }
 
 /**
+ * 두 배열에 공통 원소가 하나라도 있으면 true, 없으면 false 반환.
+ *
+ * @param array $a 첫 번째 배열
+ * @param array $b 두 번째 배열
+ */
+function has_intersect(array $a, array $b) : bool
+{
+    return count(\array_intersect($a, $b)) > 0;
+}
+
+/**
  * Google reCAPTCHA 토큰을 검증합니다.
  *
  * @param string      $token            클라이언트로부터 받은 g-recaptcha-response
