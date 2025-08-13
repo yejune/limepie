@@ -24,8 +24,14 @@ class Password extends Fields
             $readonly = ' readonly="readonly"';
         }
 
+        $autocomplete = '';
+
+        if (isset($property['autocomplete']) && $property['autocomplete']) {
+            $autocomplete = ' autocomplete="' . $property['autocomplete'] . '"';
+        }
+
         return <<<EOT
-        <input type="password" class="valid-target form-control" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="" data-default="{$default}"{$readonly} />
+        <input type="password" class="valid-target form-control" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="" data-default="{$default}"{$readonly}{$autocomplete} />
         EOT;
     }
 

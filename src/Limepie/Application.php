@@ -239,7 +239,7 @@ class Application
         $this->properties     = $properties;
         $this->store          = $store;
 
-        $classFile = \str_replace('\\', '/', \strtr($this->className, ['\\App\\' => __BASE_DIR__ . '/app/'])) . '.' . $this->extension;
+        $classFile = \str_replace('\\', '/', \strtr($this->className, ['\App\\' => __BASE_DIR__ . '/app/'])) . '.' . $this->extension;
 
         if (false === \file_exists($classFile)) {
             // throw new \Limepie\Exception('"' . $classFile . '" file not found');
@@ -257,7 +257,7 @@ class Application
                 Di::getRequest(),
                 Di::getResponse()
             );
-        } catch (\Limepie\Exception $e) {
+        } catch (Exception $e) {
             // throw $e;
             // \pr($e);
             $current = $e->getTrace()[0];
@@ -287,21 +287,21 @@ class Application
         }
 
         if (false === \class_exists($className)) {
-            throw (new \Limepie\Exception('Class "' . $className . '" not found', 404))
+            throw (new Exception('Class "' . $className . '" not found', 404))
                 ->setDisplayMessage('page not found', __FILE__, __LINE__)
             ;
         }
 
         try {
             $methods = \get_class_methods($className);
-        } catch (\Limepie\Exception $e) {
+        } catch (Exception $e) {
             throw $e;
         } catch (\Throwable $e) {
-            throw new \Limepie\Exception($e);
+            throw new Exception($e);
         }
 
         if (null === $methods) {
-            throw (new \Limepie\Exception('Class "' . $className . '" name error', 404))
+            throw (new Exception('Class "' . $className . '" name error', 404))
                 ->setDisplayMessage('page not found', __FILE__, __LINE__)
             ;
         }
@@ -330,7 +330,7 @@ class Application
         \rsort($likely);
 
         // ERRORCODE: 40002, method not found
-        throw (new \Limepie\Exception('"' . \implode('" or "', \array_unique($likely)) . '" method not found in ' . $className . '" class', 404))
+        throw (new Exception('"' . \implode('" or "', \array_unique($likely)) . '" method not found in ' . $className . '" class', 404))
             ->setDisplayMessage('page not found', __FILE__, __LINE__)
         ;
     }

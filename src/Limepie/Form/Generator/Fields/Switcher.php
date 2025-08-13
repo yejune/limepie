@@ -151,10 +151,10 @@ class Switcher extends Fields
         $html = <<<EOT
             <div class="input-group d-flex align-items-center" {$onclick}>
                 {$prepend}
-                <div class="{$readonly} form-check form-switch mh-0 me-1 {$switcherClass}">
+                <div class="{$readonly} form-check form-switch mh-0 me-1 {$switcherClass} d-flex align-items-center">
                     <input id="{$id}" class="mb-0 valid-target form-check-input{$inputClass}" type="checkbox" name="{$key}" role="switch" autocomplete="off" data-name="{$propertyName}" data-rule-name="{$ruleName}" value="{$sendValue}" data-is-default="{$default}" data-default-checked="{$checked}" {$elementStyle} {$onchange} {$onload} {$checked} />
                 </div>
-                <label for="{$id}" class="{$readonly} form-check-label {$elementClass}{$appendClass} noselect"><div class="d-flex align-items-center">{$append}</div></label>
+                <label for="{$id}" class="{$readonly} form-check-label {$elementClass}{$appendClass} noselect flex-grow-1 cursor-pointer d-flex align-items-center">{$append}</label>
             </div>
             {$script}
         EOT;

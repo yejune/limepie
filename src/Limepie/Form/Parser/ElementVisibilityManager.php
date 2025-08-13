@@ -206,11 +206,31 @@ class ElementVisibilityManager
                 $showElements[] = "\$self.closest('.form-group').find('." . $elementClass . "').show();";
             }
 
-            // 조건 및 요소 표시 코드 조합
+            // 조건 및 요소 표시 코드 조합 - 체크박스/라디오 버튼 고려
             if (!empty($showElements)) {
-                $this->jsConditions[] = "if(this.value == '{$scriptKey}') { " . \implode(' ', $showElements) . ' }';
+                $condition            = $this->generateElementCondition($scriptKey);
+                $this->jsConditions[] = "if({$condition}) { " . \implode(' ', $showElements) . ' }';
             }
         }
+    }
+
+    /**
+     * 요소 타입에 따른 조건문 생성.
+     *
+     * select, input text는 value만 확인하고,
+     * checkbox, radio는 checked 상태와 value를 함께 확인합니다.
+     *
+     * @param mixed $scriptKey 확인할 값
+     *
+     * @return string 생성된 조건문
+     */
+    private function generateElementCondition($scriptKey) : string
+    {
+        return <<<JS
+        ((this.type === 'checkbox' || this.type === 'radio')
+            ? (this.checked && this.value == '{$scriptKey}')
+            : this.value == '{$scriptKey}')
+        JS;
     }
 
     /**

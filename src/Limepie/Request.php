@@ -348,6 +348,11 @@ class Request
         return $url;
     }
 
+    public function getReferer()
+    {
+        return $this->getServer('HTTP_REFERER') ?: '';
+    }
+
     public function getSelf()
     {
         $url = '';
@@ -994,7 +999,6 @@ class Request
                         $data = [$k => $data];
                     }, $k);
                     $new = \array_replace_recursive($new, $file[$k]);
-                    \print_r($new);
                 }
                 $out[$key] = $new;
             } else {

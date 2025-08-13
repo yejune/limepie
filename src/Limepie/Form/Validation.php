@@ -45,6 +45,7 @@ class Validation
         'accept'       => 'Please enter a value with a valid mimetype.',
         'in'           => 'Not a allowed value',
         'enddate'      => 'Must be greater than {0}.',
+        'notEqual'     => 'Please enter a different value.',
     ];
 
     public function __construct($data = [], $language = '')
@@ -125,6 +126,10 @@ class Validation
             return $this->optional($value, $name) || \preg_match('~^' . $param . '$~', (string) $value, $m);
             // \pr($m);
             // pr(Validation::getMethod('required')($value,'',''),$value, $name, $param, $this->optional($value), \preg_match('/^' . $param . '$/', $value));
+        });
+
+        Validation::addMethod('notEqual', function ($value, $name, $param) { // 다르면 ok
+            return $this->optional($value, $name) || $value !== $param;
         });
 
         Validation::addMethod('maxlength', function ($value, $name, $param) {
@@ -278,7 +283,9 @@ class Validation
 
             $target = \ltrim($param, '#.');
 
-            return $this->getValue($target) === $value;
+            $target = $this->getValue($this->getNameByDot($target));
+
+            return $target === $value;
         });
 
         Validation::addMethod('maxTo', function ($value, $name, $param) {

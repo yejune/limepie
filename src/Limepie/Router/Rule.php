@@ -24,6 +24,7 @@ class Rule
         'delete',
         'put',
         'patch',
+        'head',
     ];
 
     public static function getMatched(string $pattern, string $subject, array $default) : array

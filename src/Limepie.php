@@ -117,6 +117,7 @@ function verify_captcha(
     return [
         'success' => (bool) $success,
         'errors'  => $errors,
+        'result'  => $result,
     ];
 }
 
@@ -1457,63 +1458,119 @@ function utc_date($format)
 
     return $utcDate->format($format);
 }
-// 받침 유무 판별 함수
+/**
+ * 한글 문자의 받침(종성) 존재 여부를 확인하는 함수.
+ *
+ * @param mixed $char
+ */
 function has_final_consonant($char)
 {
+    if (empty($char)) {
+        return false;
+    }
+
     $code = \mb_ord($char) - 44032;
+
+    // 한글 범위 체크 (안전성을 위해 추가)
+    if ($code < 0 || $code > 11171) { // 힣: 55203, 가: 44032 → 55203-44032 = 11171
+        return false;
+    }
 
     return 0 != $code % 28;
 }
-function add_josa($word, $josa)
-{
-    // UTF-8 인코딩으로 문자열을 처리합니다.
-    $code = \mb_substr($word, -1, 1, 'UTF-8');
-    $len  = \strlen($code);
 
-    // 한글인지, 숫자인지, 영문인지 판별
-    if (\preg_match('/[0-9]/', $code)) {
-        $last_char_type = 'number';
-    } elseif (\preg_match('/[a-zA-Z]/', $code)) {
-        $last_char_type = 'english';
-    } elseif ($len > 1) {
-        $last_char_type = 'korean';
-    } else {
-        $last_char_type = 'other';
+/**
+ * 숫자/영문의 받침 여부를 판단하는 함수.
+ *
+ * @param mixed $char
+ */
+function has_final_consonant_for_non_korean($char)
+{
+    // 숫자의 경우 한국어 발음 기준
+    $numbers_with_consonant = ['1', '3', '6', '7', '8'];
+
+    if (\in_array($char, $numbers_with_consonant)) {
+        return true;
     }
 
-    // 조사를 선택합니다.
-    switch ($josa) {
+    // 영문자의 경우 한국어 발음 기준 (대략적)
+    $english_with_consonant = ['L', 'M', 'N', 'R', 'l', 'm', 'n', 'r'];
+
+    if (\in_array($char, $english_with_consonant)) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * 단어에 적절한 조사를 붙이는 함수.
+ *
+ * @param mixed $word
+ * @param mixed $josa
+ */
+function add_josa($word, $josa)
+{
+    if (empty($word)) {
+        return $word;
+    }
+
+    // UTF-8 인코딩으로 마지막 문자를 가져옴
+    $last_char     = \mb_substr($word, -1, 1, 'UTF-8');
+    $has_consonant = false;
+
+    // 문자 타입 판별 및 받침 여부 확인
+    if (\preg_match('/[0-9]/', $last_char)) {
+        // 숫자
+        $has_consonant = has_final_consonant_for_non_korean($last_char);
+    } elseif (\preg_match('/[a-zA-Z]/', $last_char)) {
+        // 영문
+        $has_consonant = has_final_consonant_for_non_korean($last_char);
+    } else {
+        // 한글인지 확인 (유니코드 범위로)
+        $unicode = \mb_ord($last_char);
+
+        if ($unicode >= 44032 && $unicode <= 55203) {
+            // 한글
+            $has_consonant = has_final_consonant($last_char);
+        } else {
+            // 기타 문자 - 받침 없다고 가정
+            $has_consonant = false;
+        }
+    }
+
+    // 조사 선택
+    switch (\strtolower($josa)) {
         case '은':
         case '는':
-            if ('korean' == $last_char_type && has_final_consonant($code)) {
-                return $word . '은';
-            }
-
-            return $word . '는';
+            return $word . ($has_consonant ? '은' : '는');
         case '이':
         case '가':
-            if ('korean' == $last_char_type && has_final_consonant($code)) {
-                return $word . '이';
-            }
-
-            return $word . '가';
+            return $word . ($has_consonant ? '이' : '가');
         case '와':
         case '과':
-            if ('korean' == $last_char_type && has_final_consonant($code)) {
-                return $word . '과';
-            }
-
-            return $word . '와';
+            return $word . ($has_consonant ? '과' : '와');
         case '을':
         case '를':
-            if ('korean' == $last_char_type && has_final_consonant($code)) {
-                return $word . '을';
+            return $word . ($has_consonant ? '을' : '를');
+        case '으로':
+        case '로':
+            // 'ㄹ' 받침의 경우 특별 처리
+            if ($has_consonant) {
+                $code = \mb_ord($last_char) - 44032;
+
+                // 'ㄹ' 받침인지 확인 (종성 8번째)
+                if ($code >= 0 && $code <= 11171 && ($code % 28) === 8) {
+                    return $word . '로';
+                }
+
+                return $word . '으로';
             }
 
-            return $word . '를';
+            return $word . '로';
 
         default:
-            return $word;
+            return $word . $josa;
     }
 }
 
@@ -1715,9 +1772,8 @@ function yml_parse_file($file, ?\Closure $callback = null)
     $filepath = \Limepie\stream_resolve_include_path($file);
 
     if ($filepath) {
-        $basepath = \dirname($filepath);
-        $spec     = \yaml_parse_file($filepath);
-
+        $basepath      = \dirname($filepath);
+        $spec          = \yaml_parse_file($filepath);
         $formProcessor = new Form\Parser($spec, $basepath);
 
         $data = $formProcessor->processForm();
@@ -2980,6 +3036,48 @@ function get_redirect_code($code = 301)
     return $code;
 }
 
+function get_safe_return_url($returnUrl, $schemeHost)
+{
+    if (empty($returnUrl)) {
+        return null;
+    }
+
+    $returnUrl = \rawurldecode($returnUrl);
+
+    // 상대 URL은 바로 허용 (// 제외)
+    if ('/' === $returnUrl[0] && (false === isset($returnUrl[1]) || '/' !== $returnUrl[1])) {
+        return $returnUrl;
+    }
+
+    // 절대 URL인 경우
+    $parsed      = \parse_url($returnUrl);
+    $currentHost = \parse_url($schemeHost, PHP_URL_HOST);
+
+    if (!isset($parsed['host']) || empty($currentHost)) {
+        return '/';
+    }
+
+    $targetHost = $parsed['host'];
+
+    // 정확히 같은 도메인이면 경로 부분만 반환
+    if ($targetHost === $currentHost) {
+        $path     = $parsed['path'] ?? '/';
+        $query    = isset($parsed['query']) ? '?' . $parsed['query'] : '';
+        $fragment = isset($parsed['fragment']) ? '#' . $parsed['fragment'] : '';
+
+        return $path . $query . $fragment;
+    }
+
+    // 서브도메인 체크
+    if (is_same_base_domain($targetHost, $currentHost)) {
+        // 서브도메인이면 전체 URL 반환 (호스트 정보 필요)
+        return $returnUrl;
+    }
+
+    // 외부 도메인이면 /
+    return '/';
+}
+
 /**
  * GET 파라미터로 주어진 return_url을 디코딩하고, URL 인코딩된 쿼리 스트링을 반환합니다.
  *
@@ -2998,16 +3096,48 @@ function build_qs_return_url()
 }
 
 /**
+ * 현재 HTTP_HOST와 같은 베이스 도메인인지 확인.
+ *
+ * @param mixed $targetHost
+ */
+function is_same_base_domain($targetHost)
+{
+    $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+
+    if (empty($currentHost)) {
+        return false;
+    }
+
+    // 첫 번째 서브도메인 제거하고 비교
+    $currentBaseDomain = get_base_domain($currentHost);
+    $targetBaseDomain  = get_base_domain($targetHost);
+
+    return $currentBaseDomain === $targetBaseDomain;
+}
+
+/**
+ * 호스트에서 베이스 도메인 추출 (첫 번째 서브도메인 제거).
+ *
+ * @param mixed $host
+ */
+function get_base_domain($host)
+{
+    $dotPos = \strpos($host, '.');
+
+    return (false === $dotPos) ? $host : \substr($host, $dotPos + 1);
+}
+
+/**
  * 특정 규칙에 따라 return_url을 디코딩하고, URL 인코딩된 쿼리 스트링을 반환합니다.
  *
  * @param string $default 기본 경로, return_url이 없을 때 사용됩니다
  *
  * @return string URL 인코딩된 return_url 쿼리 스트링
  */
-function build_qs_return_url_by_rule($default = '/')
+function xbuild_qs_return_url_by_rule($default = '/')
 {
-    // get_return_url_by_rule 함수를 사용하여 URL을 가져옵니다.
-    $urlRequestUrl = get_return_url_by_rule($default);
+    // get_return_or_current_url 함수를 사용하여 URL을 가져옵니다.
+    $urlRequestUrl = get_return_or_current_url($default);
 
     if ($urlRequestUrl) {
         return '?return_url=' . rawurlencode($urlRequestUrl);
@@ -3021,10 +3151,10 @@ function build_qs_return_url_by_rule($default = '/')
  *
  * @return string URL 인코딩된 return_url 쿼리 스트링
  */
-function build_qs_current_return_url()
+function xbuild_qs_current_return_url()
 {
-    // get_current_url_path 함수를 사용하여 현재 URL을 가져옵니다.
-    return build_qs_return_url_by_rule(get_current_url_path());
+    // get_current_path 함수를 사용하여 현재 URL을 가져옵니다.
+    return xbuild_qs_return_url_by_rule(get_current_path());
 }
 
 /**
@@ -3035,7 +3165,22 @@ function build_qs_current_return_url()
 function get_return_url()
 {
     if (isset($_GET['return_url'])) {
-        return \rawurldecode($_GET['return_url']);
+        $url = \rawurldecode($_GET['return_url']);
+
+        // URL 파싱
+        $parsedUrl = \parse_url($url);
+
+        // host가 없으면 상대 경로이므로 허용 (기존 로직과 동일)
+        if (!isset($parsedUrl['host'])) {
+            return ('/' === $url[0]) ? $url : '/';
+        }
+
+        // host가 있으면 서브도메인 검사
+        if (is_same_base_domain($parsedUrl['host'])) {
+            return $url;
+        }
+
+        return '/'; // 허용되지 않는 도메인
     }
 
     return '';
@@ -3048,17 +3193,44 @@ function get_return_url()
  *
  * @return string 디코딩된 return_url 경로
  */
-function get_return_url_by_rule($default = '/')
+function get_return_or_current_url($default = '/')
 {
-    if (isset($_GET['return_url'])) {
-        return \rawurldecode($_GET['return_url']);
+    if ($returnUrl = get_return_url()) {
+        return $returnUrl;
     }
 
     if ($default) {
         return \rawurldecode($default);
     }
 
-    return get_current_url();
+    return get_current_path_qsa();
+}
+
+function get_qsa_return_or_current_url($default = null)
+{
+    // 현재 쿼리 스트링을 파싱
+    $queryString = parse_str($_SERVER['QUERY_STRING']);
+
+    // return_url 결정
+    $returnUrl = null;
+
+    if ($returnUrl = get_return_url()) {
+    } elseif ($default) {
+        $returnUrl = \rawurldecode($default);
+    } else {
+        // 현재 경로 + 쿼리 스트링 생성
+        $returnUrl = $_SERVER['REQUEST_URI'];
+    }
+
+    // 쿼리 스트링에 return_url 추가
+    if ($returnUrl) {
+        $queryString['return_url'] = $returnUrl;
+    }
+
+    // 쿼리 스트링 생성
+    $query = \http_build_query($queryString);
+
+    return $query ? '?' . $query : '';
 }
 
 /**
@@ -3066,22 +3238,22 @@ function get_return_url_by_rule($default = '/')
  *
  * @return string 현재 URL 경로
  */
-function get_current_url_path()
+function get_current_path()
 {
     // 서버 변수로부터 현재 URL 경로를 가져옵니다.
     return \parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 }
 
-function get_current_url()
+function get_current_path_qsa()
 {
     // 서버 변수로부터 현재 URL 경로를 가져옵니다.
     return $_SERVER['REQUEST_URI'];
 }
 
-function build_qs_return_current_url()
+function xbuild_qs_return_current_url()
 {
     // get_return_url 함수를 사용하여 URL을 가져옵니다.
-    $urlRequestUrl = get_current_url();
+    $urlRequestUrl = get_current_path_qsa();
 
     if ($urlRequestUrl) {
         return '?return_url=' . rawurlencode($urlRequestUrl);
@@ -3090,10 +3262,10 @@ function build_qs_return_current_url()
     return '';
 }
 
-function get_signin_url($returnUrl = null)
+function xget_signin_url($returnUrl = null)
 {
     if (!$returnUrl) {
-        $returnUrl = get_current_url();
+        $returnUrl = get_current_path_qsa();
     }
 
     $path = '/user/sign/in';
@@ -3110,7 +3282,7 @@ function get_signin_url_back_step($number = 0)
     // number를 무조건 마이너스로
     $number = -\abs($number);
 
-    $returnUrl = get_current_url();
+    $returnUrl = get_current_path_qsa();
 
     // 현재 path 가져오기
     $currentPath = \parse_url($returnUrl, PHP_URL_PATH);
@@ -3492,6 +3664,10 @@ function is_hx_boost()
 
 function is_hx_swap_paging()
 {
+    if (\Limepie\is_hx_boost()) {
+        return false;
+    }
+
     if (isset($_SERVER['HTTP_HX_SWAP_TYPE']) && 'paging' == $_SERVER['HTTP_HX_SWAP_TYPE']) {
         return true;
     }
@@ -3500,6 +3676,10 @@ function is_hx_swap_paging()
 }
 function is_hx_swap_change()
 {
+    if (\Limepie\is_hx_boost()) {
+        return false;
+    }
+
     if (isset($_SERVER['HTTP_HX_SWAP_TYPE']) && 'change' == $_SERVER['HTTP_HX_SWAP_TYPE']) {
         return true;
     }

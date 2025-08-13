@@ -625,7 +625,7 @@ class Group extends Fields
                         foreach ($condition as $ckey => $cvalue) {
                             $conditionValue = $data[$ckey] ?? '';
                             $tmp            = false;
-                            \var_dump($conditionValue);
+                            // \var_dump($conditionValue);
 
                             if (\in_array($conditionValue, \array_values($cvalue), $tmp)) {
                                 $conditionResult = true;

@@ -60,6 +60,13 @@ class Text extends Fields
         if (isset($property['placeholder']) && $property['placeholder']) {
             $placeholder = ' placeholder="' . $property['placeholder'] . '"';
         }
+
+        $autocomplete = '';
+
+        if (isset($property['autocomplete']) && $property['autocomplete']) {
+            $autocomplete = ' autocomplete="' . $property['autocomplete'] . '"';
+        }
+
         $elementClass = '';
 
         if (isset($property['element_class']) && $property['element_class']) {
@@ -91,7 +98,7 @@ class Text extends Fields
         }
 
         return <<<EOT
-        <div class="input-group">{$prepend}<input type="text" class="valid-target form-control{$elementClass}" name="{$key}" value="{$value}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}"{$readonly}{$disabled}{$placeholder}{$style} />{$append}<!--btn--></div>
+        <div class="input-group">{$prepend}<input type="text" class="valid-target form-control{$elementClass}" name="{$key}" value="{$value}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  data-default="{$default}"{$readonly}{$disabled}{$placeholder}{$style}{$autocomplete} />{$append}<!--btn--></div>
         EOT;
     }
 

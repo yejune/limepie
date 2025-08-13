@@ -160,6 +160,23 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
         $isOrNull  = false;
         $fieldName = \Limepie\decamelize(\substr($name, 3));
 
+        // if ('getFunction' == $name) {
+        //     echo '<pre>';
+        //     \print_r($name);
+        //     \print_r($arguments);
+        //     \print_r($this->attributes);
+        //     echo '<hr /><hr /><hr /><hr /><hr />';
+        //     \var_dump(
+        //         isset($this->attributes[$fieldName])
+        //     );
+        //     \var_dump(
+        //         \is_null($this->attributes[$fieldName])
+        //     );
+        //     echo  true === \array_key_exists(0, $arguments);
+
+        //     echo '</pre>';
+        // }
+
         if (!$name) {
             throw new Exception(\get_called_class() . ': Column "' . $fieldName . '" not found #2', 500);
         }
@@ -168,6 +185,7 @@ class ArrayObject implements \Iterator, \ArrayAccess, \Countable, \JsonSerializa
             (
                 false   === isset($this->attributes[$fieldName])
                 || true === \is_null($this->attributes[$fieldName])
+                || ''   === $this->attributes[$fieldName] // 추가 조건, 빈 문자열일 경우에도 허용, 빈문자열일때 디폴트 값 리턴
             )
             && true === \array_key_exists(0, $arguments)
         ) {
