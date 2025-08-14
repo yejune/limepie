@@ -48,7 +48,9 @@ class Template
     /**
      * @var int
      */
-    public $permission = 0777;
+    public $permission = 0775;
+
+    public $filePermission = 0664;
 
     /**
      * @var bool

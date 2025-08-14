@@ -23,7 +23,13 @@ class Compiler
     /**
      * @var int
      */
-    private $permission = 0777;
+    // private $permission = 0777;
+    // private $permission = 0755;  // 변경: 777 → 755
+
+    // 또는 더 세밀한 제어
+    private $permission = 0755;
+
+    private $filePermission = 0664;
 
     /**
      * @var bool
@@ -94,8 +100,12 @@ class Compiler
     public function execute($tpl, $fid, $tplPath, $cplPath, $cplHead)
     {
         $this->permission = $tpl->permission;
-        $this->phpengine  = $tpl->phpengine;
-        $this->debug      = $tpl->debug;
+
+        if ($this->filePermission) {
+            $this->filePermission = $this->filePermission;
+        }
+        $this->phpengine = $tpl->phpengine;
+        $this->debug     = $tpl->debug;
 
         $this->filename        = $tplPath;
         $this->basepath        = \dirname($tplPath);
@@ -1252,6 +1262,7 @@ class Compiler
         $source     = $cplHead . \str_pad((string) $sourceSize, 9, '0', \STR_PAD_LEFT) . $initCode . $source;
 
         \file_put_contents($cplPath, $source, \LOCK_EX);
+        \chmod($cplPath, $this->filePermission);
 
         // 파일 시스템 동기화
         \system('sync');
