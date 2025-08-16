@@ -3364,7 +3364,14 @@ function qsa($key, $value = null)
     $queryString = parse_str($_SERVER['QUERY_STRING']);
 
     if (\is_array($key)) {
-        $queryString = [...$queryString, ...$key];
+        // 배열로 키-값들이 넘어온 경우
+        foreach ($key as $k => $v) {
+            if (null === $v) {
+                unset($queryString[$k]);
+            } else {
+                $queryString[$k] = $v;
+            }
+        }
     } else {
         if (null === $value) {
             unset($queryString[$key]);
@@ -3372,6 +3379,7 @@ function qsa($key, $value = null)
             $queryString[$key] = $value;
         }
     }
+
     $query = \http_build_query($queryString);
 
     return $query ? '?' . $query : '';
