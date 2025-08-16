@@ -108,7 +108,7 @@ class Juso extends Fields
         return <<<EOT
             <div class="input-group">
             {$prepend}
-            <input type="text" onkeydown="var that = this;enterJuso(event, function() {getJuso({currentPage:1, countPerPage:{$count_per_page}, resultType: 'json', confmKey: '{$api_key}', hstryYn: '{$hstryYn}', firstSort: '{$first_sort}', keyword_element: $(that)}, 'target_{$uniqueId}');})" class="form-control{$elementClass}" name="view_{$key}" value="" {$readonly}{$disabled}{$placeholder}{$style} />
+            <input type="text" tabindex="-1" onkeydown="var that = this;enterJuso(event, function() {getJuso({currentPage:1, countPerPage:{$count_per_page}, resultType: 'json', confmKey: '{$api_key}', hstryYn: '{$hstryYn}', firstSort: '{$first_sort}', keyword_element: $(that)}, 'target_{$uniqueId}');})" class="form-control{$elementClass}" name="view_{$key}" value="" {$readonly}{$disabled}{$placeholder}{$style} />
 
             <button class="btn btn-juso btn-search" type="button" onclick="getJuso({currentPage:1, countPerPage:{$count_per_page}, resultType: 'json', confmKey: '{$api_key}', hstryYn: '{$hstryYn}', firstSort: '{$first_sort}', keyword_element: $(this).prev()}, 'target_{$uniqueId}')" >&nbsp;</button>
             {$append}
