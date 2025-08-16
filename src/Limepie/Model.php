@@ -1162,7 +1162,7 @@ class Model extends ModelUtil
                 if ($joinModel->parentNode) {
                     // parentNode가 true일 경우, 부모에게 자식을 붙인다.
                     foreach ($tmp ?? [] as $key => $value) {
-                        if ('seq' !== $key && \Limepie\has_value($value)) {
+                        if ('seq' !== $key && $this->isMoveParent($attributes, $key, $value)) {
                             $attributes[$key] = $value;
                         }
                     }
@@ -1514,7 +1514,7 @@ class Model extends ModelUtil
                 if ($joinModel->parentNode) {
                     // parentNode가 true일 경우, 부모에게 자식을 붙인다.
                     foreach ($tmp ?? [] as $key => $value) {
-                        if ('seq' !== $key && \Limepie\has_value($value)) {
+                        if ('seq' !== $key && $this->isMoveParent($row, $key, $value)) {
                             $row[$key] = $value;
                         }
                     }

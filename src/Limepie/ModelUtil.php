@@ -556,6 +556,34 @@ class ModelUtil extends ModelBase
         return $attributes;
     }
 
+    /**
+     * 특정 키로의 값 이동이 가능한지 확인.
+     *
+     * @param array  $data  현재 데이터
+     * @param string $key   이동하려는 키
+     * @param mixed  $value 이동하려는 값
+     *
+     * @return bool 이동 가능 여부
+     */
+    public function isMoveParent($data, $key, $value)
+    {
+        // 1. value가 null이 아닌 경우: 무조건 이동 가능
+        // (어떤 값이든 덮어쓰기 가능)
+        if (null !== $value) {
+            return true;
+        }
+
+        // 2. value가 null이고 키가 존재하지 않는 경우: 이동 가능
+        // (새로운 키에 null 설정 가능)
+        if (!isset($data[$key])) {
+            return true;
+        }
+
+        // 3. value가 null이고 키가 이미 존재하는 경우: 이동 불가
+        // (기존 키를 null로 변경 불가)
+        return false;
+    }
+
     public function getRelationData(Model $class, $attribute, $functionName, $parentTableName = '', $isSingle = true)
     {
         if ($class->pdo) {
@@ -634,7 +662,7 @@ class ModelUtil extends ModelBase
             // parentNode가 있고 single인 경우 ,single일때만 적용된다. 싱글이 아니면 seq를 비교할수 없다.
             if ($class->parentNode && $isSingle) {
                 foreach ($data ?? [] as $key => $value) {
-                    if ('seq' !== $key && \Limepie\has_value($value)) {
+                    if ('seq' !== $key && $this->isMoveParent($attribute[$parentTableName], $key, $value)) {
                         $attribute[$parentTableName][$key] = $value;
                     }
                 }
@@ -649,7 +677,7 @@ class ModelUtil extends ModelBase
             // parentNode가 있고 single인 경우,single일때만 적용된다. 싱글이 아니면 seq를 비교할수 없다.
             if ($class->parentNode && $isSingle) {
                 foreach ($data ?? [] as $key => $value) {
-                    if ('seq' !== $key && \Limepie\has_value($value)) {
+                    if ('seq' !== $key && $this->isMoveParent($attribute, $key, $value)) {
                         $attribute[$key] = $value;
                     }
                 }
@@ -808,7 +836,7 @@ class ModelUtil extends ModelBase
                     if ($class->parentNode) {
                         // parentNode가 true일 경우, 부모에게 자식을 붙인다.
                         foreach ($data[$leftKeyValue] ?? [] as $key => $value) {
-                            if ('seq' !== $key && \Limepie\has_value($value)) {
+                            if ('seq' !== $key && $this->isMoveParent($attribute[$parentTableName], $key, $value)) {
                                 $attribute[$parentTableName][$key] = $value;
                             }
                         }
@@ -820,7 +848,7 @@ class ModelUtil extends ModelBase
                     if ($class->parentNode) {
                         // parentNode가 true일 경우, 부모에게 자식을 붙인다.
                         foreach ($data[$leftKeyValue] ?? [] as $key => $value) {
-                            if ('seq' !== $key && \Limepie\has_value($value)) {
+                            if ('seq' !== $key && $this->isMoveParent($attribute, $key, $value)) {
                                 $attribute[$key] = $value;
                             }
                         }
@@ -925,7 +953,7 @@ class ModelUtil extends ModelBase
 
                         if ($class->parentNode) { // parent로 옮길때는 seq까지 옮기면 덮어 쓴다.
                             foreach ($rightKeyMapValueByLeftKey ?? [] as $key => $value) {
-                                if ('seq' !== $key && \Limepie\has_value($value)) {
+                                if ('seq' !== $key && $this->isMoveParent($attribute[$parentTableName], $key, $value)) {
                                     $attribute[$parentTableName][$key] = $value;
                                 }
                             }
@@ -935,7 +963,7 @@ class ModelUtil extends ModelBase
                     } else {
                         if ($class->parentNode) { // parent로 옮길때는 seq까지 옮기면 덮어 쓴다.
                             foreach ($rightKeyMapValueByLeftKey ?? [] as $key => $value) {
-                                if ('seq' !== $key && \Limepie\has_value($value)) {
+                                if ('seq' !== $key && $this->isMoveParent($attribute, $key, $value)) {
                                     $attribute[$key] = $value;
                                 }
                             }
