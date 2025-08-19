@@ -1,0 +1,13 @@
+{
+    "name": "yejune/limepie",
+    "description": "",
+    "require": {
+        "php": ">7.3",
+        "johngrogg/ics-parser": "^2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Limepie\\": "src/Limepie/"
+        }
+    }
+}
