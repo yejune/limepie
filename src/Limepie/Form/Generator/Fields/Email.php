@@ -37,6 +37,13 @@ class Email extends Fields
         if (isset($property['placeholder']) && $property['placeholder']) {
             $placeholder = ' placeholder="' . $property['placeholder'] . '"';
         }
+
+        $autocomplete = '';
+
+        if (isset($property['autocomplete']) && $property['autocomplete']) {
+            $autocomplete = ' autocomplete="' . $property['autocomplete'] . '"';
+        }
+
         $elementClass = '';
 
         if (isset($property['element_class']) && $property['element_class']) {
@@ -62,7 +69,7 @@ class Email extends Fields
         return <<<EOT
             <div class="input-group">
             {$prepend}
-            <input type="email" class="valid-target form-control{$elementClass}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" data-default="{$default}"{$readonly}{$disabled}{$placeholder} />
+            <input type="email" class="valid-target form-control{$elementClass}" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" data-default="{$default}"{$readonly}{$disabled}{$placeholder}{$autocomplete} />
             {$append}
             </div>
         EOT;

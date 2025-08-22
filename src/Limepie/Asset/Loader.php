@@ -30,6 +30,10 @@ abstract class Loader
             static::$isDevelopment = 'local' === $_SERVER['STAGE_NAME'];
         }
 
+        if ('local' === $_SERVER['STAGE_NAME'] && 'on' == ($_GET['assets'] ?? 'off')) {
+            static::$isDevelopment = false;
+        }
+
         if (static::$isDevelopment) {
             static::$baseUrl = $_SERVER['ASSETS_URL'];
         } else {

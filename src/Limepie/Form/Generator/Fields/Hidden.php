@@ -24,8 +24,14 @@ class Hidden extends Fields
             }
         }
 
+        $id = $property['id'] ?? '';
+
+        if (0 === \strlen($id)) {
+            $id = 'id="' . $id . '"';
+        }
+
         return <<<EOT
-        <input type="hidden" class="valid-target form-control" readonly="readonly" name="{$key}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}" data-default="{$default}" />
+        <input type="hidden" class="valid-target form-control" readonly="readonly" name="{$key}" {$id} data-name="{$propertyName}" data-rule-name="{$ruleName}"  value="{$value}"  data-default="{$default}" id="{$id}" />
         EOT;
     }
 

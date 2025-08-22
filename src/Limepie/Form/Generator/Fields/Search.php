@@ -253,7 +253,7 @@ class Search extends Fields
         SCRIPT;
 
         return <<<EOT
-        {$styleText}{$scripts}<div class="input-group">{$prepend}<select class="valid-target form-control{$class}" {$style} name="{$key}" data-class="{$containerClass}" data-keyword-min-length="{$keyword_min_length}" data-delay="{$delay}" data-api-server="{$api_server}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>{$append}<!--btn--></div>
+        {$styleText}{$scripts}<div class="input-group field-search">{$prepend}<select class="valid-target form-control{$class}" {$style} name="{$key}" data-class="{$containerClass}" data-keyword-min-length="{$keyword_min_length}" data-delay="{$delay}" data-api-server="{$api_server}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>{$append}<!--btn--></div>
         EOT;
     }
 

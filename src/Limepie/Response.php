@@ -154,6 +154,7 @@ class Response
 
     public function redirect($location, $seconds = 0)
     {
+        // \prx(\debug_backtrace());
         $this->content  = '<meta http-equiv="refresh" content="' . $seconds . '; url=' . $location . '" />';
         $this->redirect = true;
 

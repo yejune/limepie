@@ -150,7 +150,7 @@ class Searchbox extends Fields
         }
 
         return <<<EOT
-        <div class="input-group">{$prepend}<select class="valid-target form-control{$class}" {$style} name="{$key}" data-api-server="{$api_server}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>{$append}</div>{$scripts}
+        <div class="input-group field-searchbox">{$prepend}<select class="valid-target form-control{$class}" {$style} name="{$key}" data-api-server="{$api_server}" data-name="{$propertyName}" data-rule-name="{$ruleName}"  id="{$id}" {$onchange} data-default="{$default}" class="testselect">{$option}</select>{$append}</div>{$scripts}
         EOT;
     }
 
