@@ -5,1601 +5,856 @@ declare(strict_types=1);
 namespace Limepie;
 
 use Limepie\Pdo\Exception\OptimisticLock;
+use Limepie\Model\QueryBuilder;
+use Limepie\Model\DataProcessor;
+use Limepie\Model\ConditionBuilder;
+use Limepie\Model\RelationManager;
+use Limepie\Model\SqlExecutor;
+use Limepie\Model\Constants\QueryOperators;
+use Doctrine\SqlFormatter\SqlFormatter;
 
-class Model extends ModelUtil
+use Limepie\Model\Base\Core;
+use Limepie\Model\Traits\MagicMethods;
+use Limepie\Model\Traits\CrudOperations;
+use Limepie\Model\Traits\QueryMethods;
+
+/**
+ * Limepie ORM Model 클래스 - PHP 객체-관계 매핑 클래스
+ * 
+ * 주요 기능:
+ * - 매직 메서드를 통한 동적 쿼리 생성 (condition*, and*, or*, orderBy* 등)
+ * - 관계형 데이터 처리 (relation/relations 체이닝)  
+ * - SQL 쿼리 빌더 및 파라미터 바인딩
+ * - 데이터 암호화, 직렬화 처리
+ * - JOIN, 서브쿼리, 집계함수 지원
+ * - ArrayObject 상속으로 배열/객체 호환 인터페이스
+ * 
+ * 사용 예제:
+ * ```php
+ * class User extends Model {
+ *     public $tableName = 'users';
+ * }
+ * 
+ * $user = (new User())($pdo);
+ * 
+ * // 기본 쿼리 - OPERATOR + COLUMN 패턴
+ * $result = $user->conditionEqName('John')->andGtAge(25)->get();
+ * 
+ * // 복잡한 Relations 체이닝
+ * $posts = $user->relations(
+ *     (new Post())($pdo)->matchSeqWithUserSeq()
+ *              ->relations((new Comment())($pdo))
+ * )->get();
+ * 
+ * // 집계 쿼리
+ * $count = $user->conditionEqIsActive(1)->getCount();
+ * $stats = $user->conditionGeCreatedTs('2024-01-01')->sumPoints()->getSum();
+ * ```
+ * 
+ * 구조:
+ * - Core: 84개 속성과 핵심 기능
+ * - MagicMethods: 동적 메서드 처리 
+ * - CrudOperations: CREATE/UPDATE/DELETE SQL 생성
+ * - QueryMethods: ORDER BY, LIMIT, GROUP BY 등
+ * 
+ * @author Limepie Team
+ * @version 2.0
+ * @package Limepie\Model
+ */
+class Model extends Core
 {
+    use MagicMethods, CrudOperations, QueryMethods;
+
     /**
-     * MySQL 풀텍스트 검색에서 사용할 수 있도록 검색어를 안전하게 만드는 함수.
-     *
-     * @param string $searchTerm 원래 검색어
-     *
-     * @return string 풀텍스트 검색에 안전한 정제된 검색어
+     * 다음에 호출될 조건에 사용할 바인딩 ID (테스트용)
      */
-    public static function safe_fulltext_keyword($searchTerm)
+    public $nextBindId = null;
+
+    // === 핵심 조건 빌더 메서드들 ===
+    
+    /**
+     * 다음 조건에 사용할 바인딩 ID 지정 (테스트용)
+     */
+    public function appendBindId(?string $bindId = null): self
     {
-        // 공백 제거
-        $searchTerm = \trim($searchTerm);
-
-        if (empty($searchTerm)) {
-            return '';
-        }
-
-        // MySQL 풀텍스트 부울 연산자 제거 (구문 오류 방지)
-        $operators  = ['+', '-', '<', '>', '(', ')', '~', '*', '"', '@', '>', '<'];
-        $searchTerm = \str_replace($operators, ' ', $searchTerm);
-
-        // 여러 공백을 하나로 통합
-        $searchTerm = \preg_replace('/\s+/', ' ', $searchTerm);
-
-        // 단어로 분리
-        $words     = \explode(' ', $searchTerm);
-        $safeWords = [];
-
-        foreach ($words as $word) {
-            $word = \trim($word);
-
-            // 빈 단어 건너뛰기
-            if (empty($word)) {
-                continue;
-            }
-
-            // 너무 짧은 단어 건너뛰기 (MySQL에서 일반적으로 3글자 미만)
-            // MySQL의 ft_min_word_len 설정에 따라 조정이 필요할 수 있음
-            if (\mb_strlen($word) >= 3) {
-                // SQL 인젝션 방지를 위한 특수 문자 제거
-                $word = \preg_replace('/[^\p{L}\p{N}]/u', ' ', $word);
-
-                if (!empty($word)) {
-                    $safeWords[] = $word;
-                }
-            }
-        }
-
-        // 단어들을 결합
-        if (!empty($safeWords)) {
-            return \implode(' ', $safeWords);
-        }
-
-        return '';
+        $this->nextBindId = $bindId;
+        return $this;
     }
-
-    public function replace() {}
-
-    public function buildCreate($prefix = '')
+    
+    /**
+     * WHERE 조건 생성 - 매직 메서드의 핵심 로직
+     * 
+     * 지원하는 패턴:
+     * - conditionEqName('John') -> name = 'John'
+     * - conditionGtAge(25) -> age > 25  
+     * - conditionLikeEmail('%@gmail.com') -> email LIKE '%@gmail.com'
+     * - conditionInId([1,2,3]) -> id IN (1, 2, 3)
+     * - conditionIsNotNullStatus() -> status IS NOT NULL
+     * 
+     * @param string $name 메서드명 (예: conditionEqName)
+     * @param array $arguments 인자들 
+     * @param int $offset 'condition' 부분을 제외한 시작 위치
+     * @return self 메서드 체이닝 지원
+     */
+    protected function buildCondition($name, $arguments, $offset)
     {
-        $columns = [];
-        $binds   = [];
-        $values  = [];
-
-        foreach ($this->allColumns as $column) {
-            $columnBindName = $prefix . $column;
-
-            if ($this->sequenceName === $column) {
-            } else {
-                // create시에는 시간 컬럼 추가하지 않음, 자동 입력
-                if ('created_ts' === $column || 'updated_ts' === $column) {
-                    if ($this->attributes[$column] ?? false) {
-                        // $columns[]            = '`' . $column . '`';
-                        // $values[]             = ':' . $column;
-                        // $binds[':' . $column] = $this->attributes[$column];
-                    }
-                } elseif ('ip' === $column) {
-                    $columns[]                    = '`' . $column . '`';
-                    $binds[':' . $columnBindName] = $this->attributes[$column] ?? \Limepie\getIp();
-                    $values[]                     = 'inet6_aton(:' . $columnBindName . ')';
-                } elseif ('aes_serialize' === $this->dataStyles[$column]) {
-                    $columns[]                                   = '`' . $column . '`';
-                    $binds[':' . $columnBindName]                = \serialize($this->attributes[$column] ?? null);
-                    $binds[':' . $columnBindName . '_secretkey'] = Aes::$salt;
-                    $values[]                                    = 'AES_ENCRYPT(:' . $columnBindName . ', :' . $columnBindName . '_secretkey)';
-                } elseif ('aes' === $this->dataStyles[$column]) {
-                    $columns[]                                   = '`' . $column . '`';
-                    $binds[':' . $columnBindName]                = $this->attributes[$column] ?? null;
-                    $binds[':' . $columnBindName . '_secretkey'] = Aes::$salt;
-                    $values[]                                    = 'AES_ENCRYPT(:' . $columnBindName . ', :' . $columnBindName . '_secretkey)';
-                } elseif ('aes_hex' === $this->dataStyles[$column]) {
-                    $columns[]                                   = '`' . $column . '`';
-                    $binds[':' . $columnBindName]                = $this->attributes[$column] ?? null;
-                    $binds[':' . $columnBindName . '_secretkey'] = Aes::$salt;
-                    $values[]                                    = 'HEX(AES_ENCRYPT(:' . $columnBindName . ', :' . $columnBindName . '_secretkey))';
-                } elseif (
-                    true === isset($this->dataStyles[$column])
-                    && 'point' == $this->dataStyles[$column]
-                    && true  === isset($this->attributes[$column])
-                    && true  === \is_array($this->attributes[$column])
-                    && false === isset($this->rawAttributes[$column])
-                ) {
-                    $columns[] = '`' . $column . '`';
-                    $value     = $this->attributes[$column];
-
-                    if (true === \is_null($value)) {
-                        throw new Exception('empty point value');
-                    }
-                    $binds[':' . $columnBindName . '1'] = $value[0];
-                    $binds[':' . $columnBindName . '2'] = $value[1];
-
-                    $values[] = 'point(:' . $columnBindName . '1, :' . $columnBindName . '2)';
-                } elseif (true === \array_key_exists($column, $this->attributes)) {
-                    $value = $this->attributes[$column];
-
-                    if (true === isset($this->dataStyles[$column])) {
-                        switch ($this->dataStyles[$column]) {
-                            case 'curlfile_serialize':
-                                $value = CurlFile::serialize($value);
-
-                                break;
-                            case 'serialize':
-                                $value = \serialize($value);
-
-                                break;
-                            case 'base64':
-                                $value = \base64_encode(\serialize($value));
-
-                                break;
-                            case 'gz':
-                                $value = \gzcompress(\serialize($value), 9);
-
-                                break;
-                                // case 'aes':
-                                //     $value = \Limepie\Aes::pack($value);
-
-                                //     break;
-                            case 'jsons':
-                                // $value = \json_encode($value);
-
-                                break;
-                            case 'json':
-                                if (false === \is_null($value)) {
-                                    $value = \json_encode($value);
-                                }
-
-                                break;
-                            case 'yml':
-                            case 'yaml':
-                                $value = \yaml_emit($value);
-
-                                break;
-                        }
-                    }
-
-                    // if (true === isset($this->plusAttributes[$column])) {
-                    //     $columns[] = '`' . $column . '`';
-                    //     $values[]  = '`' . $column . '` + ' . $this->plusAttributes[$column];
-                    // } elseif (true === isset($this->minusAttributes[$column])) {
-                    //     $columns[] = '`' . $column . '`';
-                    //     $values[]  = '`' . $column . '` - ' . $this->minusAttributes[$column];
-                    // } else
-
-                    if (true === isset($this->rawAttributes[$column])) {
-                        // raw는
-                        // ->setRawLocation(
-                        //     'POINT(:x, :y)',
-                        //     [
-                        //         ':x' => $point['x'],
-                        //         ':y' => $point['y'],
-                        //     ]
-                        // )
-                        // 형태나 ? 형태로 들어오므로 bind변수를 prefix할 필요가 없음.
-
-                        $columns[] = "`{$this->tableName}`." . '`' . $column . '`';
-                        $values[]  = \str_replace('?', ':' . $column, $this->rawAttributes[$column]);
-
-                        if (null === $value) {
-                        } elseif (true === \is_array($value)) {
-                            $binds += $value;
-                        } else {
-                            throw new Exception($column . ' raw bind error');
-                        }
-                    } else {
-                        $columns[]                    = '`' . $column . '`';
-                        $binds[':' . $columnBindName] = $value;
-                        $values[]                     = ':' . $columnBindName;
-                    }
-                }
-            }
-        }
-
-        return [$columns, $binds, $values];
-    }
-
-    public function create($on_duplicate_key_update = null)
-    {
-        $columns = [];
-        $binds   = [];
-        $values  = [];
-
-        [$columns, $binds, $values] = $this->buildCreate($on_duplicate_key_update);
-
-        $column = \implode(', ', $columns);
-        $values = \implode(', ', $values);
-        $sql    = <<<SQL
-            INSERT INTO
-                `{$this->tableName}`
-            ({$column})
-                VALUES
-            ({$values})
-        SQL;
-
-        if ($on_duplicate_key_update) {
-            $sql .= ' ' . $on_duplicate_key_update;
-        }
-
-        if ($this->duplication) {
-            [$duplicationColumns, $duplicationBinds, $duplicationSames] = $this->duplication->buildUpdate('dup_');
-
-            $sql .= ' ON DUPLICATE KEY UPDATE ' . \implode(', ', $duplicationColumns);
-            $binds += $duplicationBinds;
-        }
-
-        $primaryKey = '';
-
-        if (static::$debug) {
-            $this->print($sql, $binds);
-            Timer::start();
-        }
-        $this->query = $sql;
-        $this->binds = $binds;
-
-        if ($this->sequenceName) {
-            $primaryKey                              = $this->getConnect()->setAndGetSequnce($sql, $binds);
-            $this->attributes[$this->primaryKeyName] = $primaryKey;
-        } else {
-            if ($this->getConnect()->set($sql, $binds)) {
-                $primaryKey = $this->attributes[$this->primaryKeyName];
-            }
-        }
-
-        if (static::$debug) {
-            echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
-        }
-
-        if ($primaryKey) {
-            $this->primaryKeyValue = $primaryKey;
-            $this->plusAttributes  = [];
-
+        $methodPart = substr($name, $offset);
+        
+        // 괄호 처리 (인자가 없을 때만)
+        if (in_array($methodPart, ['(', ')'], true) && !isset($arguments[0])) {
+            $this->condition .= $methodPart;
             return $this;
         }
-
-        return false;
-    }
-
-    public function buildUpdate($prefix = '')
-    {
-        $columns = [];
-        $binds   = [];
-        $sames   = [];
-
-        foreach ($this->allColumns as $column) {
-            $columnBindName = $prefix . $column;
-            // db에서 가져온것과 비교해서 바뀌지 않으면 업데이트 하지 않음
-
-            $attr     = $this->attributes[$column]       ?? null;
-            $origAttr = $this->originAttributes[$column] ?? null;
-
-            // attr과 originAttr가 같고 raw, plus, minus가 아니면 continue,
-            // raw, plus, minus가 있으면 값은 변동되지 않아도 업데이트 함
-            // $this->originAttributes가 있다는건 셀렉트를 했다는것. create후 update시에는 존재하지 않는 값
-            if (
-                $this->originAttributes
-                && $attr === $origAttr
-                && false === isset($this->plusAttributes[$column])
-                && false === isset($this->minusAttributes[$column])
-                && false === isset($this->rawAttributes[$column])
-            ) {
-                $sames[$column] = $origAttr;
-
-                continue;
-            }
-
-            if (true === isset($this->dataStyles[$column])
-                && 'jsons' == $this->dataStyles[$column]) {
-                if (true === isset($this->originAttributes[$column]) && $this->originAttributes[$column]) {
-                    if ($this->originAttributes[$column] instanceof ArrayObject) {
-                        $target = $this->originAttributes[$column]->attributes;
-                    } else {
-                        $target = $this->originAttributes[$column];
-                    }
-
-                    if (\is_string($this->attributes[$column])) {
-                        if (\json_decode($this->attributes[$column], true) == $target) {
-                            continue;
-                        }
-                    } elseif ($this->attributes[$column] == $target) {
-                        continue;
-                    }
-                }
-            }
-
-            if ($this->sequenceName === $column) {
-            } else {
-                if ('created_ts' === $column || 'updated_ts' === $column) {
-                    if ('created_ts' === $column) {
-                        // 입력 날짜는 변경 안함
-                    } else {
-                        // 수정 날짜는 변경 할수있음.
-                        if ($this->attributes[$column] ?? false) {
-                            $columns[]                    = "`{$this->tableName}`." . '`' . $column . '` = :' . $columnBindName;
-                            $binds[':' . $columnBindName] = $this->attributes[$column];
-                        }
-                    }
-                } elseif ('ip' === $column) {
-                    $columns[]                    = "`{$this->tableName}`." . '`' . $column . '` = inet6_aton(:' . $columnBindName . ')';
-                    $binds[':' . $columnBindName] = $this->attributes[$column] ?? \Limepie\getIp();
-                } elseif ('aes_serialize' === $this->dataStyles[$column]) {
-                    $columns[]                                   = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $columnBindName . ', :' . $columnBindName . '_secretkey)';
-                    $binds[':' . $columnBindName]                = \serialize($this->attributes[$column] ?? null);
-                    $binds[':' . $columnBindName . '_secretkey'] = Aes::$salt;
-                } elseif ('aes' === $this->dataStyles[$column]) {
-                    $columns[]                                   = "`{$this->tableName}`." . '`' . $column . '` = AES_ENCRYPT(:' . $columnBindName . ', :' . $columnBindName . '_secretkey)';
-                    $binds[':' . $columnBindName]                = $this->attributes[$column] ?? null;
-                    $binds[':' . $columnBindName . '_secretkey'] = Aes::$salt;
-                } elseif ('aes_hex' === $this->dataStyles[$column]) {
-                    $columns[]                                   = "`{$this->tableName}`." . '`' . $column . '` = HEX(AES_ENCRYPT(:' . $columnBindName . ', :' . $columnBindName . '_secretkey))';
-                    $binds[':' . $columnBindName]                = $this->attributes[$column] ?? null;
-                    $binds[':' . $columnBindName . '_secretkey'] = Aes::$salt;
-                } elseif (
-                    true === isset($this->dataStyles[$column])
-                    && 'point' == $this->dataStyles[$column]
-                    && false === isset($this->rawAttributes[$column])
-                ) {
-                    if (true === \is_array($this->attributes[$column])) {
-                        $value = $this->attributes[$column];
-
-                        if (true === \is_null($value)) {
-                            throw new Exception('empty point value');
-                        }
-
-                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = point(:' . $columnBindName . '1, :' . $columnBindName . '2)';
-
-                        $binds[':' . $columnBindName . '1'] = $value[0];
-                        $binds[':' . $columnBindName . '2'] = $value[1];
-                    }
-                } elseif (true === \array_key_exists($column, $this->attributes)) {
-                    $value = $this->attributes[$column];
-
-                    if (true === isset($this->dataStyles[$column])) {
-                        switch ($this->dataStyles[$column]) {
-                            case 'curlfile_serialize':
-                                $value = CurlFile::serialize($value);
-
-                                break;
-                            case 'serialize':
-                                $value = \serialize($value);
-
-                                break;
-                            case 'base64':
-                                $value = \base64_encode(\serialize($value));
-
-                                break;
-                            case 'gz':
-                                $value = \gzcompress(\serialize($value), 9);
-
-                                break;
-                                // case 'aes':
-                                //     $value = \Limepie\Aes::pack($value);
-
-                                //     break;
-                            case 'jsons':
-                                // $value = \json_encode($value);
-
-                                break;
-                            case 'json':
-                                if (false === \is_null($value)) {
-                                    $value = \json_encode($value);
-                                }
-
-                                break;
-                            case 'yml':
-                            case 'yaml':
-                                $value = \yaml_emit($value);
-
-                                break;
-                        }
-                    }
-
-                    if (true === isset($this->plusAttributes[$column])) {
-                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . "`{$this->tableName}`." . '`' . $column . '` + ' . $this->plusAttributes[$column];
-                    } elseif (true === isset($this->minusAttributes[$column])) {
-                        $name = "`{$this->tableName}`." . '`' . $column . '`';
-
-                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . "IF({$name} > 0, {$name} - " . $this->minusAttributes[$column] . ', 0)';
-                    } elseif (true === isset($this->rawAttributes[$column])) {
-                        // raw는
-                        // ->setRawLocation(
-                        //     'POINT(:x, :y)',
-                        //     [
-                        //         ':x' => $point['x'],
-                        //         ':y' => $point['y'],
-                        //     ]
-                        // )
-                        // 형태나 ? 형태로 들어오므로 bind변수를 prefix할 필요가 없음.
-                        // ? 의 경우에 대한 보완 필요. 겹칠수도 있음.
-
-                        $columns[] = "`{$this->tableName}`." . '`' . $column . '` = ' . \str_replace('?', ':' . $column, $this->rawAttributes[$column]);
-
-                        if (null === $value) {
-                        } elseif (true === \is_array($value)) {
-                            $binds += $value;
-                        } else {
-                            throw new Exception($column . ' raw bind error');
-                        }
-                    } else {
-                        $columns[]                    = "`{$this->tableName}`." . '`' . $column . '` = :' . $columnBindName;
-                        $binds[':' . $columnBindName] = $value;
-                    }
-                }
+        
+        // 일반적인 컬럼 조건 처리
+        $operator = QueryOperators::EQUAL;
+        $column = $methodPart;
+        
+        // 연산자 목록으로 직접 확인 (conditionEqName -> Eq + Name)
+        $operators = QueryOperators::getAllOperators();
+        
+        foreach ($operators as $op) {
+            if (strpos($methodPart, $op) === 0) {
+                $operator = $op;
+                $column = substr($methodPart, strlen($op));
+                break;
             }
         }
-
-        return [$columns, $binds, $sames];
-    }
-
-    public function update($checkUpdatedTs = false)
-    {
-        if (!$this->primaryKeyValue) {
-            $debug = \debug_backtrace()[0];
-
-            throw (new Exception('not found ' . $this->primaryKeyName))
-                ->setDebugMessage('models update?', $debug['file'], $debug['line'])
-            ;
-        }
-
-        [$this->changeColumns, $this->changeBinds, $this->sameColumns] = $this->buildUpdate();
-
-        if ($this->changeColumns) {
-            $column = \implode(', ', $this->changeColumns);
-            $where  = $this->primaryKeyName;
-            $sql    = <<<SQL
-                UPDATE
-                    `{$this->tableName}`
-                SET
-                    {$column}
-                WHERE
-                    `{$where}` = :{$where}
-            SQL;
-
-            $this->changeBinds[':' . $this->primaryKeyName] = $this->primaryKeyValue;
-
-            if (true === $checkUpdatedTs) {
-                $sql .= ' AND updated_ts = :check_updated_ts';
-                $this->changeBinds[':check_updated_ts'] = $this->attributes['updated_ts'];
-            }
-
-            if (static::$debug) {
-                $this->print($sql, $this->changeBinds);
-                Timer::start();
-            }
-
-            if ($this->getConnect()->set($sql, $this->changeBinds)) {
-                if (true === $checkUpdatedTs && 0 == $this->getConnect()->last_row_count()) {
-                    throw new OptimisticLock($this->tableName . ' updated_ts is changed');
-                }
-
-                if (static::$debug) {
-                    echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
-                }
-                $this->plusAttributes = [];
-
-                return $this;
-            }
-
-            return false;
-        }
-
+        
+        // CamelCase를 snake_case로 변환 (Name -> name)
+        $column = $this->camelToSnake($column);
+        
+        // 실제 SQL 조건과 바인딩 파라미터 생성 (테이블 alias 포함)
+        [$condition, $binds] = ConditionBuilder::buildSimpleCondition($column, $operator, $arguments, $this->tableAliasName, $this);
+        
+        // condition* 메서드들은 AND를 자동으로 추가하지 않음 (명시적으로 and* 메서드를 사용해야 함)
+        $this->condition .= $condition;
+        $this->binds = array_merge($this->binds, $binds);
+        
         return $this;
     }
 
-    public function doDelete() : bool|self
+    /**
+     * AND 조건 생성 - 기존 조건에 AND로 추가 연결
+     * 
+     * 사용 예제:
+     * - andEqName('John') -> AND name = 'John'  
+     * - andGtAge(25) -> AND age > 25
+     * - andInStatus(['active', 'pending']) -> AND status IN ('active', 'pending')
+     * 
+     * @param string $name 메서드명 (예: andEqName)
+     * @param array $arguments 인자들
+     * @param int $offset 'and' 부분을 제외한 시작 위치
+     * @return self 메서드 체이닝 지원
+     */
+    protected function buildAnd($name, $arguments, $offset)
     {
-        if (true == $this->deleteLock) {
-            return true;
-        }
-        // \prx($this->tableName, $this->attributes);
-
-        if (true === isset($this->attributes[$this->primaryKeyName])) {
-            $sql = <<<SQL
-                DELETE
-                FROM
-                    `{$this->tableName}`
-                WHERE
-                    `{$this->primaryKeyName}` = :{$this->primaryKeyName}
-            SQL;
-
-            $binds = [
-                $this->primaryKeyName => $this->originAttributes[$this->primaryKeyName],
-            ];
-
-            if (static::$debug) {
-                $this->print($sql, $binds);
-                Timer::start();
-            }
-
-            if ($this->getConnect()->set($sql, $binds)) {
-                if (static::$debug) {
-                    echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
-                }
-                $this->primaryKeyValue = '';
-                $this->attributes      = [];
-
-                return $this;
-            }
-
-            return false;
-        }
-        $result = false;
-
-        foreach ($this->attributes as $index => &$object) {
-            $sql = <<<SQL
-                DELETE
-                FROM
-                    `{$object->tableName}`
-                WHERE
-                    `{$object->primaryKeyName}` = :{$object->primaryKeyName}
-            SQL;
-
-            $binds = [
-                $object->primaryKeyName => $object->originAttributes[$object->primaryKeyName],
-            ];
-
-            if (static::$debug) {
-                $this->print($sql, $binds);
-                Timer::start();
-            }
-
-            if ($this->getConnect()->set($sql, $binds)) {
-                if (static::$debug) {
-                    echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
-                }
-                $object->primaryKeyValue = '';
-                $object->attributes      = [];
-                // $object->originAttributes = [];
-                unset($ojbect);
-                $result = true;
-            }
-        }
-
-        if ($result) {
-            $this->primaryKeyValue = '';
-            $this->attributes      = [];
-            // 삭제해도 origin은 보관
-            // $this->originAttributes = [];
-
+        $methodPart = substr($name, $offset);
+        
+        // 괄호 처리
+        if (in_array($methodPart, ['(', ')'], true)) {
+            $this->condition .= ' AND ' . $methodPart;
             return $this;
         }
-
-        return false;
+        
+        // Raw SQL 처리 (공백이 포함된 경우)
+        if (strpos($methodPart, ' ') !== false) {
+            $this->condition .= ' AND ' . $methodPart;
+            
+            if (isset($arguments[0])) {
+                $this->binds = array_merge($this->binds, $arguments[0]);
+            }
+            
+            return $this;
+        }
+        
+        // 일반적인 컬럼 조건 처리 (기존 로직)
+        $operator = QueryOperators::EQUAL;
+        $column = $methodPart;
+        
+        // 연산자 목록으로 직접 확인 (andGtAge -> Gt + Age)
+        $operators = QueryOperators::getAllOperators();
+        
+        foreach ($operators as $op) {
+            if (strpos($methodPart, $op) === 0) {
+                $operator = $op;
+                $column = substr($methodPart, strlen($op));
+                break;
+            }
+        }
+        
+        $column = $this->camelToSnake($column);
+        [$condition, $binds] = ConditionBuilder::buildSimpleCondition($column, $operator, $arguments, $this->tableAliasName, $this);
+        
+        // 항상 AND로 연결 (기존 조건이 없으면 첫 조건으로)
+        $this->condition .= ($this->condition ? ' AND ' : '') . $condition;
+        $this->binds = array_merge($this->binds, $binds);
+        
+        return $this;
     }
 
-    protected function buildCount(string $name, array $arguments, int $offset, $isGroup = false)
+    protected function buildSum($name, $arguments, $offset)
     {
-        $this->attributes = [];
+        $column = substr($name, $offset);
+        $column = $this->camelToSnake($column);
+        $this->sumColumn = $column;
+        return $this;
+    }
 
-        $condition           = '';
-        $binds               = [];
-        [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
-        $selectColumns       = $this->getSelectColumns(isCount: true);
+    protected function buildAvg($name, $arguments, $offset)
+    {
+        $column = substr($name, $offset);
+        $column = $this->camelToSnake($column);
+        $this->avgColumn = $column;
+        return $this;
+    }
 
-        $condition .= $this->condition;
-        $binds += $this->binds;
-
-        $orderBy = $this->getOrderBy();
-        $limit   = $this->getLimit();
-        $join    = '';
-
-        if ($this->joinModels) {
-            $joinInfomation = $this->getJoin(isCount: true);
-            $join           = $joinInfomation['join'];
-            $selectColumns .= $joinInfomation['selectColumns'];
-            $binds += $joinInfomation['binds'];
-
-            if ($joinInfomation['condition']) {
-                if ($condition) {
-                    $condition .= ' ' . $joinInfomation['condition'];
-                } else {
-                    $condition = $joinInfomation['condition'];
-                }
+    protected function buildOr($name, $arguments)
+    {
+        $offset = 2; // 'or' 문자열 길이
+        $operator = substr($name, $offset);
+        
+        if (in_array($operator, [')', '('], true)) {
+            // 괄호 처리
+            $this->condition .= ' OR ' . $operator;
+        } elseif (strpos($operator, ' ') !== false) {
+            // 공백이 포함된 직접 SQL 조건
+            $this->condition .= ' OR ' . $operator;
+            if (isset($arguments[0])) {
+                $this->binds = array_merge($this->binds, $arguments[0]);
             }
-
-            // $keyName = '';
-        }
-
-        if ($condition) {
-            $condition = ' WHERE ' . $condition;
-        }
-
-        if (true === $isGroup) {
-            if ($this->groupKey) { // 이 케이스는 아래 select시 문제될듯, 전수조사 필요.
-                $group = $this->groupBy . ' AS ' . $this->groupKey;
-            } else {
-                $group = $this->groupBy;
-            }
-            $sql = <<<SQL
-                SELECT
-                    {$group},
-                    COUNT(*) as row_count
-                FROM
-                    `{$this->tableName}` AS `{$this->tableAliasName}`
-                {$join}
-                {$condition}
-                group by {$this->groupBy}
-            SQL;
         } else {
-            if ($this->groupBy) {
-                $sql = <<<SQL
-                SELECT
-                    COUNT(distinct({$this->groupBy}))
-                FROM
-                    `{$this->tableName}` AS `{$this->tableAliasName}`
-                {$join}
-                {$condition}
-            SQL;
-            } else {
-                $sql = <<<SQL
-                SELECT
-                    COUNT(*)
-                FROM
-                    `{$this->tableName}` AS `{$this->tableAliasName}`
-                {$join}
-                {$condition}
-            SQL;
-            }
-        }
-
-        $this->condition = $condition;
-        $this->query     = $sql;
-        $this->binds     = $binds;
-
-        if (static::$debug) {
-            $this->print(null, null);
-            Timer::start();
-        }
-
-        if ($this->getConnect() instanceof \PDO) {
-            if (true === $isGroup) {
-                $data = $this->getConnect()->gets($sql, $binds, false);
-
-                $attributes = [];
-                $class      = \get_called_class();
-
-                // group by 한 키네임, 보통 특정 keyName을 기반으로 한다.
-                foreach ($data as $index => &$row) {
-                    if ($this->keyName) {
-                        if ($this->keyName instanceof \Closure) {
-                            $keyName = ($this->keyName)($row);
-                        } else {
-                            $keyName = $row[$this->keyName];
-                        }
-
-                        $attributes[$keyName] = new $class($this->getConnect(), $row);
-                    } else {
-                        // primary가 없다.
-                        $attributes[] = new $class($this->getConnect(), $row);
-                    }
+            // 일반적인 OR 조건 처리
+            $operatorType = QueryOperators::EQUAL;
+            $column = $operator;
+            
+            // 연산자 목록으로 직접 확인
+            $operators = QueryOperators::getAllOperators();
+            
+            foreach ($operators as $op) {
+                if (strpos($operator, $op) === 0) {
+                    $operatorType = $op;
+                    $column = substr($operator, strlen($op));
+                    break;
                 }
-            } else {
-                $attributes = $this->getConnect()->get1($sql, $binds, false);
             }
-
-            if (static::$debug) {
-                echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
+            
+            $column = $this->camelToSnake($column);
+            
+            [$condition, $binds] = ConditionBuilder::buildSimpleCondition($column, $operatorType, $arguments, $this->tableAliasName);
+            
+            if ($condition) {
+                $this->condition .= ' OR ' . $condition;
             }
-
-            return $attributes;
+            if ($binds) {
+                $this->binds = array_merge($this->binds, $binds);
+            }
         }
-
-        throw new Exception('lost connection');
+        
+        return $this;
     }
 
-    protected function buildGetSum(string $name, array $arguments, int $offset) : float|int
+    // === 관계 메서드들 ===
+    
+    protected function buildMatch($name, $arguments)
     {
-        $this->attributes = [];
-
-        $condition           = '';
-        $binds               = [];
-        [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
-
-        $selectColumns = $this->getSelectColumns(isCount: true);
-        $condition .= $this->condition;
-        $binds += $this->binds;
-
-        $orderBy = $this->getOrderBy();
-        $limit   = $this->getLimit();
-        $join    = '';
-
-        $sumColumn = $this->sumColumn;
-
-        if ($this->joinModels) {
-            $joinInfomation = $this->getJoin(isCount: true);
-
-            if ($joinInfomation['sumColumn']) {
-                $sumColumn = $joinInfomation['sumColumn'];
+        // Match 키 설정 로직
+        if (preg_match('/match(.+?)With(.+?)$/', $name, $matches)) {
+            $this->leftKeyName = $this->camelToSnake($matches[1]);
+            $this->rightKeyName = $this->camelToSnake($matches[2]);
+            
+            if (isset($arguments[0])) {
+                $this->matchKeyRemove = (bool)$arguments[0];
             }
-            $join = $joinInfomation['join'];
-            $selectColumns .= $joinInfomation['selectColumns'];
-            $binds += $joinInfomation['binds'];
-
-            if ($joinInfomation['condition']) {
-                if ($condition) {
-                    $condition .= ' ' . $joinInfomation['condition'];
-                } else {
-                    $condition = $joinInfomation['condition'];
-                }
-            }
-
-            // $keyName = '';
         }
-
-        if ($condition) {
-            $condition = ' WHERE ' . $condition;
-        }
-        $sql = <<<SQL
-            SELECT
-                COALESCE(SUM({$sumColumn}), 0)
-            FROM
-                `{$this->tableName}` AS `{$this->tableAliasName}`
-            {$join}
-            {$condition}
-        SQL;
-
-        $this->condition = $condition;
-        $this->query     = $sql;
-        $this->binds     = $binds;
-
-        if (static::$debug) {
-            $this->print(null, null);
-            Timer::start();
-        }
-
-        if ($this->getConnect() instanceof \PDO) {
-            $data = $this->getConnect()->get1($sql, $binds, false);
-
-            if (static::$debug) {
-                echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
-            }
-
-            return \Limepie\decimal($data);
-        }
-
-        throw new Exception('lost connection');
+        return $this;
     }
 
-    protected function buildGetAvg(string $name, array $arguments, int $offset) : float|int
+    protected function buildRelation($name, $arguments, $isMany)
     {
-        $this->attributes = [];
-
-        $condition           = '';
-        $binds               = [];
-        [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
-
-        $selectColumns = $this->getSelectColumns(isCount: true);
-        $condition .= $this->condition;
-        $binds += $this->binds;
-
-        $orderBy = $this->getOrderBy();
-        $limit   = $this->getLimit();
-        $join    = '';
-
-        $avgColumn = $this->avgColumn;
-
-        if ($this->joinModels) {
-            $joinInfomation = $this->getJoin(isCount: true);
-
-            if ($joinInfomation['avgColumn']) {
-                $avgColumn = $joinInfomation['avgColumn'];
+        if (isset($arguments[0])) {
+            if ($isMany) {
+                $this->oneToMany[] = $arguments[0];
+            } else {
+                $this->oneToOne[] = $arguments[0];
             }
-            $join = $joinInfomation['join'];
-            $selectColumns .= $joinInfomation['selectColumns'];
-            $binds += $joinInfomation['binds'];
-
-            if ($joinInfomation['condition']) {
-                if ($condition) {
-                    $condition .= ' ' . $joinInfomation['condition'];
-                } else {
-                    $condition = $joinInfomation['condition'];
-                }
-            }
-
-            // $keyName = '';
         }
-
-        if ($condition) {
-            $condition = ' WHERE ' . $condition;
-        }
-        $sql = <<<SQL
-            SELECT
-                AVG({$avgColumn})
-            FROM
-                `{$this->tableName}` AS `{$this->tableAliasName}`
-            {$join}
-            {$condition}
-        SQL;
-
-        $this->condition = $condition;
-        $this->query     = $sql;
-        $this->binds     = $binds;
-
-        if (static::$debug) {
-            $this->print(null, null);
-            Timer::start();
-        }
-
-        if ($this->getConnect() instanceof \PDO) {
-            $data = $this->getConnect()->get1($sql, $binds, false);
-
-            if (static::$debug) {
-                echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
-            }
-
-            return \Limepie\decimal($data);
-        }
-
-        throw new Exception('lost connection');
+        return $this;
     }
 
-    public function get1(null|array|string $sql = null, array $binds = []) : ?self
+    protected function buildJoin($name, $arguments)
+    {
+        if (isset($arguments[0])) {
+            $joinType = strpos($name, 'leftJoin') === 0 ? 'LEFT' : 'INNER';
+            $this->joinModels[] = [
+                'model' => $arguments[0],
+                'type' => $joinType
+            ];
+        }
+        return $this;
+    }
+
+    protected function buildJoinOn($name, $arguments)
+    {
+        $offset = 2; // 'on' 문자열 길이
+        $operator = substr($name, $offset);
+        
+        if (in_array($operator, [')', '('], true) && !isset($arguments[0])) {
+            // 괄호만 추가
+            $this->onCondition .= $operator;
+        } else {
+            // 일반적인 ON 조건 처리
+            $column = $this->camelToSnake($operator);
+            $operatorType = QueryOperators::EQUAL;
+            
+            // 연산자 추출
+            $operatorPattern = '/(.+?)' . QueryOperators::getOperatorPattern() . '$/';
+            if (preg_match($operatorPattern, $operator, $matches)) {
+                $column = $this->camelToSnake($matches[1]);
+                $operatorType = $matches[2];
+            }
+            
+            [$condition, $binds] = ConditionBuilder::buildSimpleCondition($column, $operatorType, $arguments, $this->tableAliasName);
+            
+            $this->onCondition .= ($this->onCondition ? ' AND ' : '') . $condition;
+            $this->onConditionBinds = array_merge($this->onConditionBinds, $binds);
+        }
+        
+        return $this;
+    }
+
+    protected function buildPossible($name, $arguments)
+    {
+        $tmp = substr($name, 8); // 'possible' 문자열 길이
+        $this->possibleRelationKey = $this->camelToSnake($tmp);
+        
+        if (isset($arguments[0])) {
+            $this->possibleRelationValue = $arguments[0];
+        }
+        
+        return $this;
+    }
+
+    // === 데이터 조회 메서드들 ===
+    
+    protected function buildGetBy($name, $arguments, $offset)
+    {
+        $this->buildCondition('condition' . substr($name, $offset), $arguments, 9);
+        return $this->get();
+    }
+
+    protected function buildGetsBy($name, $arguments, $offset)
+    {
+        $this->buildCondition('condition' . substr($name, $offset), $arguments, 9);
+        return $this->gets();
+    }
+
+    protected function buildCount($name, $arguments, $offset, $isGets = false)
+    {
+        $this->buildCondition('condition' . substr($name, $offset), $arguments, 9);
+        return $this->getCount();
+    }
+
+    protected function buildGetSum($name, $arguments, $offset)
+    {
+        $column = substr($name, $offset);
+        $this->buildSum('sum' . $column, [], 3);
+        return $this->getSum();
+    }
+
+    protected function buildGetAvg($name, $arguments, $offset)
+    {
+        $column = substr($name, $offset);
+        $this->buildAvg('avg' . $column, [], 3);
+        return $this->getAvg();
+    }
+
+    // === 컬럼 관리 메서드들 ===
+    
+    protected function buildAddColumn($name, $arguments)
+    {
+        $column = substr($name, 9); // 'addColumn' 이후
+        $column = $this->camelToSnake($column);
+        $this->addColumns[$column] = $arguments[0] ?? true;
+        return $this;
+    }
+
+    protected function buildRemoveColumn($name, $arguments)
+    {
+        $column = substr($name, 12); // 'removeColumn' 이후
+        $column = $this->camelToSnake($column);
+        $this->removeColumns[] = $column;
+        return $this;
+    }
+
+    // === 속성 설정 메서드들 ===
+    
+    protected function buildSet($name, $arguments)
+    {
+        $column = substr($name, 3); // 'set' 이후
+        $column = $this->camelToSnake($column);
+        
+        if (isset($arguments[0])) {
+            $this->attributes[$column] = $arguments[0];
+        }
+        
+        return $this;
+    }
+
+    protected function buildSetRaw($name, $arguments)
+    {
+        $column = substr($name, 6); // 'setRaw' 이후
+        $column = $this->camelToSnake($column);
+        
+        if (isset($arguments[0])) {
+            $this->rawAttributes[$column] = $arguments[0];
+        }
+        
+        return $this;
+    }
+
+    protected function buildNew($name, $arguments)
+    {
+        // 새 인스턴스에 값 설정
+        return $this->buildSet($name, $arguments);
+    }
+
+    protected function buildNewRaw($name, $arguments)
+    {
+        // 새 인스턴스에 Raw 값 설정
+        return $this->buildSetRaw('setRaw' . substr($name, 6), $arguments);
+    }
+
+    protected function buildPlus($name, $arguments)
+    {
+        $column = substr($name, 4); // 'plus' 이후
+        $column = $this->camelToSnake($column);
+        
+        if (isset($arguments[0])) {
+            $this->plusAttributes[$column] = $arguments[0];
+        }
+        
+        return $this;
+    }
+
+    protected function buildMinus($name, $arguments)
+    {
+        $column = substr($name, 5); // 'minus' 이후
+        $column = $this->camelToSnake($column);
+        
+        if (isset($arguments[0])) {
+            $this->minusAttributes[$column] = $arguments[0];
+        }
+        
+        return $this;
+    }
+
+    protected function buildGetColumn($name, $arguments)
+    {
+        $column = substr($name, 3); // 'get' 이후
+        $column = $this->camelToSnake($column);
+        
+        return $this->attributes[$column] ?? null;
+    }
+
+    protected function buildAddRawColumn($name, $arguments)
+    {
+        $column = substr($name, 12); // 'addRawColumn' 이후
+        $column = $this->camelToSnake($column);
+        
+        if (isset($arguments[0])) {
+            $this->rawColumnAliasNames[$column] = $arguments[0];
+        }
+        
+        return $this;
+    }
+
+    // === 기본 데이터 조회 메서드들 ===
+
+    protected function addAllColumns()
+    {
+        $this->isRemoveAllColumn = false;
+        $this->selectColumns = $this->allColumns;
+    }
+
+    protected function get(...$arguments)
+    {
+        // 단일 레코드 조회 구현
+        $sql = $this->buildSelectQuery();
+        return $this->executeGet($sql, $this->binds);
+    }
+
+    public function get1(null|array|string $sql = null, array $binds = []): ?self
     {
         throw new Exception('not support get1');
     }
 
-    protected function buildGroupBy(string $groupByString, array $arguments) : self
+    protected function gets(...$arguments)
     {
-        $part = \explode('And', \substr($groupByString, 7));
+        // 다중 레코드 조회 구현  
+        $sql = $this->buildSelectQuery();
+        return $this->executeGets($sql, $this->binds);
+    }
 
-        $groupBy = [];
+    public function getCount()
+    {
+        // 개수 조회 구현
+        $sql = $this->buildCountQuery();
+        return $this->executeGetCount($sql, $this->binds);
+    }
 
-        foreach ($part as $name) {
-            if (1 === \preg_match('#(?P<column>.*)(?P<how>Asc|Desc)$#U', $name, $m)) {
-                if (true === isset($arguments[0])) {
-                    $groupBy[] = \sprintf($arguments[0], "`{$this->tableAliasName}`." . '`' . \Limepie\decamelize($m['column']) . '` ') . \strtoupper($m['how']);
-                } else {
-                    $groupBy[] = "`{$this->tableAliasName}`." . '`' . \Limepie\decamelize($m['column']) . '` ' . \strtoupper($m['how']);
-                }
-            } elseif (1 === \preg_match('#(?P<column>.*)#', $name, $m)) {
-                if (true === isset($arguments[0])) {
-                    $groupBy[] = \sprintf($arguments[0], "`{$this->tableAliasName}`." . '`' . \Limepie\decamelize($m['column']) . '` ') . '';
-                } else {
-                    $groupBy[] = "`{$this->tableAliasName}`." . '`' . \Limepie\decamelize($m['column']) . '`';
-                }
-            } else {
-                throw new Exception('"' . $name . '" syntax error', 1999);
-            }
-        }
-        $this->groupBy = \implode(', ', $groupBy);
+    public function getSum()
+    {
+        // 합계 조회 구현
+        $sql = $this->buildSumQuery();
+        return $this->executeGetSum($sql, $this->binds);
+    }
 
+    public function getAvg()
+    {
+        // 평균 조회 구현
+        $sql = $this->buildAvgQuery();
+        return $this->executeGetAvg($sql, $this->binds);
+    }
+
+    // === 쿼리 빌더 헬퍼 메서드들 ===
+
+    private function buildSelectQuery(): string
+    {
+        return SqlExecutor::buildSelectQuery(
+            $this->tableName,
+            $this->tableAliasName,
+            $this->selectColumns,
+            $this->condition,
+            $this->and,
+            $this->orderBy,
+            $this->limit,
+            $this->offset,
+            $this->joinModels,
+            $this->forceIndexes
+        );
+    }
+
+    private function buildCountQuery(): string
+    {
+        return SqlExecutor::buildCountQuery(
+            $this->tableName,
+            $this->condition,
+            $this->and,
+            $this->joinModels
+        );
+    }
+
+    private function buildSumQuery(): string
+    {
+        return SqlExecutor::buildSumQuery(
+            $this->tableName,
+            $this->sumColumn,
+            $this->condition,
+            $this->and,
+            $this->joinModels
+        );
+    }
+
+    private function buildAvgQuery(): string
+    {
+        return SqlExecutor::buildAvgQuery(
+            $this->tableName,
+            $this->avgColumn,
+            $this->condition,
+            $this->and,
+            $this->joinModels
+        );
+    }
+
+    // === SQL 실행 메서드들 ===
+
+    private function executeGet(string $sql, array $binds)
+    {
+        return SqlExecutor::executeGet($this->getConnect(), $sql, $binds);
+    }
+
+    private function executeGets(string $sql, array $binds)
+    {
+        return SqlExecutor::executeGets($this->getConnect(), $sql, $binds);
+    }
+
+    private function executeGetCount(string $sql, array $binds): int
+    {
+        return SqlExecutor::executeGetCount($this->getConnect(), $sql, $binds);
+    }
+
+    private function executeGetSum(string $sql, array $binds): float
+    {
+        return SqlExecutor::executeGetSum($this->getConnect(), $sql, $binds);
+    }
+
+    private function executeGetAvg(string $sql, array $binds): float
+    {
+        return SqlExecutor::executeGetAvg($this->getConnect(), $sql, $binds);
+    }
+
+    private function camelToSnake($input): string
+    {
+        return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $input));
+    }
+
+    public function getConditionAndBinds(string $whereKey, array $arguments = [], int $offset = 0): array
+    {
+        $condition = '';
+        $binds = [];
+        $conds = [];
+        [$conds, $binds] = ConditionBuilder::getConditions($whereKey, $arguments, $offset, $this->tableName, $this->tableAliasName, $this->allColumns, $this->dataStyles);
+        $condition = \trim(\implode(PHP_EOL . '        ', $conds));
+        return [$condition, $binds];
+    }
+
+    public function condition(string $string): self
+    {
+        $this->condition .= ' ' . $string;
         return $this;
     }
 
-    protected function buildOrderBy(string $orderByString, array $arguments) : self
+    public function and(?string $key = null, $value = null): self
     {
-        $part = \explode('And', \substr($orderByString, 7));
-
-        $orderBy = [];
-
-        foreach ($part as $name) {
-            if (1 === \preg_match('#(?P<column>.*)(?P<how>Asc|Desc)$#U', $name, $m)) {
-                if (true === isset($arguments[0])) {
-                    $orderBy[] = \sprintf($arguments[0], "`{$this->tableAliasName}`." . '`' . \Limepie\decamelize($m['column']) . '` ') . \strtoupper($m['how']);
-                } else {
-                    $orderBy[] = "`{$this->tableAliasName}`." . '`' . \Limepie\decamelize($m['column']) . '` ' . \strtoupper($m['how']);
-                }
-            } elseif (1 === \preg_match('#(?P<column>.*)#', $name, $m)) {
-                if (true === isset($arguments[0])) {
-                    $orderBy[] = \sprintf($arguments[0], "`{$this->tableAliasName}`." . '`' . \Limepie\decamelize($m['column']) . '` ') . 'ASC';
-                } else {
-                    $orderBy[] = "`{$this->tableAliasName}`." . '`' . \Limepie\decamelize($m['column']) . '` ASC';
-                }
-            } else {
-                throw new Exception('"' . $name . '" syntax error', 1999);
-            }
+        if (null === $key) {
+            $this->condition .= ' AND ';
+        } else {
+            return $this->buildAnd('and' . ucfirst($key), [$value], 0);
         }
-        $this->orderBy = \implode(', ', $orderBy);
-
         return $this;
     }
 
-    private function isValidSeqArgument(string $operator, mixed $argument) : bool
+    public function or(?string $key = null, $value = null): self
     {
-        if ('seq' !== \strtolower(\substr($operator, -3))) {
-            return true; // Not a Seq operator, so it's valid
-        }
-
-        if (\is_array($argument)) {
-            // Check if all elements in the array are numeric
-            return \array_reduce($argument, function (bool $allNumeric, mixed $element) {
-                return $allNumeric && \is_numeric($element);
-            }, true);
-        }
-
-        return \is_numeric($argument) || null === $argument;
-    }
-
-    protected function buildAnd(string $name, array $arguments, int $offset = 3) : self
-    {
-        $operator = \substr($name, $offset);
-
-        if (true === \in_array($operator, [')', '('], true)) {
-            $this->condition .= ' AND ' . $operator;
-        } elseif (false !== \strpos($operator, ' ')) { // pure sql
-            $this->condition .= ' AND ' . $operator;
-
-            if (isset($arguments[0])) {
-                $this->binds += $arguments[0];
-            }
+        if (null === $key) {
+            $this->condition .= ' OR ';
         } else {
-            [$conds, $binds] = $this->getConditions($name, $arguments, $offset);
-
-            if ($conds) {
-                $this->condition .= ' AND ' . PHP_EOL . '        ' . \trim(\implode(PHP_EOL . '        ', $conds));
-            }
-
-            if ($binds) {
-                $this->binds += $binds;
-            }
+            return $this->buildOr('or' . ucfirst($key), [$value]);
         }
-
         return $this;
     }
 
-    protected function buildOr(string $name, array $arguments, int $offset = 2) : self
+    public function where(string $key, $value = null): self
     {
-        $operator = \substr($name, $offset);
+        return $this->buildCondition('where' . ucfirst($key), [$value], 0);
+    }
 
-        if (true === \in_array($operator, [')', '('], true)) {
-            $this->condition .= ' OR ' . $operator;
-        } elseif (false !== \strpos($operator, ' ')) { // pure sql
-            $this->condition .= ' OR ' . $operator;
+    public function match(string $key, $value = null): self
+    {
+        return $this->buildMatch('match' . ucfirst($key), [$value]);
+    }
 
-            if (isset($arguments[0])) {
-                $this->binds += $arguments[0];
-            }
-        } else {
-            [$conds, $binds] = $this->getConditions($name, $arguments, $offset);
+    public function relation($model): self
+    {
+        return $this->buildRelation('relation', [$model], false);
+    }
 
-            if ($conds) {
-                $this->condition .= ' OR ' . PHP_EOL . '        ' . \trim(\implode(PHP_EOL . '        ', $conds));
-            }
+    public function relations($model): self
+    {
+        return $this->buildRelation('relations', [$model], true);
+    }
 
-            if ($binds) {
-                $this->binds += $binds;
-            }
-        }
-
+    public function oneToOne($model): self
+    {
+        $this->oneToOne[] = $model;
         return $this;
     }
 
-    public function get(null|array|string $sql = null, array $binds = []) : ?self
+    public function oneToMany($model): self
     {
-        $this->attributes      = [];
-        $this->primaryKeyValue = '';
-
-        if (true === \is_array($sql) || null === $sql) {
-            $args          = $sql;
-            $selectColumns = $this->getSelectColumns();
-            $condition     = '';
-            $join          = '';
-            $binds         = [];
-            $orderBy       = $this->getOrderBy();
-
-            if (true === isset($args['condition'])) {
-                $condition = ' ' . $args['condition'];
-            } else {
-                if ($this->condition) {
-                    $condition = '  ' . $this->condition;
-                }
-
-                if ($this->binds) {
-                    $binds = $this->binds;
-                }
-            }
-
-            if (true === isset($args['binds'])) {
-                $binds = $args['binds'];
-            }
-
-            if (!$condition && $this->condition) {
-                $condition = '' . $this->condition;
-                $binds     = $this->binds;
-            }
-
-            // $selectColumns = $this->getSelectColumns();
-
-            if ($this->joinModels) {
-                $joinInfomation = $this->getJoin();
-                $join           = $joinInfomation['join'];
-                $selectColumns .= $joinInfomation['selectColumns'];
-                $binds += $joinInfomation['binds'];
-
-                if ($joinInfomation['condition']) {
-                    if ($condition) {
-                        $condition .= ' ' . $joinInfomation['condition'];
-                    } else {
-                        $condition = $joinInfomation['condition'];
-                    }
-                }
-
-                // $keyName = '';
-            }
-
-            if ($condition) {
-                $condition = ' WHERE ' . $condition;
-            }
-
-            // if ($this->rawColumnString) {
-            //     $selectColumns .= ',' . $this->rawColumnString;
-            // }
-            $sql = <<<SQL
-                SELECT
-                    {$selectColumns}
-                FROM
-                    `{$this->tableName}` AS `{$this->tableAliasName}`
-                {$join}
-                {$condition}
-                {$orderBy}
-                LIMIT 1
-            SQL;
-
-            $this->condition = $condition;
-        }
-
-        $this->query = $sql;
-        $this->binds = $binds;
-
-        if (static::$debug) {
-            $this->print(null, null);
-            Timer::start();
-        }
-
-        return $this->executeGet($sql, $binds);
+        $this->oneToMany[] = $model;
+        return $this;
     }
 
-    protected function buildGetBy(string $name, array $arguments, int $offset)
+    public function on(string $key, $value = null): self
     {
-        $this->attributes = [];
-
-        $condition           = '';
-        $binds               = [];
-        [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
-
-        $selectColumns = $this->getSelectColumns();
-        $condition .= $this->condition;
-        $binds += $this->binds;
-
-        $orderBy    = $this->getOrderBy();
-        $limit      = $this->getLimit();
-        $groupLimit = $this->getGroupLimit();
-        $join       = '';
-
-        if ($this->joinModels) {
-            $joinInfomation = $this->getJoin();
-            $join           = $joinInfomation['join'];
-            $selectColumns .= $joinInfomation['selectColumns'];
-            $binds += $joinInfomation['binds'];
-
-            if ($joinInfomation['condition']) {
-                if ($condition) {
-                    $condition .= ' ' . $joinInfomation['condition'];
-                } else {
-                    $condition = $joinInfomation['condition'];
-                }
-            }
-
-            // $keyName = '';
-        }
-
-        if ($condition) {
-            $condition = ' WHERE ' . $condition;
-        }
-
-        // if ($this->rawColumnString) {
-        //     $selectColumns .= ',' . $this->rawColumnString;
-        // }
-
-        $sql = <<<SQL
-            SELECT
-                {$selectColumns}
-            FROM
-                `{$this->tableName}` AS `{$this->tableAliasName}`
-            {$join}
-            {$condition}
-            {$orderBy}
-            {$limit}
-        SQL;
-
-        $this->condition = $condition;
-        $this->query     = $sql;
-        $this->binds     = $binds;
-
-        return $this->executeGet($sql, $binds);
+        return $this->buildJoinOn('on' . ucfirst($key), [$value]);
     }
 
-    public function executeGet(string $sql, array $binds = [])
+    public function open(): self
     {
-        if ($this->getConnect() instanceof \PDO) {
-            if (static::$debug) {
-                $this->print(null, null);
-                Timer::start();
-            }
+        $this->condition .= ' (';
+        return $this;
+    }
 
-            $attributes = $this->getConnect()->get($sql, $binds, false);
+    public function openParenthesis(): self
+    {
+        return $this->open();
+    }
 
-            foreach ($this->callbackColumns as $callbackColumn) {
-                $attributes[$callbackColumn['alias']] = $callbackColumn['callback']($attributes[$callbackColumn['column']]);
-            }
+    public function closeParenthesis(): self
+    {
+        $this->condition .= ') ';
+        return $this;
+    }
 
-            if (static::$debug) {
-                echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
-            }
+    public function getQuery()
+    {
+        return [$this->query, $this->binds];
+    }
+
+    /**
+     * 실제 실행 없이 SQL만 생성 (모든 CRUD 및 집계 작업 지원)
+     * 
+     * 지원 작업:
+     * - SELECT: get, gets, get1, getBy, getsBy, get1By
+     * - CREATE/INSERT: create
+     * - UPDATE: update
+     * - DELETE: delete
+     * - SUM: getSum, getSumBy
+     * - COUNT: getCount, getCountBy
+     * - AVG: getAvg, getAvgBy
+     * - MIN: getMin, getMinBy
+     * - MAX: getMax, getMaxBy
+     */
+    public function getSql(string $operation = 'SELECT', ?string $aggregateColumn = null): array
+    {
+        switch (strtoupper($operation)) {
+            case 'CREATE':
+            case 'INSERT':
+                return $this->buildCreate();
+                
+            case 'UPDATE':
+                [$sql, $binds] = $this->buildUpdate();
+                if (!empty($this->condition)) {
+                    $sql .= " WHERE " . $this->condition;
+                    $binds = array_merge($binds, $this->binds);
+                }
+                return [$sql, $binds];
+                
+            case 'DELETE':
+                $sql = "DELETE FROM `{$this->tableName}`";
+                $binds = [];
+                
+                // 조건이 있으면 우선 사용
+                if (!empty($this->condition)) {
+                    $sql .= " WHERE " . $this->condition;
+                    $binds = $this->binds ?: [];
+                } 
+                // 조건이 없고 primaryKey 값이 있으면 해당 레코드 삭제
+                else if (isset($this->attributes[$this->primaryKeyName])) {
+                    $primaryValue = $this->attributes[$this->primaryKeyName];
+                    $bindKey = ':' . $this->primaryKeyName;
+                    $sql .= " WHERE `{$this->tableAliasName}`.`{$this->primaryKeyName}` = {$bindKey}";
+                    $binds = [$bindKey => $primaryValue];
+                }
+                // seq 속성이 직접 설정된 경우도 처리
+                else if (isset($this->{$this->primaryKeyName})) {
+                    $primaryValue = $this->{$this->primaryKeyName};
+                    $bindKey = ':' . $this->primaryKeyName;
+                    $sql .= " WHERE `{$this->tableAliasName}`.`{$this->primaryKeyName}` = {$bindKey}";
+                    $binds = [$bindKey => $primaryValue];
+                }
+                
+                return [$sql, $binds];
+                
+            case 'SUM':
+                $column = $aggregateColumn ?: $this->sumColumn ?: $this->primaryKeyName;
+                $sql = $this->buildAggregateQuery('SUM', $column);
+                return [$sql, $this->binds ?: []];
+                
+            case 'COUNT':
+                $column = $aggregateColumn ?: '*';
+                $sql = $this->buildAggregateQuery('COUNT', $column);
+                return [$sql, $this->binds ?: []];
+                
+            case 'AVG':
+                $column = $aggregateColumn ?: $this->avgColumn ?: $this->primaryKeyName;
+                $sql = $this->buildAggregateQuery('AVG', $column);
+                return [$sql, $this->binds ?: []];
+                
+            case 'MIN':
+                $column = $aggregateColumn ?: $this->primaryKeyName;
+                $sql = $this->buildAggregateQuery('MIN', $column);
+                return [$sql, $this->binds ?: []];
+                
+            case 'MAX':
+                $column = $aggregateColumn ?: $this->primaryKeyName;
+                $sql = $this->buildAggregateQuery('MAX', $column);
+                return [$sql, $this->binds ?: []];
+                
+            case 'SELECT':
+            default:
+                // buildSelectQuery 메서드 활용
+                $sql = $this->buildSelectQuery();
+                return [$sql, $this->binds ?: []];
+        }
+    }
+
+    /**
+     * 집계 함수 쿼리 생성
+     */
+    private function buildAggregateQuery(string $function, string $column): string
+    {
+        $sql = "SELECT {$function}(";
+        
+        if ($column === '*') {
+            $sql .= '*';
         } else {
-            throw new Exception('lost connection');
+            $sql .= "`{$this->tableAliasName}`.`{$column}`";
         }
-
-        if ($attributes) {
-            $attributes = $this->buildDataType($attributes);
-
-            foreach ($this->joinModels as $joinModelInfomation) {
-                $joinModel          = $joinModelInfomation['model'];
-                $joinClassAliasName = $joinModel->tableAliasName;
-                $joinClassName      = $joinModel->tableName;
-
-                $tmp = [];
-
-                foreach ($attributes as $innerFieldName => &$innerFieldValue) {
-                    if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
-                        $tmp[\Limepie\str_replace_first($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
-
-                        unset($attributes[$innerFieldName]);
-                    }
-                }
-
-                unset($innerFieldValue);
-
-                if ($joinModel->newTableName) {
-                    $parentTableName = $joinModel->newTableName;
-                } else {
-                    $parentTableName = $joinModel->tableName . '_model';
-                }
-
-                if ($joinModel->parentNode) {
-                    // parentNode가 true일 경우, 부모에게 자식을 붙인다.
-                    foreach ($tmp ?? [] as $key => $value) {
-                        if ('seq' !== $key && $this->isMoveParent($attributes, $key, $value)) {
-                            $attributes[$key] = $value;
-                        }
-                    }
-                    // $attribute->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
-                } else {
-                    $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
-
-                    if ($attributes[$parentTableName] instanceof self) {
-                        $attributes[$parentTableName]->deleteLock = $joinModel->deleteLock;
-                        // $attributes[$parentTableName]->parentNode = $joinModel->parentNode;
-                    }
-                }
-
-                // $attributes[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
-
-                if ($joinModel->oneToOne) {
-                    $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
-                }
-
-                if ($joinModel->oneToMany) {
-                    $this->oneToManies[$parentTableName] = $joinModel->oneToMany;
-                }
-            }
-
-            $this->primaryKeyValue = $attributes[$this->primaryKeyName] ?? null;
-            // originAttr과 attr이 달라지는 경우는 valueName을 적용하거나 parentNode를 적용한 경우
-            // parentNode는 원본을 상실함. 부모노드로 속성만 옮겨지고 구조가 유지 되지 않음
-            // 여기서는 valueName을 적용할수 없고 getRelation에서 배열에서 적용하는 구조이므로
-            // originAttributes와 attributes는 동일한 배열을 참조함
-            $this->originAttributes = $this->attributes = $this->getRelation($attributes);
-
-            if ($this->valueName instanceof \Closure) {
-                if (\is_array($this->attributes)) {
-                    $fetchValue = ($this->valueName)($this);
-
-                    $this->attributes = $fetchValue;
-                }
-            }
-
-            if ($this->addColumns) {
-                if (\is_array($this->attributes)) {
-                    foreach ($this->addColumns as $columnName => $aliasName) {
-                        if ($aliasName instanceof \Closure) {
-                            $this->attributes[$columnName] = $aliasName($this);
-                        }
-                    }
-                }
-            }
-
-            return $this;
+        
+        $sql .= ") FROM `{$this->tableName}` AS `{$this->tableAliasName}`";
+        
+        // WHERE 조건 추가
+        if (!empty($this->condition)) {
+            $sql .= " WHERE " . $this->condition;
         }
-
-        return $this->empty();
+        
+        // GROUP BY 추가
+        if (!empty($this->groupBy)) {
+            $sql .= " GROUP BY " . $this->groupBy;
+        }
+        
+        return $sql;
     }
 
-    protected function buildGetsBy(string $name, array $arguments, int $offset) : ?self
+    public function getQueryBinds(array $binds = [])
     {
-        $this->attributes      = [];
-        $this->primaryKeyValue = '';
-
-        [$condition, $binds] = $this->getConditionAndBinds($name, $arguments, $offset);
-
-        $selectColumns = $this->getSelectColumns();
-        $condition .= $this->condition;
-        $binds += $this->binds;
-
-        $groupBy    = $this->getGroupBy();
-        $orderBy    = $this->getOrderBy();
-        $limit      = $this->getLimit();
-        $groupLimit = $this->getGroupLimit();
-        $join       = '';
-        $forceIndex = \implode(', ', $this->forceIndexes);
-
-        if ($this->joinModels) {
-            $joinInfomation = $this->getJoin();
-            $join           = $joinInfomation['join'];
-            $selectColumns .= $joinInfomation['selectColumns'];
-            $binds += $joinInfomation['binds'];
-
-            if ($joinInfomation['condition']) {
-                if ($condition) {
-                    $condition .= ' ' . $joinInfomation['condition'];
-                } else {
-                    $condition = $joinInfomation['condition'];
-                }
+        $result = [];
+        foreach ($binds as $key => $value) {
+            if (0 === \strpos($key, ':aes_') || false !== \strpos($key, '_aes_')) {
+                $result[$key] = \Limepie\decrypt($value);
+            } else {
+                $result[$key] = $value;
             }
-
-            if ($joinInfomation['orderBy']) {
-                if ($orderBy) {
-                    $orderBy .= ', ' . $joinInfomation['orderBy'];
-                } else {
-                    $orderBy = $this->getOrderBy($joinInfomation['orderBy']);
-                }
-            }
-            // $keyName = '';
         }
-
-        if ($condition) {
-            $condition = ' WHERE ' . $condition;
-        }
-
-        // if ($this->rawColumnString) {
-        //     $selectColumns .= ',' . $this->rawColumnString;
-        // }
-
-        $sql = '';
-
-        if ($groupLimit) {
-            $sql = <<<SQL
-                SELECT
-                {$selectColumns}
-                ,
-                ROW_NUMBER() OVER (PARTITION BY `{$this->tableAliasName}`.`{$this->rightKeyName}` {$orderBy}) as row_num
-            SQL;
-        } else {
-            $sql = <<<SQL
-                SELECT
-                {$selectColumns}
-
-            SQL;
-        }
-
-        $sql .= <<<SQL
-            FROM
-                `{$this->tableName}` AS `{$this->tableAliasName}`
-                {$forceIndex}
-                {$join}
-                {$condition}
-                {$groupBy}
-        SQL;
-
-        if ($groupLimit) {
-            $newOrderBy = \str_replace(
-                '`' . $this->tableAliasName . '`.',
-                'ranked.',
-                $orderBy
-            );
-
-            $sql = <<<SQL
-                SELECT *
-                FROM (
-                    {$sql}
-                ) AS ranked
-                WHERE ranked.row_num <= {$groupLimit}
-                {$newOrderBy}
-            SQL;
-        } else {
-            $sql .= ' ' . $orderBy
-                  . ' ' . $limit;
-        }
-
-        $this->condition = $condition;
-        $this->query     = $sql;
-        $this->binds     = $binds;
-
-        if (static::$debug) {
-            $this->print(null, null);
-            Timer::start();
-        }
-
-        return $this->executeGets($sql, $binds);
+        return $result;
     }
 
-    public function gets(null|array|string $sql = null, array $binds = []) : ?self
+    public function getLimit()
     {
-        $this->attributes      = [];
-        $this->primaryKeyValue = '';
-
-        if (false === \is_string($sql)) {
-            $args          = $sql;
-            $orderBy       = $this->getOrderBy($args['order'] ?? null);
-            $limit         = $this->getLimit();
-            $condition     = '';
-            $binds         = [];
-            $join          = '';
-            $selectColumns = $this->getSelectColumns(isCount: false);
-
-            if (true === isset($args['condition'])) {
-                $condition = ' ' . $args['condition'];
+        if ($this->limit) {
+            if ($this->offset) {
+                return "LIMIT {$this->offset}, {$this->limit}";
             } else {
-                if ($this->condition) {
-                    $condition = '  ' . $this->condition;
-                }
-
-                if ($this->binds) {
-                    $binds = $this->binds;
-                }
+                return "LIMIT {$this->limit}";
             }
-
-            if (true === isset($args['binds'])) {
-                $binds = $args['binds'];
-            }
-
-            if (!$condition && $this->condition) {
-                $condition = '' . $this->condition;
-                $binds     = $this->binds;
-            }
-
-            if ($this->joinModels) {
-                $joinInfomation = $this->getJoin();
-                $join           = $joinInfomation['join'];
-                $selectColumns .= $joinInfomation['selectColumns'];
-                $binds += $joinInfomation['binds'];
-
-                if ($joinInfomation['condition']) {
-                    if ($condition) {
-                        $condition .= ' ' . $joinInfomation['condition'];
-                    } else {
-                        $condition = $joinInfomation['condition'];
-                    }
-                }
-
-                if ($joinInfomation['orderBy']) {
-                    if ($orderBy) {
-                        $orderBy .= ', ' . $joinInfomation['orderBy'];
-                    } else {
-                        $orderBy = $this->getOrderBy($joinInfomation['orderBy']);
-                    }
-                }
-
-                // 조인시 왜 keyname을 무력화 했던것인가?
-                // $keyName = '';
-            }
-
-            if ($condition) {
-                $condition = ' WHERE ' . $condition;
-            }
-            $forceIndex = \implode(', ', $this->forceIndexes);
-
-            $groupBy = $this->getGroupBy();
-
-            // if ($this->rawColumnString) {
-            //     $selectColumns .= ',' . $this->rawColumnString;
-            // }
-
-            $groupLimit = $this->getGroupLimit();
-
-            if ($groupLimit) {
-                $sql = <<<SQL
-                SELECT
-                {$selectColumns}
-                ,
-                ROW_NUMBER() OVER (PARTITION BY `{$this->tableAliasName}`.`{$this->rightKeyName}` {$orderBy}) as row_num
-            SQL;
-            } else {
-                $sql = <<<SQL
-                SELECT
-                {$selectColumns}
-
-            SQL;
-            }
-            $sql .= <<<SQL
-
-            FROM
-                `{$this->tableName}` AS `{$this->tableAliasName}`
-                {$forceIndex}
-                {$join}
-                {$condition}
-                {$groupBy}
-                {$orderBy}
-        SQL;
-
-            if ($groupLimit) {
-                $sql = <<<SQL
-                SELECT *
-                FROM (
-                    {$sql}
-                ) AS ranked
-                WHERE ranked.row_num <= {$groupLimit}
-            SQL;
-            } else {
-                $sql .= ' ' . $limit;
-            }
-
-            // $sql = <<<SQL
-            //     SELECT
-            //         {$selectColumns}
-            //     FROM
-            //         `{$this->tableName}` AS `{$this->tableAliasName}`
-            //     {$forceIndex}
-            //     {$join}
-            //     {$condition}
-            //     {$groupBy}
-            //     {$orderBy}
-            //     {$limit}
-            // SQL;
-            $this->condition = $condition;
-        } else {
-            $orderBy = $this->getOrderBy($args['order'] ?? null);
-            $limit   = $this->getLimit();
-
-            $sql .= <<<SQL
-                {$orderBy}
-                {$limit}
-            SQL;
         }
-
-        $this->query = $sql;
-        $this->binds = $binds;
-
-        if (static::$debug) {
-            $this->print(null, null);
-            Timer::start();
-        }
-
-        return $this->executeGets($sql, $binds);
+        return '';
     }
 
-    public function executeGets(string $sql, array $binds = []) : ?self
+    public function getOrderBy()
     {
-        $data = $this->getConnect()->gets($sql, $binds, false);
+        return $this->orderBy ? "ORDER BY {$this->orderBy}" : '';
+    }
 
-        if (static::$debug) {
-            echo '<div style="font-size: 9pt;">ㄴ ' . Timer::stop() . '</div>';
+    public function getGroupBy()
+    {
+        return $this->groupBy ? "GROUP BY {$this->groupBy}" : '';
+    }
+
+    public function getGroupLimit()
+    {
+        return $this->groupLimit;
+    }
+
+    public function replaceQueryBinds(string $query, array $binds): string
+    {
+        foreach ($binds as $key => $value) {
+            $query = str_replace($key, "'" . addslashes($value) . "'", $query);
         }
-
-        $class = \get_called_class();
-
-        $attributes = [];
-
-        foreach ($data as $index => &$row) {
-            foreach ($this->callbackColumns as $callbackColumn) {
-                $row[$callbackColumn['alias']] = $callbackColumn['callback']($row[$callbackColumn['column']]);
-            }
-
-            foreach ($this->joinModels as $joinModelInfomation) {
-                $joinModel          = $joinModelInfomation['model'];
-                $joinClassAliasName = $joinModel->tableAliasName;
-                $joinClassName      = $joinModel->tableName;
-
-                $tmp = [];
-
-                foreach ($row as $innerFieldName => &$innerFieldValue) {
-                    if (0 === \strpos($innerFieldName, $joinClassAliasName . '_')) {
-                        $tmp[\Limepie\str_replace_first($joinClassAliasName . '_', '', $innerFieldName)] = $innerFieldValue;
-
-                        unset($row[$innerFieldName]);
-                    }
-                }
-
-                unset($innerFieldValue);
-
-                if ($joinModel->newTableName) {
-                    $parentTableName = $joinModel->newTableName;
-                } else {
-                    $parentTableName = $joinModel->tableName . '_model';
-                }
-
-                if ($joinModel->parentNode) {
-                    // parentNode가 true일 경우, 부모에게 자식을 붙인다.
-                    foreach ($tmp ?? [] as $key => $value) {
-                        if ('seq' !== $key && $this->isMoveParent($row, $key, $value)) {
-                            $row[$key] = $value;
-                        }
-                    }
-                    // $attribute->offsetSet($moduleName, $data[$leftKeyValue] ?? null);
-                } else {
-                    $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp);
-
-                    if ($row[$parentTableName] instanceof Model) {
-                        $row[$parentTableName]->deleteLock = $joinModel->deleteLock;
-                        // $row[$parentTableName]->parentNode = $joinModel->parentNode;
-                    }
-                }
-
-                // $row[$parentTableName] = new $joinModel($this->getConnect(), $tmp, null, true);
-
-                if ($joinModel->oneToOne) {
-                    $this->oneToOnes[$parentTableName] = $joinModel->oneToOne;
-                }
-
-                if ($joinModel->oneToMany) {
-                    $this->oneToManies[$parentTableName] = $joinModel->oneToMany;
-                }
-            }
-
-            if ($this->keyName) {
-                if ($this->keyName instanceof \Closure) {
-                    $keyName = ($this->keyName)($row);
-                } else {
-                    if (false === \array_key_exists($this->keyName, $row)) {
-                        // if ($parentTableName) {
-                        //     throw new Exception('gets ' . $this->tableName . ' "> ' . $parentTableName . ' ' . $this->keyName . '" column not found #5');
-                        // }
-
-                        throw new Exception('gets ' . $this->tableName . ' "' . $this->keyName . '" column not found #5');
-                    }
-                    $keyName = $row[$this->keyName];
-                }
-            } else {
-                $keyName = $row[$this->primaryKeyName];
-            }
-
-            // if ('key' == $this->keyName) {
-            //     \prx($this->keyName, $keyName, \is_callable($this->keyName));
-            // }
-            $attributes[$keyName] = new $class($this->getConnect(), $row);
-        }
-        unset($row);
-
-        if ($attributes) {
-            // gets에서는 원본 속성을 저장하지 않음, 원본속성은 개별 모델에만 존재함
-            $this->originAttributes = [];
-
-            $attributes = $this->getRelations($attributes);
-
-            if ($this->valueName instanceof \Closure) {
-                foreach ($attributes as $key => $attribute) {
-                    if (\is_array($attributes[$key]->attributes)) {
-                        $fetchValue = ($this->valueName)($attributes[$key]);
-                        // echo '<pre>---';
-                        // \print_r($key);
-                        // echo PHP_EOL;
-                        // \print_r($fetchValue);
-                        // echo '---</pre>';
-                        $attributes[$key]->attributes = $fetchValue;
-                    }
-                }
-            }
-
-            if ($this->addColumns) {
-                foreach ($attributes as $key => $attribute) {
-                    if (\is_array($attributes[$key]->attributes)) {
-                        foreach ($this->addColumns as $columnName => $aliasName) {
-                            if ($aliasName instanceof \Closure) {
-                                $attributes[$key]->attributes[$columnName] = ($aliasName)($attributes[$key]);
-                            }
-                        }
-                    }
-                }
-            }
-
-            $this->attributes = $attributes;
-
-            return $this;
-        }
-
-        return $this->empty();
+        return $query;
     }
 }
