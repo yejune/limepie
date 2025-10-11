@@ -2202,4 +2202,53 @@ class Arr
 
         return \implode(',', $names);
     }
+
+    // 구분자 정의: [전각(사용), 반각(치환대상)]
+    private const GLUE = ['＝', '='];        // 키=값 구분자
+
+    private const SEPARATOR = ['＆', '&'];   // 항목 간 구분자
+
+    /**
+     * 키-값 문자열 생성.
+     *
+     * @param array $data   키-값 쌍 배열
+     * @param bool  $encode HTML 인코딩 여부
+     *
+     * @return string 생성된 문자열 (예: name＝value＆type＝data)
+     */
+    public static function build_key($data, $encode = false)
+    {
+        $results = [];
+
+        foreach ($data as $k => $v) {
+            // 입력값에서 전각 구분자를 반각으로 치환 (충돌 방지)
+            $cleanKey   = \str_replace([self::GLUE[0], self::SEPARATOR[0]], [self::GLUE[1], self::SEPARATOR[1]], $k);
+            $cleanValue = \str_replace([self::GLUE[0], self::SEPARATOR[0]], [self::GLUE[1], self::SEPARATOR[1]], $v);
+
+            if ($encode) {
+                $cleanValue = \htmlspecialchars($cleanValue);
+            }
+
+            // 전각 구분자로 문자열 생성
+            $results[] = $cleanKey . self::GLUE[0] . $cleanValue;
+        }
+
+        return \implode(self::SEPARATOR[0], $results);
+    }
+
+    /**
+     * 키-값 문자열 파싱.
+     *
+     * @param string $key 키-값 문자열
+     *
+     * @return array 파싱된 키-값 배열
+     */
+    public static function parse_key($key)
+    {
+        // 전각 구분자를 반각으로 치환하여 표준 parse_str 사용
+        $normalized = \str_replace([self::GLUE[0], self::SEPARATOR[0]], [self::GLUE[1], self::SEPARATOR[1]], $key);
+        \parse_str($normalized, $result);
+
+        return $result;
+    }
 }
