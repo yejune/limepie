@@ -2303,7 +2303,7 @@ function is_binary(string $string) : bool
     return false;
 }
 
-function decimal($number, $zero2null = false) : null|float|int
+function decimal($number, $zero2null = false) : float|int|null
 {
     if (true === $zero2null) {
         if (null === $number || 0 === (float) $number) {
@@ -2429,6 +2429,32 @@ function seqtokey($seq)
 function seq2key($seq)
 {
     return \Limepie\seqtokey($seq);
+}
+
+function randkey()
+{
+    return '__' . uniqid(13) . '__';
+}
+
+function makekey($seq = null)
+{
+    if (null === $seq) {
+        // 없으면 랜덤 생성
+        return '__' . uniqid(13) . '__';
+    }
+
+    if (true === \is_numeric($seq)) {
+        // 숫자면 seqtokey 처리 (13자리 패딩)
+        return seqtokey($seq);
+    }
+
+    // 문자열이고 13자리면 __ 붙이기
+    if (\is_string($seq) && 13 === \strlen($seq)) {
+        return '__' . $seq . '__';
+    }
+
+    // 13자리가 아니면 예외 처리
+    throw new \InvalidArgumentException('Invalid key format');
 }
 
 function keytoseq($key)
@@ -2562,8 +2588,8 @@ function mysql_aes_key($key)
     $length = \strlen($key);
 
     for ($i = 0; $i < $length; ++$i) {
-        $index = $i % $bytes;
-        $newKey[$index] ^= $key[$i];
+        $index          = $i % $bytes;
+        $newKey[$index] = \chr(\ord($newKey[$index]) ^ \ord($key[$i]));
     }
 
     return $newKey;
@@ -2590,7 +2616,7 @@ function aes_encrypt($decrypted, $salt = null)
 
     $cypher = 'aes-128-ecb';
 
-    return \openssl_encrypt($decrypted, $cypher, $key, \OPENSSL_RAW_DATA);
+    return \openssl_encrypt((string) $decrypted, $cypher, $key, \OPENSSL_RAW_DATA);
 }
 
 /**
@@ -2849,7 +2875,7 @@ function shield(mixed $data, ?string $key = null) : string
 
     $nonce = \random_bytes(16);
 
-    return \base64_encode(
+    return \base58_encode(
         $nonce
         . \openssl_encrypt(
             $payload,
@@ -2869,7 +2895,7 @@ function unshield(string $encoded, ?string $key = null, int $expireDays = 365) :
         $key = Environment::get('salt');
     }
 
-    $data = \base64_decode($encoded, true);
+    $data = \base58_decode($encoded, true);
 
     if (false === $data) {
         throw new \RuntimeException('Invalid data format');
@@ -3755,7 +3781,7 @@ function eprint($content, $nl2br = false) : string
 }
 
 // Clean Print
-function cprint_tags(string $content, null|array|string $allowedTags = [], bool $sanitizeAttributes = false) : string
+function cprint_tags(string $content, array|string|null $allowedTags = [], bool $sanitizeAttributes = false) : string
 {
     // 설정 변수들을 정의
     $allowedDomains = [
