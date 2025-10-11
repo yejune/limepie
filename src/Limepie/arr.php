@@ -58,7 +58,7 @@ class Arr
      *
      * @return array 지정된 키를 가진 요소들만 포함한 필터링된 배열
      */
-    public static function filter_has_key(null|array|ArrayObject $array, string $key = 'images') : array
+    public static function filter_has_key(array|ArrayObject|null $array, string $key = 'images') : array
     {
         if (null === $array) {
             return [];
@@ -747,7 +747,7 @@ class Arr
     }
 
     public static function extract(
-        null|array|object $arrays = [],
+        array|object|null $arrays = [],
         array|string $key = [],
         $index = null
     ) {
