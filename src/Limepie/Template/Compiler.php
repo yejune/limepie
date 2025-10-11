@@ -8,7 +8,7 @@ use Limepie\Exception;
 
 class Compiler
 {
-    private $debug = true;
+    private $debug = false;
 
     /**
      * @var array
@@ -470,7 +470,7 @@ class Compiler
 
                     if (1 < \strlen($statement)) {
                         // if (true === $this->debug) {
-                        //     \pr($xpr, $prev, $current, __LINE__);
+                        //     \prx($xpr, $prev, $current, __LINE__);
                         // }
 
                         return false;
@@ -687,8 +687,8 @@ class Compiler
             |(?P<namespace_sigh>\\\)
             |(?P<static_object_sign>::)
             |(?P<compare>===|!==|<<|>>|<=|>=|==|!=|&&|\|\||<|>)
-            |(?P<sam>\?\?|\?\:)
-            |(?P<sam2>\?|\:)
+            |(?P<sam2>\?\?|\?\:)
+            |(?P<sam1>\?|\:)
             |(?P<assign>\=)
             |(?P<string_concat>\.)
             |(?P<left_parenthesis>\()
@@ -732,7 +732,7 @@ class Compiler
                 $token[] = $r;
             }
         }
-        // \pr($token);
+        // \prx($token);
         $xpr    = '';
         $stat   = [];
         $assign = 0;
@@ -742,7 +742,7 @@ class Compiler
         foreach ($token as $key => &$current) {
             if ('semi_colon' === $current['name']) {
                 if (true === $this->debug) {
-                    \pr($xpr, $prev, $current, __LINE__);
+                    \prx($xpr, $prev, $current, __LINE__);
                 }
 
                 return $this->empty($prev, $current, $xpr, __LINE__);
@@ -774,7 +774,7 @@ class Compiler
 
             // 마지막이 종결되지 않음
             if (!$next['name'] && false === \in_array($current['name'], ['string', 'number', 'string_number', 'right_bracket', 'right_parenthesis', 'double_operator', 'quote'], true)) {
-                if ('sam' === $current['name']) {
+                if ('sam2' === $current['name']) {
                     $xpr .= $current['value'] . 'null';
 
                     continue;
@@ -782,7 +782,7 @@ class Compiler
 
                 // pr($current);
                 if (true === $this->debug) {
-                    \pr($xpr, $prev, $current, __LINE__);
+                    \prx($xpr, $prev, $current, __LINE__);
                 }
 
                 return $this->empty($prev, $current, $xpr, __LINE__);
@@ -797,9 +797,9 @@ class Compiler
 
                     break;
                 case 'string':
-                    if (false === \in_array($prev['name'], ['', 'clone_sign', 'right_parenthesis', 'left_parenthesis', 'left_bracket', 'assign', 'object_sign', 'static_object_sign', 'namespace_sigh', 'double_operator', 'operator', 'assoc_array', 'compare', 'quote_number_concat', 'assign', 'string_concat', 'comma', 'sam', 'sam2', 'array_concat'], true)) {
+                    if (false === \in_array($prev['name'], ['', 'clone_sign', 'right_parenthesis', 'left_parenthesis', 'left_bracket', 'assign', 'object_sign', 'static_object_sign', 'namespace_sigh', 'double_operator', 'operator', 'assoc_array', 'compare', 'quote_number_concat', 'assign', 'string_concat', 'comma', 'sam2', 'sam1', 'array_concat'], true)) {
                         if (true === $this->debug) {
-                            \pr($xpr, $prev, $current, __LINE__);
+                            \prx($xpr, $prev, $current, __LINE__);
                         }
 
                         return $this->empty($prev, $current, $xpr, __LINE__);
@@ -818,7 +818,7 @@ class Compiler
                     } elseif (true === \in_array($next['name'], ['left_parenthesis', 'static_object_sign', 'namespace_sigh'], true)) {
                         if ('string_concat' === $prev['name']) {
                             if (true === $this->debug) {
-                                \pr($xpr, $prev, $current, __LINE__);
+                                \prx($xpr, $prev, $current, __LINE__);
                             }
 
                             return $this->empty($prev, $current, $xpr, __LINE__);
@@ -861,14 +861,14 @@ class Compiler
                     break;
                 case 'dollar':
                     if (true === $this->debug) {
-                        \pr($xpr, $prev, $current, __LINE__);
+                        \prx($xpr, $prev, $current, __LINE__);
                     }
 
                     return $this->empty($prev, $current, $xpr, __LINE__);
 
                     if (false === \in_array($prev['name'], ['left_bracket', 'assign', 'object_sign', 'static_object_sign', 'namespace_sigh', 'double_operator', 'operator', 'assoc_array', 'compare', 'quote_number_concat', 'assign', 'string_concat', 'comma'], true)) {
                         if (true === $this->debug) {
-                            \pr($xpr, $prev, $current, __LINE__);
+                            \prx($xpr, $prev, $current, __LINE__);
                         }
 
                         return $this->empty($prev, $current, $xpr, __LINE__); // 원본 출력(javascript)
@@ -879,7 +879,7 @@ class Compiler
                     break;
                 case 'not_support':
                     if (true === $this->debug) {
-                        \pr($xpr, $prev, $current, __LINE__);
+                        \prx($xpr, $prev, $current, __LINE__);
                     }
 
                     return $this->empty($prev, $current, $xpr, __LINE__); // 원본 출력(javascript)
@@ -888,9 +888,9 @@ class Compiler
 
                     break;
                 case 'not_match':
-                    if (true === \in_array($prev['name'], ['sam', 'sam2'], true)) {
+                    if (true === \in_array($prev['name'], ['sam2', 'sam1'], true)) {
                         if (true === $this->debug) {
-                            \pr($xpr, $prev, $current, __LINE__);
+                            \prx($xpr, $prev, $current, __LINE__);
                         }
 
                         return $this->empty($prev, $current, $xpr, __LINE__); // 원본 출력
@@ -917,10 +917,10 @@ class Compiler
                     $xpr .= $current['value'];
 
                     break;
-                case 'sam':
+                case 'sam2':
                     if (false === \in_array($prev['name'], ['string', 'number', 'right_bracket', 'right_parenthesis', 'string_number'], true)) {
                         if (true === $this->debug) {
-                            \pr($xpr, $prev, $current, __LINE__);
+                            \prx($xpr, $prev, $current, __LINE__);
                         }
 
                         return $this->empty($prev, $current, $xpr, __LINE__);
@@ -928,10 +928,10 @@ class Compiler
                     $xpr .= $current['value'];
 
                     break;
-                case 'sam2':
+                case 'sam1':
                     if (false === \in_array($prev['name'], ['string', 'number', 'quote', 'right_parenthesis'], true)) {
                         if (true === $this->debug) {
-                            \pr($xpr, $prev, $current, __LINE__);
+                            \prx($xpr, $prev, $current, __LINE__);
                         }
 
                         return $this->empty($prev, $current, $xpr, __LINE__);
@@ -942,9 +942,9 @@ class Compiler
                     } elseif (':' === $current['value']) {
                         $last_stat = \array_pop($stat);
 
-                        if (!$last_stat || 'sam2' !== $last_stat['name'] || !$next['name']) {
+                        if (!$last_stat || 'sam1' !== $last_stat['name'] || !$next['name']) {
                             if (true === $this->debug) {
-                                \pr($xpr, $prev, $current, __LINE__);
+                                \prx($xpr, $prev, $current, __LINE__);
                             }
 
                             return $this->empty($prev, $current, $xpr, __LINE__);
@@ -956,13 +956,13 @@ class Compiler
                 case 'quote':
                     if (true === \in_array($prev['name'], ['string'], true)) {
                         if (true === $this->debug) {
-                            \pr($xpr, $prev, $current, __LINE__);
+                            \prx($xpr, $prev, $current, __LINE__);
                         }
 
                         return $this->empty($prev, $current, $xpr, __LINE__);
                     }
 
-                    if (false === \in_array($prev['name'], ['', 'left_parenthesis', 'left_bracket', 'comma', 'compare', 'assoc_array', 'operator', 'quote_number_concat', 'assign', 'sam', 'sam2'], true)) {
+                    if (false === \in_array($prev['name'], ['', 'left_parenthesis', 'left_bracket', 'comma', 'compare', 'assoc_array', 'operator', 'quote_number_concat', 'assign', 'sam2', 'sam1'], true)) {
                         throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= $current['value'];
@@ -984,7 +984,7 @@ class Compiler
 
                     $stat[] = $last_stat;
 
-                    if (false === \in_array($prev['name'], ['', 'left_bracket', 'left_parenthesis', 'comma', 'compare', 'operator', 'assign', 'assoc_array', 'string', 'right_bracket', 'number_concat', 'string_concat', 'quote_number_concat', 'sam', 'sam2'], true)) {
+                    if (false === \in_array($prev['name'], ['', 'left_bracket', 'left_parenthesis', 'comma', 'compare', 'operator', 'assign', 'assoc_array', 'string', 'right_bracket', 'number_concat', 'string_concat', 'quote_number_concat', 'sam2', 'sam1'], true)) {
                         throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
@@ -1013,9 +1013,9 @@ class Compiler
 
                     break;
                 case 'double_operator':
-                    if (false === \in_array($prev['name'], ['string', 'number', 'string_number', 'assign', 'sam', 'sam2'], true)) {
+                    if (false === \in_array($prev['name'], ['string', 'number', 'string_number', 'assign', 'sam2', 'sam1'], true)) {
                         if (true === $this->debug) {
-                            \pr($xpr, $prev, $current, __LINE__);
+                            \prx($xpr, $prev, $current, __LINE__);
                         }
 
                         return $this->empty($prev, $current, $xpr, __LINE__);
@@ -1042,9 +1042,9 @@ class Compiler
 
                     break;
                 case 'namespace_sigh':
-                    if (false === \in_array($prev['name'], ['compare', 'static_object_sign', 'quote_number_concat', 'left_bracket', 'left_parenthesis', 'string', 'assign', 'comma', 'operator', 'sam2', 'sam', 'string_concat', ''], true)) {
+                    if (false === \in_array($prev['name'], ['compare', 'static_object_sign', 'quote_number_concat', 'left_bracket', 'left_parenthesis', 'string', 'assign', 'comma', 'operator', 'sam1', 'sam2', 'string_concat', ''], true)) {
                         if (true === $this->debug) {
-                            \pr($xpr, $prev, $current, __LINE__);
+                            \prx($xpr, $prev, $current, __LINE__);
                         }
 
                         // return $this->empty($prev, $current, $xpr, __LINE__);
@@ -1069,9 +1069,9 @@ class Compiler
 
                     break;
                 case 'operator':
-                    if (false === \in_array($prev['name'], ['', 'compare', 'right_parenthesis', 'right_bracket', 'number', 'string', 'string_number', 'quote', 'assign', 'comma', 'sam', 'sam2', 'left_parenthesis'], true)) {
+                    if (false === \in_array($prev['name'], ['', 'compare', 'right_parenthesis', 'right_bracket', 'number', 'string', 'string_number', 'quote', 'assign', 'comma', 'sam2', 'sam1', 'left_parenthesis'], true)) {
                         if (true === $this->debug) {
-                            \pr($xpr, $prev, $current, __LINE__);
+                            \prx($xpr, $prev, $current, __LINE__);
                         }
 
                         return $this->empty($prev, $current, $xpr, __LINE__);
@@ -1104,8 +1104,8 @@ class Compiler
                         throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
 
-                    if (false === \in_array($prev['name'], ['sam', 'right_bracket', 'string', 'operator'], true)) {
-                        // \pr($prev, $current, $next);
+                    if (false === \in_array($prev['name'], ['sam2', 'right_bracket', 'string', 'operator'], true)) {
+                        // \prx($prev, $current, $next);
                         // exit;
                         throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
@@ -1121,7 +1121,7 @@ class Compiler
                 case 'left_bracket':
                     $stat[] = $current;
 
-                    if (false === \in_array($prev['name'], ['', 'assign', 'left_bracket', 'right_bracket', 'comma', 'left_parenthesis', 'right_parenthesis', 'assoc_array', 'string', 'string_number', 'sam'], true)) {
+                    if (false === \in_array($prev['name'], ['', 'assign', 'left_bracket', 'right_bracket', 'comma', 'left_parenthesis', 'right_parenthesis', 'assoc_array', 'string', 'string_number', 'sam2'], true)) {
                         throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
                     $xpr .= $current['value'];
@@ -1158,7 +1158,7 @@ class Compiler
                 case 'left_parenthesis': // ()
                     $stat[] = $current;
 
-                    if (false === \in_array($prev['name'], ['', 'quote_number_concat', 'operator', 'compare', 'assoc_array', 'left_parenthesis', 'comma', 'left_bracket', 'array_keyword', 'string', 'assign', 'right_bracket', 'sam2'], true)) {
+                    if (false === \in_array($prev['name'], ['', 'quote_number_concat', 'operator', 'compare', 'assoc_array', 'left_parenthesis', 'comma', 'left_bracket', 'array_keyword', 'string', 'assign', 'right_bracket', 'sam1'], true)) {
                         // , 'string_number' ->d.3.a() -> ->d[3]['a']() 제외
                         throw new Compiler\Exception(__LINE__ . ' parse error(' . $prev['name'] . ') : file ' . $this->filename . ' line ' . $line . ' ' . $prev['org'] . $current['org']);
                     }
@@ -1169,8 +1169,8 @@ class Compiler
                     $last_stat = \array_pop($stat);
 
                     if (!$last_stat) {
-                        \pr($org);
-                        \pr($last_stat);
+                        \prx($org);
+                        \prx($last_stat);
 
                         exit;
                     }
@@ -1182,7 +1182,7 @@ class Compiler
                     if (false === \in_array($prev['name'], ['left_parenthesis', 'right_bracket', 'right_parenthesis', 'string', 'number', 'string_number', 'quote'], true)) {
                         //                        pr($prev);
                         if (true === $this->debug) {
-                            \pr($xpr, $prev, $current, __LINE__);
+                            \prx($xpr, $prev, $current, __LINE__);
                         }
 
                         return $this->empty($prev, $current, $xpr, __LINE__);
@@ -1206,7 +1206,7 @@ class Compiler
                         // 배열이나 인자 속이 아니면 오류
                         if (false === \in_array($last_stat['name'], ['left_parenthesis', 'left_bracket'], true)) {
                             if (true === $this->debug) {
-                                \pr($xpr, $prev, $current, __LINE__);
+                                \prx($xpr, $prev, $current, __LINE__);
                             }
 
                             return $this->empty($prev, $current, $xpr, __LINE__);
@@ -1248,7 +1248,7 @@ class Compiler
 
     private function empty($prev, $current, $xpr, $line)
     {
-        // \pr($prev, $current, $xpr, $line);
+        // \prx($prev, $current, $xpr, $line);
 
         // if(false !== strpos($xpr, "guest")) {
         //     exit;
